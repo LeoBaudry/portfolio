@@ -1,0 +1,8 @@
+{
+  "tailwindCSS.includeLanguages": {
+    "css": "css",
+    "postcss": "css",
+    "scss": "scss"
+  },
+  "tailwindCSS.emmetCompletions": true
+}

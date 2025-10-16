@@ -1,3 +1,11 @@
+/* === Polices === */
+
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/700.css";
+
+/* === Tailwind & Plugins === */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -42,6 +50,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* === Variables OKLCH === */
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -77,6 +86,7 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* Thème sombre */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -111,11 +121,16 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* =========================
+   Base Tailwind + Font
+   ========================= */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: "Poppins", sans-serif;
   }
 }
