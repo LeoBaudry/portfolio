@@ -1,0 +1,56 @@
+---
+// src/components/ArrowIcon.astro
+export interface Props {
+  variant: 'contact' | 'cv';
+  class?: string;
+}
+
+const { variant, class: className } = Astro.props;
+---
+
+<svg 
+width="12"
+height="12"
+viewBox="0 0 12 12"
+fill="none"
+xmlns="http://www.w3.org/2000/svg"
+class:list={["arrow-svg", className]}>
+  
+  <defs>
+    <!-- Gradient pour le bouton contact (vert/jaune) -->
+    <linearGradient id="gradient-contact" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#51EB96" />
+      <stop offset="100%" stop-color="#E8F444" />
+    </linearGradient>
+    
+    <!-- Gradient pour le bouton CV (orange/rouge) -->
+    <linearGradient id="gradient-cv" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7957" />
+      <stop offset="100%" stop-color="#F3471C" />
+    </linearGradient>
+  </defs>
+  
+  <path
+    class:list={["arrow-path", `arrow-path-${variant}`]}
+    d="M1 11L11 1M11 1H2M11 1V10"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
+
+<style>
+  .arrow-path {
+    stroke: currentColor;
+    transition: stroke 0.3s ease;
+  }
+  
+  /* Au survol du groupe parent */
+  :global(.group:hover) .arrow-path-contact {
+    stroke: url(#gradient-contact);
+  }
+  
+  :global(.group:hover) .arrow-path-cv {
+    stroke: url(#gradient-cv);
+  }
+</style>

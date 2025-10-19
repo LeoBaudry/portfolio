@@ -1,0 +1,25 @@
+/* === Polices === */
+
+@import "@fontsource/poppins/100.css";
+@import "@fontsource/poppins/200.css";
+@import "@fontsource/poppins/300.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/poppins/800.css";
+@import "@fontsource/poppins/900.css";
+
+@layer base {
+  body {
+    font-family: "Poppins", sans-serif;
+  }
+
+  .hero-title {
+    @apply font-[900] text-[12rem] leading-[1]; /* Ultra bold */
+  }
+
+  .section-title {
+    @apply font-[700] text-5xl; /* Bold */
+  }
+}
