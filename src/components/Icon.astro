@@ -6,13 +6,13 @@ export interface Props {
   hoverGradient?: 'orange' | 'green';
 }
 const { name, class: className, hoverGradient } = Astro.props;
-const icons = import.meta.glob('/src/assets/*.svg', { as: 'raw' });
+const icons = import.meta.glob('/src/assets/*.svg', { query: '?raw', import: 'default' });
 const iconPath = `/src/assets/${name}.svg`;
 if (!icons[iconPath]) {
   console.error(`L'icône "${name}" n'a pas été trouvée dans /src/assets/`);
   return null;
 }
-let svgContent = await icons[iconPath]();
+let svgContent = String(await icons[iconPath]());
 
 const uniqueId = `${name}-${Math.random().toString(36).substr(2, 9)}`;
 

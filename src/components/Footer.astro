@@ -28,7 +28,8 @@ const gridCells = Array(36).fill(null).map((_, index) => {
 ---
 
 <!-- --- STRUCTURE DU FOOTER (HTML + TAILWIND) --- -->
-<footer class="h-screen w-full bg-transparent box-border p-4 lg:p-[26px_20px] font-['Poppins']">
+{/* MODIFICATION: Ajout de tracking-[-0.08em] pour resserrer les caractères */}
+<footer class="h-screen w-full bg-transparent box-border p-4 lg:p-[26px_20px] font-['Poppins'] tracking-[-0.05em]">
   <div class="relative h-full w-full rounded-3xl lg:rounded-[40px] bg-[#111111] grid place-items-center overflow-hidden">
     
     <!-- Grille de fond unifiée et responsive -->
@@ -42,7 +43,7 @@ const gridCells = Array(36).fill(null).map((_, index) => {
         return (
           <div class={`group rounded-[20px] border border-[#222222] bg-[#111111] transition-colors duration-300 p-4 justify-start items-start hover:bg-[#222222] ${visibilityClass}`}>
             {cell.text && (
-              <span class="hidden lg:block text-white font-mono uppercase text-xs transition-all duration-300 group-hover:translate-y-full">
+            <span class="hidden lg:block text-white uppercase text-sm transition-all duration-300 group-hover:translate-y-full">
                 {cell.text}
               </span>
             )}
@@ -59,7 +60,7 @@ const gridCells = Array(36).fill(null).map((_, index) => {
           PROJETS <ArrowIcon variant="contact" class="w-3 h-3 text-black"/>
         </a>
         <a href="#" class="text-sm hover:underline transition-colors">Yumly</a>
-        <a href="#" class="text-sm hover:underline transition-colors">Mödulo</a>
+        <a href="#" class="text-sm hover:underline transition-colors">Mōdulo</a>
         <a href="#" class="text-sm hover:underline transition-colors">Site web de l'APG</a>
         <a href="#" class="text-sm hover:underline transition-colors">Réalisations 3D</a>
       </div>
@@ -78,7 +79,6 @@ const gridCells = Array(36).fill(null).map((_, index) => {
       <div class="bg-white text-black rounded-3xl p-6 flex flex-row items-center justify-between gap-2 text-center w-full lg:w-80 transition-all duration-300 ease-in-out lg:hover:w-[330px]">
         <Icon name="logofooter" class="h-12 w-auto text-black"/>
         <div class="flex items-center gap-2">
-          <!-- MODIFICATION: Ajout de délais de transition différents -->
           <a href="#" aria-label="Behance" class="transition-all duration-300 ease-in-out hover:-translate-y-1 delay-50">
             <Icon name="behance" class="h-7 w-7 lg:h-9 lg:w-9 text-black" hoverGradient="orange"/>
           </a>
@@ -96,3 +96,4 @@ const gridCells = Array(36).fill(null).map((_, index) => {
     </div>
   </div>
 </footer>
+
