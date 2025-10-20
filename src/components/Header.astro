@@ -1,0 +1,257 @@
+---
+// src/components/Header.astro
+import Icon from './Icon.astro';
+---
+<header id="main-header" class="fixed top-0 left-0 w-full z-50 p-4">
+  <div class="mx-auto grid max-w-7xl grid-cols-3 items-center">
+    
+    <div class="flex justify-start">
+      <a href="/" class="z-10 header-dynamic-color">
+        <Icon name="LOGOHEADER" class="h-10 w-auto"/>
+      </a>
+    </div>
+    
+    <div class="relative w-80 justify-self-center">
+      <button id="menu-toggle" class="relative w-full rounded-md px-5 py-2 text-left text-sm font-medium transition-colors z-10">
+        <span class="header-dynamic-color">Menu</span>
+      </button>
+      
+      <div id="menu-dropdown" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-full p-6 rounded-md invisible">
+        <div class="menu-item mb-6">
+          <span class="text-xs tracking-widest header-dropdown-text">PROJETS</span>
+          <nav class="mt-2">
+            <ul class="space-y-2 text-lg">
+              <li class="menu-item"><a href="/projets" class="block hover:opacity-60 transition-colors header-dropdown-text">Tous les projets</a></li>
+              <hr class="menu-item border-black/10 my-2 header-dropdown-border">
+              <li class="menu-item"><a href="/projet/nom-projet-1" class="block hover:opacity-60 transition-colors header-dropdown-text">Projet Individuel A</a></li>
+              <li class="menu-item"><a href="/projet/nom-projet-2" class="block hover:opacity-60 transition-colors header-dropdown-text">Projet Individuel B</a></li>
+              <li class="menu-item"><a href="/projet/nom-projet-3" class="block hover:opacity-60 transition-colors header-dropdown-text">Projet Individuel C</a></li>
+            </ul>
+          </nav>
+        </div>
+        <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
+        <div class="menu-item flex justify-between items-center">
+          <a href="/cv.pdf" target="_blank" class="text-lg hover:opacity-60 transition-colors header-dropdown-text">Voir mon CV</a>
+        </div>
+        <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
+        <a href="/contact" class="menu-item block w-full rounded-lg border border-neutral-900 bg-transparent py-3 text-center font-semibold tracking-widest transition-colors header-contact-button" style="font-size: 12px;">
+          CONTACT
+        </a>
+      </div>
+    </div>
+    
+    <div class="flex justify-end">
+      <a href="/contact" class="shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-700 transition-colors flex items-center gap-2 z-10">
+        Contactez-moi
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stroke-white"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+      </a>
+    </div>
+
+  </div>
+</header>
+
+<style is:global>
+  #menu-toggle,
+  #menu-dropdown {
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+
+  /* Couleurs par défaut (light theme) */
+  .header-dynamic-color {
+    color: rgb(23, 23, 23);
+    transition: color 0.4s ease;
+  }
+
+  .header-dynamic-color svg path,
+  .header-dynamic-color svg circle,
+  .header-dynamic-color svg rect {
+    fill: rgb(23, 23, 23);
+    transition: fill 0.4s ease;
+  }
+
+  .header-dropdown-text {
+    color: rgb(23, 23, 23);
+    transition: color 0.4s ease;
+  }
+
+  .header-dropdown-border {
+    border-color: rgba(0, 0, 0, 0.1);
+    transition: border-color 0.4s ease;
+  }
+
+  .header-contact-button {
+    color: rgb(23, 23, 23);
+    border-color: rgb(23, 23, 23);
+    transition: color 0.4s ease, border-color 0.4s ease, background-color 0.4s ease;
+  }
+
+  .header-contact-button:hover {
+    background-color: rgb(23, 23, 23);
+    color: white;
+  }
+
+  /* Dark theme */
+  #main-header.header-dark-theme .header-dynamic-color {
+    color: white;
+  }
+
+  #main-header.header-dark-theme .header-dynamic-color svg path,
+  #main-header.header-dark-theme .header-dynamic-color svg circle,
+  #main-header.header-dark-theme .header-dynamic-color svg rect {
+    fill: white;
+  }
+
+  #main-header.header-dark-theme .header-dropdown-text {
+    color: white;
+  }
+
+  #main-header.header-dark-theme .header-dropdown-border {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  #main-header.header-dark-theme .header-contact-button {
+    color: white;
+    border-color: white;
+  }
+
+  #main-header.header-dark-theme .header-contact-button:hover {
+    background-color: white;
+    color: rgb(23, 23, 23);
+  }
+
+  #menu-toggle {
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.3s ease;
+  }
+
+  #menu-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  #menu-dropdown {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  #main-header:not(.header-dark-theme) #menu-toggle {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+
+  #main-header:not(.header-dark-theme) #menu-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.12);
+  }
+
+  #main-header:not(.header-dark-theme) #menu-dropdown {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+</style>
+
+<script>
+  import { gsap } from "gsap";
+
+  const menuToggle = document.getElementById('menu-toggle');
+  const menuDropdown = document.getElementById('menu-dropdown');
+
+  // Only initialize menu behavior if both elements are present
+  if (menuToggle && menuDropdown) {
+    const menuContainer = menuToggle.parentElement;
+    const menuItems = gsap.utils.toArray('.menu-item');
+    let isMenuOpen = false;
+
+    gsap.set(menuDropdown, { y: -20, opacity: 0, visibility: 'hidden' });
+    gsap.set(menuItems, { y: 15, opacity: 0 });
+
+    const openMenu = () => {
+      if (isMenuOpen) return;
+      isMenuOpen = true;
+      
+      const tl = gsap.timeline();
+      tl.to(menuDropdown, {
+        y: 0,
+        opacity: 1,
+        visibility: 'visible',
+        duration: 0.4,
+        ease: "power3.out"
+      })
+      .to(menuItems, {
+        y: 0,
+        opacity: 1,
+        duration: 0.3,
+        ease: "power2.out",
+        stagger: 0.06
+      }, "-=0.25");
+    };
+
+    const closeMenu = () => {
+      if (!isMenuOpen) return;
+      isMenuOpen = false;
+      
+      const tl = gsap.timeline({
+        onComplete: () => {
+          gsap.set(menuDropdown, { visibility: 'hidden' });
+        }
+      });
+      tl.to(menuItems, {
+        y: 15,
+        opacity: 0,
+        duration: 0.2,
+        ease: "power2.in",
+        stagger: 0.04
+      })
+      .to(menuDropdown, {
+        y: -20,
+        opacity: 0,
+        duration: 0.3,
+        ease: "power3.in"
+      }, "-=0.1");
+    };
+
+    menuToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isMenuOpen ? closeMenu() : openMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (menuContainer && e.target instanceof Node && !menuContainer.contains(e.target) && isMenuOpen) {
+        closeMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        closeMenu();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const header = document.getElementById('main-header');
+    if (!header) return;
+    
+    const sections = document.querySelectorAll('[data-theme]');
+    if (sections.length === 0) return;
+    
+    const observerOptions = {
+      root: null,
+      rootMargin: '-50% 0px -50% 0px',
+      threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const theme = entry.target.getAttribute('data-theme');
+          if (theme === 'dark') {
+            header.classList.add('header-dark-theme');
+          } else {
+            header.classList.remove('header-dark-theme');
+          }
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach(section => {
+      observer.observe(section);
+    });
+  });
+</script>

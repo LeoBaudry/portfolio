@@ -1,7 +1,9 @@
 ---
 // Loader.astro
+import '/src/styles/global.css';
 ---
 <div class="loader-container">
+
   <div class="time-display">
     <p id="time-line1"></p>
     <p id="time-line2"></p>
@@ -24,6 +26,12 @@
       </div>
     </div>
   </div>
+
+  <div class="loading-bar-container">
+    <p class="loading-text">chargement...</p>
+    <div id="loading-bar"></div>
+  </div>
+
 </div>
 
 <style>
@@ -61,25 +69,63 @@
   width: 400px;
   max-width: 80vw;
 }
+
 .counter {
   margin-top: 20px;
-  font-family: 'Courier New', monospace;
-  font-size: 32px;
-  font-weight: bold;
+  font-family: 'Poppins', sans-serif;
+  font-size: 5rem; 
+  font-weight: 200; 
 }
+.counter span {
+  letter-spacing: -0.08em; 
+}
+
 .time-display {
   position: fixed;
   top: 40px;
   right: 40px;
   text-align: right;
-  font-family: 'Courier New', monospace;
+  font-family: 'Poppins', sans-serif;
   font-size: 16px;
+  font-weight: 300;
   color: #555;
   z-index: 9999;
 }
 .time-display p {
   margin: 0;
   line-height: 1.4;
+}
+
+.loading-bar-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  background-color: #f0f0f0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+}
+#loading-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0%;
+  height: 100%;
+  background-color: #000;
+  z-index: 1;
+}
+.loading-text {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  padding-left: 15px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #fff;
+  mix-blend-mode: difference;
 }
 </style>
 
@@ -91,47 +137,46 @@ document.addEventListener("DOMContentLoaded", () => {
   const loaderContent = document.querySelector(".loader-content");
   const logoLetters = "#letter-L, #letter-E, #letter-O1, #letter-O2";
   const counter = document.getElementById("progress-counter");
-
-  // --- GESTION DE LA DATE ET DE L'HEURE ---
+  const loadingBar = document.getElementById("loading-bar");
   const line1 = document.getElementById("time-line1");
   const line2 = document.getElementById("time-line2");
   const line3 = document.getElementById("time-line3");
   
-  const now = new Date();
-  
-  const updateTimeDisplay = () => { // Fonction pour mettre à jour l'heure, appelée une fois au début
-    const current = new Date(); // Obtenir l'heure actuelle à chaque appel
+  const updateTimeDisplay = () => {
+    const current = new Date();
     
-    // Ligne 1: DD/MM/YYYY @ HH:MM:SS (PM/AM)
     const hours12 = current.getHours() % 12 || 12;
     const ampm = current.getHours() >= 12 ? 'PM' : 'AM';
-    line1.textContent = 
-      `${String(current.getDate()).padStart(2, '0')}/` +
-      `${String(current.getMonth() + 1).padStart(2, '0')}/` +
-      `${current.getFullYear()} @ ` +
-      `${String(hours12).padStart(2, '0')}:` +
-      `${String(current.getMinutes()).padStart(2, '0')}:` +
-      `${String(current.getSeconds()).padStart(2, '0')} ${ampm}`;
 
-    // Ligne 2: YYYY-MM-DD CEST (UTC+2)
-    line2.textContent = 
-      `${current.getFullYear()}-` +
-      `${String(current.getMonth() + 1).padStart(2, '0')}-` +
-      `${String(current.getDate()).padStart(2, '0')} CEST (UTC+2)`;
+    if (line1) {
+      line1.textContent = 
+        `${String(current.getDate()).padStart(2, '0')}/` +
+        `${String(current.getMonth() + 1).padStart(2, '0')}/` +
+        `${current.getFullYear()} @ ` +
+        `${String(hours12).padStart(2, '0')}:` +
+        `${String(current.getMinutes()).padStart(2, '0')}:` +
+        `${String(current.getSeconds()).padStart(2, '0')} ${ampm}`;
+    }
 
-    // Ligne 3: JOUR, JJ MM ANNÉE
+    if (line2) {
+      line2.textContent = 
+        `${current.getFullYear()}-` +
+        `${String(current.getMonth() + 1).padStart(2, '0')}-` +
+        `${String(current.getDate()).padStart(2, '0')} CEST (UTC+2)`;
+    }
+
     const dayName = current.toLocaleDateString('fr-FR', { weekday: 'long' });
     const monthName = current.toLocaleDateString('fr-FR', { month: 'short' });
-    line3.textContent = 
-      `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ` +
-      `${current.getDate()} ${monthName} ${current.getFullYear()}`;
+
+    if (line3) {
+      line3.textContent = 
+        `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ` +
+        `${current.getDate()} ${monthName} ${current.getFullYear()}`;
+    }
   };
 
-  updateTimeDisplay(); // Appel initial pour afficher l'heure
-  // setInterval(updateTimeDisplay, 1000); // Pour mettre à jour chaque seconde si tu veux un vrai compte à rebours (décommenter si besoin)
+  updateTimeDisplay();
 
-
-  // --- ANIMATION PRINCIPALE ---
   const mainAnim = gsap.from(logoLetters, {
     opacity: 0,
     y: 30,
@@ -142,41 +187,44 @@ document.addEventListener("DOMContentLoaded", () => {
     onComplete: runExitAnimation
   });
 
-  // --- COMPTEUR 0-100% ---
   gsap.to({ val: 0 }, {
     val: 100,
     duration: mainAnim.duration(),
     delay: mainAnim.delay(),
-    ease: "none",
+    ease: "power2.out",
     onUpdate: function() {
-      counter.textContent = Math.round(this.targets()[0].val).toString().padStart(2, '0');
+      if (counter) {
+        counter.textContent = Math.round(this.targets()[0].val).toString().padStart(2, '0');
+      }
     }
   });
 
-  // --- ANIMATION DE SORTIE ORIGINALE ---
+  gsap.to(loadingBar, {
+    width: "100%",
+    duration: mainAnim.duration(),
+    delay: mainAnim.delay(),
+    ease: "power2.out",
+  });
+
   function runExitAnimation() {
     const exitTl = gsap.timeline({
-      delay: 1, // Pause de 1s avant de lancer l'animation de sortie
-      onComplete: () => loaderContainer.remove()
+      delay: 1,
+      onComplete: () => loaderContainer?.remove()
     });
     
-    // Animer le logo et le compteur pour qu'ils glissent vers le haut et disparaissent
     exitTl.to(loaderContent, {
-      yPercent: -100, // Déplace l'élément de 100% de sa hauteur vers le haut
-      opacity: 0,    // Le rend transparent en même temps
+      yPercent: -100,
+      opacity: 0,
       duration: 0.6,
       ease: "power2.in"
     });
     
-    // Animer l'affichage de l'heure pour qu'il disparaisse en même temps
-    exitTl.to(".time-display", {
+    exitTl.to([".time-display", ".loading-bar-container"], {
       opacity: 0,
-      y: -50, // Le déplace aussi légèrement vers le haut
       duration: 0.4,
       ease: "power2.in"
-    }, "<"); // En même temps que loaderContent
+    }, "<");
 
-    // Ensuite, les panneaux s'ouvrent en coulissant (reste inchangé)
     exitTl.to("#panel-left", {
       xPercent: -100,
       duration: 1,
