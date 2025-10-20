@@ -1,0 +1,192 @@
+---
+// Loader.astro
+---
+<div class="loader-container">
+  <div class="time-display">
+    <p id="time-line1"></p>
+    <p id="time-line2"></p>
+    <p id="time-line3"></p>
+  </div>
+
+  <div class="loader-panel" id="panel-left"></div>
+  <div class="loader-panel" id="panel-right"></div>
+
+  <div class="loader-content">
+    <div class="logo-wrapper">
+      <svg id="logo" width="500" height="304" viewBox="0 0 500 304" fill="none" xmlns="http://www.w3.org/2000/svg" class="animated-logo">
+        <g id="letter-L"><path d="M79.5456 201.109L89.2795 199.672L89.2859 199.829C144.763 192.558 192.502 183.459 209.416 181.371V219.374C141.149 220.32 78.8835 234.497 30.8442 257.394V30.8679C30.8442 15.2715 10.2814 3.79079 0 0H79.5456V201.109Z" fill="black"/></g>
+        <g id="letter-E"><path d="M209.416 162.437L101.876 175.46L107.142 144.592C122.778 145.097 148.567 140.518 160.713 133.706V95.041H131.493V71.4834H160.713V26.3945C150.129 22.735 126.736 22.2436 111.201 22.7451V0H209.416V162.437Z" fill="black"/></g>
+        <g id="letter-O1"><path d="M339.286 234.559C304.719 225.459 266.26 220.091 225.649 219.402V0H339.286V234.559ZM274.35 195.127L290.584 197.589V19.707L274.35 19.001V195.127Z" fill="black"/></g>
+        <g id="letter-O2"><path d="M500 0C489.719 3.79088 469.156 15.2719 469.156 30.8682V304C459.468 293.611 447.703 283.901 434.164 275.031C430.864 272.869 427.459 270.758 423.953 268.698C422.848 268.049 421.733 267.405 420.608 266.767C412.609 262.225 404.109 257.949 395.156 253.968C394.573 253.709 393.988 253.451 393.401 253.194C392.991 253.015 392.58 252.836 392.168 252.657V252.656C380.643 247.671 368.393 243.166 355.52 239.195V0H500ZM404.221 234.679L420.455 244.112V26.1494L404.221 25.1709V234.679Z" fill="black"/></g>
+      </svg>
+      <div class="counter">
+        <span id="progress-counter">00</span>%
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.loader-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+}
+.loader-panel {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 50vw;
+  background: #fff;
+  z-index: 9998;
+}
+#panel-left { left: 0; }
+#panel-right { right: 0; }
+
+.loader-content {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.logo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.animated-logo {
+  width: 400px;
+  max-width: 80vw;
+}
+.counter {
+  margin-top: 20px;
+  font-family: 'Courier New', monospace;
+  font-size: 32px;
+  font-weight: bold;
+}
+.time-display {
+  position: fixed;
+  top: 40px;
+  right: 40px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  color: #555;
+  z-index: 9999;
+}
+.time-display p {
+  margin: 0;
+  line-height: 1.4;
+}
+</style>
+
+<script>
+import { gsap } from "gsap";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const loaderContainer = document.querySelector(".loader-container");
+  const loaderContent = document.querySelector(".loader-content");
+  const logoLetters = "#letter-L, #letter-E, #letter-O1, #letter-O2";
+  const counter = document.getElementById("progress-counter");
+
+  // --- GESTION DE LA DATE ET DE L'HEURE ---
+  const line1 = document.getElementById("time-line1");
+  const line2 = document.getElementById("time-line2");
+  const line3 = document.getElementById("time-line3");
+  
+  const now = new Date();
+  
+  const updateTimeDisplay = () => { // Fonction pour mettre à jour l'heure, appelée une fois au début
+    const current = new Date(); // Obtenir l'heure actuelle à chaque appel
+    
+    // Ligne 1: DD/MM/YYYY @ HH:MM:SS (PM/AM)
+    const hours12 = current.getHours() % 12 || 12;
+    const ampm = current.getHours() >= 12 ? 'PM' : 'AM';
+    line1.textContent = 
+      `${String(current.getDate()).padStart(2, '0')}/` +
+      `${String(current.getMonth() + 1).padStart(2, '0')}/` +
+      `${current.getFullYear()} @ ` +
+      `${String(hours12).padStart(2, '0')}:` +
+      `${String(current.getMinutes()).padStart(2, '0')}:` +
+      `${String(current.getSeconds()).padStart(2, '0')} ${ampm}`;
+
+    // Ligne 2: YYYY-MM-DD CEST (UTC+2)
+    line2.textContent = 
+      `${current.getFullYear()}-` +
+      `${String(current.getMonth() + 1).padStart(2, '0')}-` +
+      `${String(current.getDate()).padStart(2, '0')} CEST (UTC+2)`;
+
+    // Ligne 3: JOUR, JJ MM ANNÉE
+    const dayName = current.toLocaleDateString('fr-FR', { weekday: 'long' });
+    const monthName = current.toLocaleDateString('fr-FR', { month: 'short' });
+    line3.textContent = 
+      `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ` +
+      `${current.getDate()} ${monthName} ${current.getFullYear()}`;
+  };
+
+  updateTimeDisplay(); // Appel initial pour afficher l'heure
+  // setInterval(updateTimeDisplay, 1000); // Pour mettre à jour chaque seconde si tu veux un vrai compte à rebours (décommenter si besoin)
+
+
+  // --- ANIMATION PRINCIPALE ---
+  const mainAnim = gsap.from(logoLetters, {
+    opacity: 0,
+    y: 30,
+    duration: 1,
+    ease: "power2.out",
+    stagger: 0.2,
+    delay: 0.5,
+    onComplete: runExitAnimation
+  });
+
+  // --- COMPTEUR 0-100% ---
+  gsap.to({ val: 0 }, {
+    val: 100,
+    duration: mainAnim.duration(),
+    delay: mainAnim.delay(),
+    ease: "none",
+    onUpdate: function() {
+      counter.textContent = Math.round(this.targets()[0].val).toString().padStart(2, '0');
+    }
+  });
+
+  // --- ANIMATION DE SORTIE ORIGINALE ---
+  function runExitAnimation() {
+    const exitTl = gsap.timeline({
+      delay: 1, // Pause de 1s avant de lancer l'animation de sortie
+      onComplete: () => loaderContainer.remove()
+    });
+    
+    // Animer le logo et le compteur pour qu'ils glissent vers le haut et disparaissent
+    exitTl.to(loaderContent, {
+      yPercent: -100, // Déplace l'élément de 100% de sa hauteur vers le haut
+      opacity: 0,    // Le rend transparent en même temps
+      duration: 0.6,
+      ease: "power2.in"
+    });
+    
+    // Animer l'affichage de l'heure pour qu'il disparaisse en même temps
+    exitTl.to(".time-display", {
+      opacity: 0,
+      y: -50, // Le déplace aussi légèrement vers le haut
+      duration: 0.4,
+      ease: "power2.in"
+    }, "<"); // En même temps que loaderContent
+
+    // Ensuite, les panneaux s'ouvrent en coulissant (reste inchangé)
+    exitTl.to("#panel-left", {
+      xPercent: -100,
+      duration: 1,
+      ease: "expo.inOut"
+    });
+    exitTl.to("#panel-right", {
+      xPercent: 100,
+      duration: 1,
+      ease: "expo.inOut"
+    }, "<");
+  }
+});
+</script>

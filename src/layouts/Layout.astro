@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
 import Footer from '../components/Footer.astro';
+import Loader from '../components/Loader.astro';
+
 ---
 <!doctype html>
 <!-- PEUT CHANGER DATA-THEME DE  
@@ -16,6 +18,8 @@ import Footer from '../components/Footer.astro';
     <title>Astro Basics</title>
 </head>
 <body>
+    <Loader />
+
     <slot />
     <Footer />
 </body>
