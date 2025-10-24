@@ -1,14 +1,25 @@
 - Responsive text cards BG FOOTER
-
-
+## IMPORTANT -> HERO A RALENTIR 
+### -> PENSER AU LAZY LOADING, PENSER A L'ACCESSIBILITÉ, PENSER AU SEO.
+#20/10/25
 
 - Menu : Voir flabbergast agency ? Sinon on reste sur le classique
 - MENU : Completer nav, 
------ VOIR HTML SEMENTIQUE
------ ATTRIBUTS ARIAs
------ ----- ( ACCESSIBILITE ULTRA IMPORTANT )
+- - VOIR HTML SEMENTIQUE
+- - - ATTRIBUTS ARIAs
 <!-- ----- ----- ----- VOIR FONCTION JS > CHANGE COULEUR TEXTE SELON CONTRASTE (BLANC OU NOIR) -->
 
-
+#24/10/25
 
 - MENU : RESPONSIVE !!!!!!!!
+- MENU : Bouton contact doit disparaitre en version mobile (reste dans menu header déplié)
+- MENU : Desktop -> Hover texte = coulissement (comprendra qui pourra)
+- - Animations GSAP pour StackedSections.astro ? 
+- - - HERO : Le timestamp doit être fonctionnel (comme pour le loader)
+- - - Organiser les dossiers (surtout components)
+- - - Penser a react et SHADCN ? 
+
+
+
+
+POUR LA PROCHAINE FOIS D'APRÈS : Les thèmes et le mode sombre
