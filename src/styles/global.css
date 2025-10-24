@@ -105,3 +105,14 @@
     font-family: "Poppins", sans-serif;
   }
 }
+
+/* Cacher la scrollbar sur tout le site */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+html::-webkit-scrollbar {
+  display: none; 
+}
+
+

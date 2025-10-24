@@ -2,7 +2,7 @@
 // Loader.astro
 import '/src/styles/global.css';
 ---
-<div class="loader-container">
+<div class="loader-container" style="display: none;">
 
   <div class="time-display">
     <p id="time-line1"></p>
@@ -73,11 +73,11 @@ import '/src/styles/global.css';
 .counter {
   margin-top: 20px;
   font-family: 'Poppins', sans-serif;
-  font-size: 5rem; 
-  font-weight: 200; 
+  font-size: 5rem;
+  font-weight: 200;
 }
 .counter span {
-  letter-spacing: -0.08em; 
+  letter-spacing: -0.08em;
 }
 
 .time-display {
@@ -132,8 +132,31 @@ import '/src/styles/global.css';
 <script>
 import { gsap } from "gsap";
 
+// 🔥 EXÉCUTÉ IMMÉDIATEMENT (avant DOMContentLoaded)
+const loaderContainer = document.querySelector(".loader-container");
+const isTransitioning = sessionStorage.getItem("pageTransition");
+
+// Si on est en transition, on supprime le loader immédiatement
+if (isTransitioning === "true") {
+  loaderContainer?.remove();
+} else {
+  // Sinon on vérifie si c'est un premier load
+  const navigation = performance.getEntriesByType("navigation")[0];
+  const isExternalOrDirect = !document.referrer || !document.referrer.includes(location.origin);
+  const isFirstLoad = navigation?.type === "reload" || isExternalOrDirect;
+
+  if (!isFirstLoad) {
+    loaderContainer?.remove();
+  } else {
+    // C'est un premier load, on affiche le loader
+    loaderContainer.style.display = "block";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  const loaderContainer = document.querySelector(".loader-container");
+  // Si le loader a été supprimé, on arrête
+  if (!loaderContainer || !document.body.contains(loaderContainer)) return;
+
   const loaderContent = document.querySelector(".loader-content");
   const logoLetters = "#letter-L, #letter-E, #letter-O1, #letter-O2";
   const counter = document.getElementById("progress-counter");
@@ -141,15 +164,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const line1 = document.getElementById("time-line1");
   const line2 = document.getElementById("time-line2");
   const line3 = document.getElementById("time-line3");
-  
+
   const updateTimeDisplay = () => {
     const current = new Date();
-    
+   
     const hours12 = current.getHours() % 12 || 12;
     const ampm = current.getHours() >= 12 ? 'PM' : 'AM';
 
     if (line1) {
-      line1.textContent = 
+      line1.textContent =
         `${String(current.getDate()).padStart(2, '0')}/` +
         `${String(current.getMonth() + 1).padStart(2, '0')}/` +
         `${current.getFullYear()} @ ` +
@@ -159,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (line2) {
-      line2.textContent = 
+      line2.textContent =
         `${current.getFullYear()}-` +
         `${String(current.getMonth() + 1).padStart(2, '0')}-` +
         `${String(current.getDate()).padStart(2, '0')} CEST (UTC+2)`;
@@ -169,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const monthName = current.toLocaleDateString('fr-FR', { month: 'short' });
 
     if (line3) {
-      line3.textContent = 
+      line3.textContent =
         `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ` +
         `${current.getDate()} ${monthName} ${current.getFullYear()}`;
     }
@@ -211,14 +234,14 @@ document.addEventListener("DOMContentLoaded", () => {
       delay: 1,
       onComplete: () => loaderContainer?.remove()
     });
-    
+   
     exitTl.to(loaderContent, {
       yPercent: -100,
       opacity: 0,
       duration: 0.6,
       ease: "power2.in"
     });
-    
+   
     exitTl.to([".time-display", ".loading-bar-container"], {
       opacity: 0,
       duration: 0.4,

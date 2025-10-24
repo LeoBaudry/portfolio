@@ -14,6 +14,7 @@
 - MENU : RESPONSIVE !!!!!!!!
 - MENU : Bouton contact doit disparaitre en version mobile (reste dans menu header déplié)
 - MENU : Desktop -> Hover texte = coulissement (comprendra qui pourra)
+- HERO : `data-theme="dark"` pour accessibilité menu ?
 - - Animations GSAP pour StackedSections.astro ? 
 - - - HERO : Le timestamp doit être fonctionnel (comme pour le loader)
 - - - Organiser les dossiers (surtout components)
