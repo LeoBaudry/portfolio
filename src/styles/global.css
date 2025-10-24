@@ -1,12 +1,10 @@
 /* === Tailwind & Plugins === */
-
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/*
- * CONTENU DE TYPOGRAPHY.CSS COLLÉ ICI
- */
 /* === Polices === */
+
+/* Poppins */
 @import "@fontsource/poppins/100.css";
 @import "@fontsource/poppins/200.css";
 @import "@fontsource/poppins/300.css";
@@ -17,15 +15,39 @@
 @import "@fontsource/poppins/800.css";
 @import "@fontsource/poppins/900.css";
 
-@layer base {
-  .hero-title {
-    @apply font-[900] text-[12rem] leading-[1]; /* Ultra bold */
+/* Bebas Neue */
+@import "@fontsource/bebas-neue/400.css";
+
+/* === Classes personnalisées === */
+@layer components {
+  .hero-text-left {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-size: 50px;
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: white;
   }
 
-  .section-title {
-    @apply font-[700] text-5xl; /* Bold */
+  .hero-text-right {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-size: 65px;
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: white;
+  }
+
+  .hero-timestamp {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 100;
+    font-size: 14px;
+    color: white;
+    opacity: 0.7;
   }
 }
+
+
 /* === FIN DU CONTENU COLLÉ === */
 
 @custom-variant dark (&:is(.dark *));

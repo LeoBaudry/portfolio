@@ -1,0 +1,85 @@
+---
+// src/components/StackedSections.astro
+interface Section {
+  number: string;
+  title: string;
+  description: string;
+  bgClass: string;
+  textColor: string;
+}
+
+const sections: Section[] = [
+  {
+    number: "01",
+    title: "Designer & Explorateur Visuel",
+    description: "Je crée des expériences numériques qui mêlent rigueur et sensibilité. Mon parcours navigue entre design produit, identité visuelle et code créatif. Je crois qu'un design réussi doit autant résoudre qu'émouvoir.",
+    bgClass: "bg-[#EEEEEE]",
+    textColor: "text-black"
+  },
+  {
+    number: "02",
+    title: "Produit & Identité",
+    description: "De la recherche utilisateur au design d'interface, de la création d'univers graphiques à la direction artistique, j'imagine et construis des systèmes visuels qui aident les projets à croître et à se distinguer.",
+    bgClass: "bg-[#333333]",
+    textColor: "text-white"
+  },
+  {
+    number: "03",
+    title: "Collaboration & Impact",
+    description: "Je m'intègre aux équipes pour apporter à la fois expertise et vision. Je conçois des expériences qui captivent, convertissent et perdurent. Chaque projet est pour moi l'occasion de donner forme à une idée forte.",
+    bgClass: "bg-gradient-to-r from-[#FF7957] to-[#F3471C]",
+    textColor: "text-black"
+  }
+];
+---
+
+<section class="relative scroll-smooth" aria-label="Services et expertises" style="scroll-padding-top: 33vh;">
+  <div class="relative">
+    {sections.map((section, index) => {
+      const isLastSection = index === sections.length - 1;
+      return (
+        <>
+          {/* <!-- Espace pour le scroll progressif --> */}
+          <div class="h-screen" aria-hidden="true"></div>
+
+          {/* <!-- Section sticky --> */}
+          <article
+            class={`sticky ${isLastSection ? 'h-[34vh]' : 'h-[33vh]'} flex items-center justify-center 
+                    px-4 sm:px-6 md:px-12 lg:px-20 xl:px-32 2xl:px-[300px]
+                    ${section.bgClass} ${section.textColor}`}
+            style={`top: ${index * 33}vh; z-index: ${30 - index * 10};`}
+            aria-labelledby={`section-title-${index + 1}`}
+          >
+            <div class="max-w-[1400px] w-full grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 lg:gap-16 items-center">
+              {/* <!-- Colonne gauche : Titre --> */}
+              <div>
+                <span 
+                  class="block text-sm lg:text-lg font-semibold opacity-60 mb-2 lg:mb-4"
+                  aria-label={`Section ${section.number}`}
+                >
+                  {section.number}
+                </span>
+                <h2 
+                  id={`section-title-${index + 1}`}
+                  class="text-2xl sm:text-3xl lg:text-5xl font-bold leading-tight"
+                >
+                  {section.title}
+                </h2>
+              </div>
+
+              {/* <!-- Colonne droite : Description --> */}
+              <div>
+                <p class="text-xs sm:text-sm lg:text-base leading-relaxed opacity-90">
+                  {section.description}
+                </p>
+              </div>
+            </div>
+          </article>
+        </>
+      );
+    })}
+
+    <!-- Espace final pour voir toutes les sections empilées -->
+    <div class="h-screen" aria-hidden="true"></div>
+  </div>
+</section>

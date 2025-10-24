@@ -1,0 +1,57 @@
+---
+// src/components/Hero.astro
+interface Props {
+  topLine1: string;
+  topLine2: string;
+  bottomLine: string;
+  backgroundVideo?: string;
+}
+
+const { topLine1, topLine2, bottomLine, backgroundVideo = "/videos/hero.mp4" } = Astro.props;
+---
+
+<section class="w-screen ml-[calc(-50vw+50%)] md:w-full md:ml-0 md:p-5">
+  <div class="relative h-screen md:h-[calc(100vh-40px)] md:rounded-[20px] overflow-hidden bg-black flex flex-col justify-end md:justify-end px-6 md:px-0">
+    <!-- Video background -->
+    <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover md:rounded-[20px]">
+      <source src={backgroundVideo} type="video/mp4" />
+    </video>
+
+    <!-- Contenu (z-10 pour être au-dessus de la vidéo) -->
+    <div class="relative z-10 w-full pb-[60px] md:pb-0">
+      <!-- Desktop & Tablet Layout -->
+      <div class="hidden md:block">
+        <!-- Texte haut à gauche -->
+        <div class="absolute left-[60px] lg:left-[80px] bottom-[50px] lg:bottom-[60px]">
+          <div class="text-[40px] lg:text-[50px] leading-[0.9] uppercase text-white" style="font-family: 'Bebas Neue', sans-serif;">{topLine1}</div>
+          <div class="text-[40px] lg:text-[50px] leading-[0.9] uppercase text-white" style="font-family: 'Bebas Neue', sans-serif;">{topLine2}</div>
+        </div>
+
+        <!-- Texte bas à droite -->
+        <div class="absolute right-[60px] lg:right-[80px] bottom-[50px] lg:bottom-[60px] text-right">
+          <div class="text-[50px] lg:text-[65px] leading-[0.9] uppercase text-white" style="font-family: 'Bebas Neue', sans-serif;">{bottomLine}</div>
+        </div>
+      </div>
+
+      <!-- Mobile Layout -->
+      <div class="md:hidden flex flex-col items-center justify-center gap-3 text-center px-6">
+        <div class="text-[20px] min-[400px]:text-[26px] leading-[0.9] uppercase text-white" style="font-family: 'Bebas Neue', sans-serif;">
+          {topLine1}
+        </div>
+        <div class="text-[32px] min-[400px]:text-[40px] leading-[0.9] uppercase text-white" style="font-family: 'Bebas Neue', sans-serif;">
+          {topLine2}
+        </div>
+        <div class="text-[44px] min-[400px]:text-[52px] leading-[0.9] uppercase text-white" style="font-family: 'Bebas Neue', sans-serif;">
+          {bottomLine}
+        </div>
+      </div>
+    </div>
+
+    <!-- Timestamp au centre à droite (Desktop only) -->
+    <div class="hidden md:block absolute right-[80px] top-1/2 -translate-y-1/2 hero-timestamp text-right">
+      <div>03/10/2025 @ 1:30 PM</div>
+      <div>2025-10-03 CEST (UTC+2)</div>
+      <div>FRI, 03 OCT 2025</div>
+    </div>
+  </div>
+</section>

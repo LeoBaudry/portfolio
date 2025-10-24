@@ -1,26 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
-// Ton AnimatedLogo n'était pas utilisé, je le retire pour la clarté
-// import AnimatedLogo from '../components/AnimatedLogo.astro';
+import Loader from '../components/Loader.astro';
+import Hero from '../components/Hero.astro';
+import StackedSections from '../components/StackedSections.astro';
 ---
 
 <Layout>
-    <section data-theme="light" class="p-4 md:p-8">
-        <h1>TEST</h1>
-        <div style="background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%); padding: 1rem 1.25rem; border-radius: 8px; color: #fff;">
-            <h2>Section avec fond coloré</h2>
-            <p>Le header restera en mode "clair" ici car il n'y a pas de tag "dark".</p>
-        </div>
-        <p class="py-10">Lorem ipsum dolor sit amet consectetur adipisicing elit. Magni debitis sunt accusantium. Sequi obcaecati totam inventore blanditiis expedita, asperiores doloribus reiciendis non. Facilis, nihil doloribus! Enim eveniet optio assumenda natus.</p>
-    </section>
+    
+    <Hero 
+    topLine1="L'originalité"
+    topLine2="n'est pas un choix,"
+    bottomLine="c'est une nécessité."
+    backgroundVideo="/videos/hero.mp4"
+    />
 
-    <section data-theme="light" style="width:90vw; height:90vh; background:#fff; color:#000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.5rem;">
-        <h2>Section claire — texte noir</h2>
-        <p>Test de contraste : fond blanc (#ffffff), texte noir (#000000).</p>
-    </section>
-
-    <section data-theme="dark" style="width:90vw; height:90vh; background:#000; color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.5rem;">
-        <h2>Section sombre — texte blanc</h2>
-        <p>Test de contraste : fond noir (#000000), texte blanc (#ffffff).</p>
-    </section>
+    <Loader />
+    <StackedSections />
 </Layout>
