@@ -18,7 +18,9 @@ let isAnimating = false;
 
 // 🔥 Simple : intercepter les clics
 document.addEventListener("click", (e) => {
-  const link = e.target.closest("a[href]");
+  // ensure e.target is an Element before calling .closest to avoid null/undefined
+  const target = e.target instanceof Element ? e.target : null;
+  const link = target?.closest("a[href]");
   
   if (!link) return;
   
@@ -40,6 +42,12 @@ document.addEventListener("click", (e) => {
   const overlay = document.getElementById("page-transition");
   const logo = document.getElementById("transition-logo");
   
+  // safeguard: if overlay or logo are missing, abort animation and allow default navigation
+  if (!overlay || !logo) {
+    isAnimating = false;
+    return;
+  }
+  
   document.body.style.overflow = "hidden";
   overlay.style.pointerEvents = "auto";
   overlay.style.opacity = "1";
@@ -49,7 +57,7 @@ document.addEventListener("click", (e) => {
   
   enterAnimation.fromTo(overlay, { y: "100%" }, {
     y: "0%",
-    duration: 1,
+    duration: 0.9,
     ease: "power3.inOut"
   });
   
@@ -58,8 +66,8 @@ document.addEventListener("click", (e) => {
     {
       opacity: 1,
       y: -80,
-      duration: 0.8,
-      delay: 0.2,
+      duration: 0.7,
+      delay: 0.15,
       ease: "power2.out"
     },
     0
@@ -75,8 +83,9 @@ document.addEventListener("click", (e) => {
 document.addEventListener("astro:after-swap", () => {
   const overlay = document.getElementById("page-transition");
   const logo = document.getElementById("transition-logo");
+  const pageContent = document.getElementById("page-content");
   
-  if (!overlay) return;
+  if (!overlay || !logo) return;
   
   overlay.style.transform = "translateY(0%)";
   overlay.style.opacity = "1";
@@ -86,30 +95,44 @@ document.addEventListener("astro:after-swap", () => {
   logo.style.opacity = "1";
   logo.style.transform = "translateY(-80px)";
   
+  // 🔥 Blur doux (25px)
+  if (pageContent) {
+    pageContent.style.filter = "blur(25px)";
+  }
+  
   const exitAnimation = gsap.timeline({
     onComplete: () => {
       overlay.style.pointerEvents = "none";
       overlay.style.transform = "translateY(100%)";
       overlay.style.opacity = "0";
-      logo.style.opacity = "0";
       document.body.style.overflow = "";
+      if (pageContent) pageContent.style.filter = "";
       isAnimating = false;
     }
   });
   
-  // Logo descend + fade out
+  // Logo descend + fade out (plus rapide et dynamique)
   exitAnimation.to(logo, {
     y: 100,
     opacity: 0,
-    duration: 0.8,
+    duration: 0.6,
     ease: "power2.in"
   }, 0);
   
-  // 🔥 Rectangle descend VERS LE BAS (y: "100%")
+  // 🔥 Rectangle remonte plus vite et avec plus de punch
   exitAnimation.to(overlay, {
     y: "-100%",
-    duration: 1,
-    ease: "power3.inOut"
+    duration: 1.2,
+    ease: "power4.inOut"
   }, 0);
+  
+  // 🔥 Déblur plus dynamique avec ease plus punchy
+  if (pageContent) {
+    exitAnimation.to(pageContent, {
+      filter: "blur(0px)",
+      duration: 0.8,
+      ease: "power3.out"
+    }, 0.4);
+  }
 });
 </script>

@@ -27,7 +27,9 @@ import { ClientRouter } from 'astro:transitions';
     <Loader />
     <Transition />
     <Header />
-    <slot />
+    <div id="page-content">
+      <slot />
+    </div>
     <Footer />
 </body>
 </html>
