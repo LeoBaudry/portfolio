@@ -1,43 +1,43 @@
----
-import "../styles/global.css";
-import Header from "../components/Header.astro";
-import Footer from '../components/Footer.astro';
-import Loader from '../components/Loader.astro';
-import Transition from '../components/Transition.astro';
-import { ClientRouter } from 'astro:transitions';
----
-<!doctype html>
-<html lang="fr" data-theme="light">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Astro Basics</title>
-    <ClientRouter />
-    <style>
-      /* 🔥 Désactiver les transitions par défaut d'Astro */
-      ::view-transition-old(root),
-      ::view-transition-new(root) {
-        animation: none;
+  ---
+  import "../styles/global.css";
+  import Header from "../components/Header.astro";
+  import Footer from '../components/Footer.astro';
+  import Loader from '../components/Loader.astro';
+  import Transition from '../components/Transition.astro';
+  import { ClientRouter } from 'astro:transitions';
+  ---
+  <!doctype html>
+  <html lang="fr" data-theme="light">
+  <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width" />
+      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      <meta name="generator" content={Astro.generator} />
+      <title>Astro Basics</title>
+      <ClientRouter />
+      <style>
+        /* 🔥 Désactiver les transitions par défaut d'Astro */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+          animation: none;
+        }
+      </style>
+  </head>
+  <body>
+      <Loader />
+      <Transition />
+      <Header />
+      <div id="page-content">
+        <slot />
+      </div>
+      <Footer />
+  </body>
+  </html>
+  <style>
+      html,
+      body {
+          margin: 0;
+          width: 100%;
+          height: 100%;
       }
-    </style>
-</head>
-<body>
-    <Loader />
-    <Transition />
-    <Header />
-    <div id="page-content">
-      <slot />
-    </div>
-    <Footer />
-</body>
-</html>
-<style>
-    html,
-    body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-    }
-</style>
+  </style>

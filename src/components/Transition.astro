@@ -1,13 +1,20 @@
 ---
 // Transition.astro
 ---
-<div id="page-transition" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(100%); background-color: white; overflow: hidden;">
-  <svg id="transition-logo" width="150" height="91" viewBox="0 0 500 304" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width: 40vw; opacity: 0; transform: translateY(0px);">
-    <g><path d="M79.5456 201.109L89.2795 199.672L89.2859 199.829C144.763 192.558 192.502 183.459 209.416 181.371V219.374C141.149 220.32 78.8835 234.497 30.8442 257.394V30.8679C30.8442 15.2715 10.2814 3.79079 0 0H79.5456V201.109Z" fill="black"/></g>
-    <g><path d="M209.416 162.437L101.876 175.46L107.142 144.592C122.778 145.097 148.567 140.518 160.713 133.706V95.041H131.493V71.4834H160.713V26.3945C150.129 22.735 126.736 22.2436 111.201 22.7451V0H209.416V162.437Z" fill="black"/></g>
-    <g><path d="M339.286 234.559C304.719 225.459 266.26 220.091 225.649 219.402V0H339.286V234.559ZM274.35 195.127L290.584 197.589V19.707L274.35 19.001V195.127Z" fill="black"/></g>
-    <g><path d="M500 0C489.719 3.79088 469.156 15.2719 469.156 30.8682V304C459.468 293.611 447.703 283.901 434.164 275.031C430.864 272.869 427.459 270.758 423.953 268.698C422.848 268.049 421.733 267.405 420.608 266.767C412.609 262.225 404.109 257.949 395.156 253.968C394.573 253.709 393.988 253.451 393.401 253.194C392.991 253.015 392.58 252.836 392.168 252.657V252.656C380.643 247.671 368.393 243.166 355.52 239.195V0H500ZM404.221 234.679L420.455 244.112V26.1494L404.221 25.1709V234.679Z" fill="black"/></g>
+<div id="page-transition" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: center; gap: 150px; opacity: 0; transform: translateY(100%); background-color: #F3471C; overflow: hidden;">
+  
+  <svg class="transition-star" width="80" height="80" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0; position: absolute;">
+    <path d="M18.4346 43.7032C18.3584 45.2431 18.4108 46.788 18.5913 48.3208C13.5625 47.5162 7.45661 46.833 8.0642e-05 45.9999C7.37937 45.1754 13.4357 44.497 18.4346 43.7032ZM48.3333 72.5744C47.5033 77.7661 46.8301 84.136 46 91.9998C45.0815 84.127 44.3368 77.7514 43.4512 72.5565C45.0748 72.7062 46.7088 72.7114 48.3333 72.5744ZM18.5913 48.3208C36.0481 51.114 40.5236 55.3814 43.4512 72.5565C37.2598 71.9856 31.2244 69.3314 26.4841 64.5912C21.9219 60.029 19.2914 54.2669 18.5913 48.3208ZM43.7571 17.5672C40.8161 36.3679 36.643 40.8117 18.4346 43.7032C18.761 37.1038 21.4433 30.5989 26.4834 25.5587C31.3017 20.7404 37.4588 18.0776 43.7571 17.5672ZM73.4121 48.2883C72.7178 54.246 70.0864 60.0207 65.5159 64.5912C60.7207 69.3863 54.6 72.0459 48.3333 72.5744C51.0922 55.317 55.5917 51.082 73.4121 48.2883ZM65.5166 25.5587C70.5131 30.5553 73.1917 36.9914 73.5558 43.532C55.0498 40.4562 50.8281 36.0687 48.0764 17.5527C54.4327 18.0293 60.6558 20.698 65.5166 25.5587ZM91.9999 45.9999C84.5627 46.8217 78.4543 47.4979 73.4121 48.2883C73.5962 46.7093 73.644 45.1177 73.5558 43.532C78.5702 44.3654 84.6331 45.1045 91.9999 45.9999ZM46 0C46.7427 6.95833 47.3603 12.7338 48.0764 17.5527C46.6387 17.4449 45.1943 17.4507 43.7571 17.5672C44.5134 12.733 45.1892 6.94996 46 0Z" fill="white"/>
   </svg>
+
+  <svg class="transition-star" width="80" height="80" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0; position: absolute;">
+    <path d="M18.4346 43.7032C18.3584 45.2431 18.4108 46.788 18.5913 48.3208C13.5625 47.5162 7.45661 46.833 8.0642e-05 45.9999C7.37937 45.1754 13.4357 44.497 18.4346 43.7032ZM48.3333 72.5744C47.5033 77.7661 46.8301 84.136 46 91.9998C45.0815 84.127 44.3368 77.7514 43.4512 72.5565C45.0748 72.7062 46.7088 72.7114 48.3333 72.5744ZM18.5913 48.3208C36.0481 51.114 40.5236 55.3814 43.4512 72.5565C37.2598 71.9856 31.2244 69.3314 26.4841 64.5912C21.9219 60.029 19.2914 54.2669 18.5913 48.3208ZM43.7571 17.5672C40.8161 36.3679 36.643 40.8117 18.4346 43.7032C18.761 37.1038 21.4433 30.5989 26.4834 25.5587C31.3017 20.7404 37.4588 18.0776 43.7571 17.5672ZM73.4121 48.2883C72.7178 54.246 70.0864 60.0207 65.5159 64.5912C60.7207 69.3863 54.6 72.0459 48.3333 72.5744C51.0922 55.317 55.5917 51.082 73.4121 48.2883ZM65.5166 25.5587C70.5131 30.5553 73.1917 36.9914 73.5558 43.532C55.0498 40.4562 50.8281 36.0687 48.0764 17.5527C54.4327 18.0293 60.6558 20.698 65.5166 25.5587ZM91.9999 45.9999C84.5627 46.8217 78.4543 47.4979 73.4121 48.2883C73.5962 46.7093 73.644 45.1177 73.5558 43.532C78.5702 44.3654 84.6331 45.1045 91.9999 45.9999ZM46 0C46.7427 6.95833 47.3603 12.7338 48.0764 17.5527C46.6387 17.4449 45.1943 17.4507 43.7571 17.5672C44.5134 12.733 45.1892 6.94996 46 0Z" fill="white"/>
+  </svg>
+
+  <svg class="transition-star" width="80" height="80" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0; position: absolute;">
+    <path d="M18.4346 43.7032C18.3584 45.2431 18.4108 46.788 18.5913 48.3208C13.5625 47.5162 7.45661 46.833 8.0642e-05 45.9999C7.37937 45.1754 13.4357 44.497 18.4346 43.7032ZM48.3333 72.5744C47.5033 77.7661 46.8301 84.136 46 91.9998C45.0815 84.127 44.3368 77.7514 43.4512 72.5565C45.0748 72.7062 46.7088 72.7114 48.3333 72.5744ZM18.5913 48.3208C36.0481 51.114 40.5236 55.3814 43.4512 72.5565C37.2598 71.9856 31.2244 69.3314 26.4841 64.5912C21.9219 60.029 19.2914 54.2669 18.5913 48.3208ZM43.7571 17.5672C40.8161 36.3679 36.643 40.8117 18.4346 43.7032C18.761 37.1038 21.4433 30.5989 26.4834 25.5587C31.3017 20.7404 37.4588 18.0776 43.7571 17.5672ZM73.4121 48.2883C72.7178 54.246 70.0864 60.0207 65.5159 64.5912C60.7207 69.3863 54.6 72.0459 48.3333 72.5744C51.0922 55.317 55.5917 51.082 73.4121 48.2883ZM65.5166 25.5587C70.5131 30.5553 73.1917 36.9914 73.5558 43.532C55.0498 40.4562 50.8281 36.0687 48.0764 17.5527C54.4327 18.0293 60.6558 20.698 65.5166 25.5587ZM91.9999 45.9999C84.5627 46.8217 78.4543 47.4979 73.4121 48.2883C73.5962 46.7093 73.644 45.1177 73.5558 43.532C78.5702 44.3654 84.6331 45.1045 91.9999 45.9999ZM46 0C46.7427 6.95833 47.3603 12.7338 48.0764 17.5527C46.6387 17.4449 45.1943 17.4507 43.7571 17.5672C44.5134 12.733 45.1892 6.94996 46 0Z" fill="white"/>
+  </svg>
+
 </div>
 
 <script>
@@ -16,9 +23,7 @@ import { navigate } from "astro:transitions/client";
 
 let isAnimating = false;
 
-// 🔥 Simple : intercepter les clics
 document.addEventListener("click", (e) => {
-  // ensure e.target is an Element before calling .closest to avoid null/undefined
   const target = e.target instanceof Element ? e.target : null;
   const link = target?.closest("a[href]");
   
@@ -40,10 +45,9 @@ document.addEventListener("click", (e) => {
   isAnimating = true;
   
   const overlay = document.getElementById("page-transition");
-  const logo = document.getElementById("transition-logo");
+  const stars = document.querySelectorAll(".transition-star");
   
-  // safeguard: if overlay or logo are missing, abort animation and allow default navigation
-  if (!overlay || !logo) {
+  if (!overlay || !stars.length) {
     isAnimating = false;
     return;
   }
@@ -52,55 +56,78 @@ document.addEventListener("click", (e) => {
   overlay.style.pointerEvents = "auto";
   overlay.style.opacity = "1";
   
-  // Animation ENTRÉE : rectangle monte + logo monte
   const enterAnimation = gsap.timeline();
   
+  // Overlay monte en 0.6s
   enterAnimation.fromTo(overlay, { y: "100%" }, {
     y: "0%",
-    duration: 0.9,
+    duration: 0.6,
     ease: "power3.inOut"
   });
   
-  enterAnimation.fromTo(logo, 
-    { opacity: 0, y: 100 },
+  // Les 3 étoiles apparaissent superposées au centre
+  enterAnimation.fromTo(stars, 
+    { opacity: 0, x: 0, y: 100 },
     {
       opacity: 1,
-      y: -80,
-      duration: 0.7,
-      delay: 0.15,
+      y: 0,
+      duration: 0.6,
       ease: "power2.out"
     },
-    0
+    0.1
   );
   
-  // Après l'animation d'entrée, naviguer
+  // Puis elles se décalent à leur position finale
+  enterAnimation.to(stars[0], {
+    x: -230,
+    duration: 0.6,
+    ease: "back.out(1.7)"
+  }, 0.5);
+  
+  enterAnimation.to(stars[1], {
+    x: 0,
+    duration: 0.6,
+    ease: "back.out(1.7)"
+  }, 0.5);
+  
+  enterAnimation.to(stars[2], {
+    x: 230,
+    duration: 0.6,
+    ease: "back.out(1.7)"
+  }, 0.5);
+  
+  // Délai réduit à 0.4s avant navigation
+  enterAnimation.to({}, { duration: 0.4 });
+  
   enterAnimation.eventCallback("onComplete", () => {
     navigate(href);
   });
 }, true);
 
-// 🔥 Après le swap : animation de SORTIE
 document.addEventListener("astro:after-swap", () => {
   const overlay = document.getElementById("page-transition");
-  const logo = document.getElementById("transition-logo");
+  const stars = document.querySelectorAll(".transition-star");
   const pageContent = document.getElementById("page-content");
   
-  if (!overlay || !logo) return;
+  if (!overlay || !stars.length) return;
   
   overlay.style.transform = "translateY(0%)";
   overlay.style.opacity = "1";
-  overlay.style.backgroundColor = "white";
+  overlay.style.backgroundColor = "#F3471C";
   overlay.style.pointerEvents = "auto";
   
-  logo.style.opacity = "1";
-  logo.style.transform = "translateY(-80px)";
+  // Reset les étoiles à leur position finale écartée
+  gsap.set(stars[0], { opacity: 1, x: -230, y: 0 });
+  gsap.set(stars[1], { opacity: 1, x: 0, y: 0 });
+  gsap.set(stars[2], { opacity: 1, x: 230, y: 0 });
   
-  // 🔥 Blur doux (25px)
   if (pageContent) {
     pageContent.style.filter = "blur(25px)";
   }
   
+  // Délai réduit à 0.3s avant l'animation de sortie
   const exitAnimation = gsap.timeline({
+    delay: 0.3,
     onComplete: () => {
       overlay.style.pointerEvents = "none";
       overlay.style.transform = "translateY(100%)";
@@ -111,28 +138,34 @@ document.addEventListener("astro:after-swap", () => {
     }
   });
   
-  // Logo descend + fade out (plus rapide et dynamique)
-  exitAnimation.to(logo, {
-    y: 100,
-    opacity: 0,
-    duration: 0.6,
+  // Les étoiles se regroupent au centre
+  exitAnimation.to(stars, {
+    x: 0,
+    duration: 0.2,
     ease: "power2.in"
   }, 0);
   
-  // 🔥 Rectangle remonte plus vite et avec plus de punch
+  // Puis disparaissent ensemble
+  exitAnimation.to(stars, {
+    y: 100,
+    opacity: 0,
+    duration: 0.5,
+    ease: "power2.in"
+  }, 0.3);
+  
+  // Overlay descend en 0.6s
   exitAnimation.to(overlay, {
     y: "-100%",
-    duration: 1.2,
+    duration: 0.6,
     ease: "power4.inOut"
   }, 0);
   
-  // 🔥 Déblur plus dynamique avec ease plus punchy
   if (pageContent) {
     exitAnimation.to(pageContent, {
       filter: "blur(0px)",
       duration: 0.8,
       ease: "power3.out"
-    }, 0.4);
+    }, 0.3);
   }
 });
 </script>
