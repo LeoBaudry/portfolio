@@ -149,11 +149,13 @@ import Icon from './Icon.astro';
 <script>
   import { gsap } from "gsap";
 
-  const menuToggle = document.getElementById('menu-toggle');
-  const menuDropdown = document.getElementById('menu-dropdown');
+  // 🔥 Fonction d'initialisation du menu
+  function initMenu() {
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuDropdown = document.getElementById('menu-dropdown');
 
-  // Only initialize menu behavior if both elements are present
-  if (menuToggle && menuDropdown) {
+    if (!menuToggle || !menuDropdown) return;
+
     const menuContainer = menuToggle.parentElement;
     const menuItems = gsap.utils.toArray('.menu-item');
     let isMenuOpen = false;
@@ -224,7 +226,8 @@ import Icon from './Icon.astro';
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  // 🔥 Fonction d'initialisation du theme observer
+  function initThemeObserver() {
     const header = document.getElementById('main-header');
     if (!header) return;
     
@@ -253,5 +256,15 @@ import Icon from './Icon.astro';
     sections.forEach(section => {
       observer.observe(section);
     });
+  }
+
+  // 🔥 Initialiser au chargement de la page
+  initMenu();
+  initThemeObserver();
+
+  // 🔥 Réinitialiser après chaque transition Astro
+  document.addEventListener('astro:after-swap', () => {
+    initMenu();
+    initThemeObserver();
   });
 </script>
