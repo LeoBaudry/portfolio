@@ -2,7 +2,9 @@
 ## IMPORTANT -> HERO A RALENTIR 
 ### -> PENSER AU LAZY LOADING, PENSER A L'ACCESSIBILITÉ, PENSER AU SEO.
 
-#20/10/25
+--------------------------------------------------------------------------------------------------------------\
+#                                          # 20/10/25                                                          |
+--------------------------------------------------------------------------------------------------------------/
 
 - Menu : Voir flabbergast agency ? Sinon on reste sur le classique
 - MENU : Completer nav, 
@@ -10,7 +12,9 @@
 - - - ATTRIBUTS ARIAs
 <!-- ----- ----- ----- VOIR FONCTION JS > CHANGE COULEUR TEXTE SELON CONTRASTE (BLANC OU NOIR) -->
 
-#24/10/25
+--------------------------------------------------------------------------------------------------------------\
+#                                          # 24/10/25                                                          |
+--------------------------------------------------------------------------------------------------------------/
 
 <!-- - MENU : RESPONSIVE !!!!!!!! -->
 <!-- - MENU : Bouton contact doit disparaitre en version mobile (reste dans menu header déplié) -->
@@ -18,12 +22,14 @@
 <!-- - HERO : `data-theme="dark"` pour accessibilité menu ? -->  
  # PENSER QUAND MEME A AJOUTER LES DATA-THEME SUR TOUS LES ELEMENTS NECESSAIRES.
  ## -> QUELS RESULTATS AVEC UN MODE SOMBRE ?
-- - Animations GSAP pour StackedSections.astro ? 
+- - Animations GSAP pour StackedSections.astro ? (apparition texte)
 - - - HERO : Le timestamp doit être fonctionnel (comme pour le loader)
 - - - Organiser les dossiers (surtout components)
-- - - Penser a react et SHADCN ? 
+<!-- - - - Penser a react et SHADCN ?  -->
 
-#26/10/25
+--------------------------------------------------------------------------------------------------------------\
+#                                          # 26/10/25                                                          | 
+--------------------------------------------------------------------------------------------------------------/
 
 - MENU : PENSER au bouton contact à faire proprement. 
 UNE FOIS QUE C'EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma part ? 
@@ -34,5 +40,3 @@ UNE FOIS QUE C'EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma 
 VERIFIER SI : LAYOUT GLOBAL (HEADER/FOOTER/TRANSITIONS/LOADER) SONT : 
 - Fonctionnels
 - Responsive
-
-
