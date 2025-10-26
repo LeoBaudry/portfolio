@@ -39,11 +39,20 @@ const wrapperClass = `icon-wrapper ${hoverGradient ? `icon-hover-${hoverGradient
 
 <script>
   import gsap from 'gsap';
-  
-  document.addEventListener('DOMContentLoaded', () => {
+ 
+  // 1. Mettre TOUTE la logique dans une fonction
+  function initIconAnimations() {
     const iconWrappers = document.querySelectorAll('.icon-wrapper[class*="icon-hover-"]');
     
+    // Si on navigue et que l'ancienne anim est toujours là, on la stoppe
+    // (petite sécurité)
+    gsap.killTweensOf(".icon-wrapper[class*='icon-hover-'] svg radialGradient");
+
     iconWrappers.forEach((wrapper) => {
+      // Prévention : vérifier si l'animation n'est pas déjà attachée
+      if (wrapper.dataset.animationInitialized) return;
+      wrapper.dataset.animationInitialized = "true";
+
       const link = wrapper.closest('a');
       const svg = wrapper.querySelector('svg');
       if (!link || !svg) return;
@@ -58,43 +67,60 @@ const wrapperClass = `icon-wrapper ${hoverGradient ? `icon-hover-${hoverGradient
         return;
       }
       
-      // Sauvegarder les couleurs originales
       paths.forEach(el => {
         el.dataset.originalFill = el.getAttribute('fill') || 'currentColor';
       });
       
-      link.addEventListener('mouseenter', () => {
-        // Reset le rayon à 0%
+      const enterAnim = () => {
         gradient.setAttribute('r', '0%');
-        
-        // Appliquer le gradient
         paths.forEach(el => {
           el.setAttribute('fill', `url(#${gradientId})`);
         });
         
-        // Animer le rayon
         gsap.to(gradient, {
           attr: { r: '150%' },
           duration: 0.6,
           ease: 'power2.out'
         });
-      });
+      };
       
-      link.addEventListener('mouseleave', () => {
-        // Rétrécir le gradient
+      const leaveAnim = () => {
         gsap.to(gradient, {
           attr: { r: '20%' },
           duration: 0.4,
           ease: 'power2.in',
           onComplete: () => {
-            // Restaurer les couleurs originales
             paths.forEach(el => {
               el.setAttribute('fill', el.dataset.originalFill);
             });
           }
         });
-      });
+      };
+
+      link.addEventListener('mouseenter', enterAnim);
+      link.addEventListener('mouseleave', leaveAnim);
+
+      // Garder une référence pour pouvoir nettoyer
+      wrapper.cleanup = () => {
+        link.removeEventListener('mouseenter', enterAnim);
+        link.removeEventListener('mouseleave', leaveAnim);
+      }
+    });
+  }
+
+  // 2. L'appeler au premier chargement
+  initIconAnimations();
+
+  // 3. L'appeler après chaque navigation Astro
+  document.addEventListener('astro:after-swap', initIconAnimations);
+
+  // 4. (Bonus) Nettoyer les anciens listeners avant le "swap"
+  // pour éviter les fuites de mémoire
+  document.addEventListener('astro:before-swap', () => {
+    document.querySelectorAll('.icon-wrapper[class*="icon-hover-"]').forEach(wrapper => {
+      if (wrapper.cleanup) {
+        wrapper.cleanup();
+      }
     });
   });
 </script>
-

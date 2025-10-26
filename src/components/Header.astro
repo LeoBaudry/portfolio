@@ -2,18 +2,22 @@
 // src/components/Header.astro
 import Icon from './Icon.astro';
 ---
-<header id="main-header" class="fixed top-0 left-0 w-full z-50 p-4">
-  <div class="mx-auto grid max-w-7xl grid-cols-3 items-center">
+<header id="main-header" class="fixed z-50 p-4 top-6 left-12 right-12 max-[800px]:top-4 max-[800px]:left-2 max-[800px]:right-2 transition-transform duration-300 ease-out">
+  <div class="relative grid items-center grid-cols-3">
     
-    <div class="flex justify-start">
+    <div class="flex justify-start max-[800px]:absolute max-[800px]:top-2.5 max-[800px]:left-3 z-20">
       <a href="/" class="z-10 header-dynamic-color">
-        <Icon name="LOGOHEADER" class="h-10 w-auto"/>
+        <Icon name="LOGOHEADER" class="h-10 max-[800px]:h-6 w-auto"/>
       </a>
     </div>
     
-    <div class="relative w-80 justify-self-center">
-      <button id="menu-toggle" class="relative w-full rounded-md px-5 py-2 text-left text-sm font-medium transition-colors z-10">
-        <span class="header-dynamic-color">Menu</span>
+    <div class="relative w-80 justify-self-center max-[800px]:w-full max-[800px]:justify-self-stretch max-[800px]:col-span-3">
+      <button id="menu-toggle" class="relative w-full rounded-md px-5 py-3 text-left text-sm font-medium transition-colors z-10 max-[800px]:text-center">
+        <span class="header-dynamic-color max-[800px]:opacity-0">Menu</span>
+        <div class="hamburger-icon flex flex-col justify-between w-6 h-2 absolute right-5 top-1/2 -translate-y-1/2">
+          <span class="hamburger-bar hamburger-bar-top header-dynamic-bg"></span>
+          <span class="hamburger-bar hamburger-bar-bottom header-dynamic-bg"></span>
+        </div>
       </button>
       
       <div id="menu-dropdown" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-full p-6 rounded-md invisible">
@@ -21,17 +25,35 @@ import Icon from './Icon.astro';
           <span class="text-xs tracking-widest header-dropdown-text">PROJETS</span>
           <nav class="mt-2">
             <ul class="space-y-2 text-lg">
-              <li class="menu-item"><a href="/projets" class="block hover:opacity-60 transition-colors header-dropdown-text">Tous les projets</a></li>
+              <li class="menu-item">
+                <a href="/projets" class="nav-link block transition-colors header-dropdown-text">
+                  <span class="nav-link-text" data-text="Tous les projets">Tous les projets</span>
+                </a>
+              </li>
               <hr class="menu-item border-black/10 my-2 header-dropdown-border">
-              <li class="menu-item"><a href="/projet/nom-projet-1" class="block hover:opacity-60 transition-colors header-dropdown-text">Projet Individuel A</a></li>
-              <li class="menu-item"><a href="/projet/nom-projet-2" class="block hover:opacity-60 transition-colors header-dropdown-text">Projet Individuel B</a></li>
-              <li class="menu-item"><a href="/projet/nom-projet-3" class="block hover:opacity-60 transition-colors header-dropdown-text">Projet Individuel C</a></li>
+              <li class="menu-item">
+                <a href="/projet/nom-projet-1" class="nav-link block transition-colors header-dropdown-text">
+                  <span class="nav-link-text" data-text="Projet Individuel A">Projet Individuel A</span>
+                </a>
+              </li>
+              <li class="menu-item">
+                <a href="/projet/nom-projet-2" class="nav-link block transition-colors header-dropdown-text">
+                   <span class="nav-link-text" data-text="Projet Individuel B">Projet Individuel B</span>
+                </a>
+              </li>
+              <li class="menu-item">
+                <a href="/projet/nom-projet-3" class="nav-link block transition-colors header-dropdown-text">
+                   <span class="nav-link-text" data-text="Projet Individuel C">Projet Individuel C</span>
+                </a>
+              </li>
             </ul>
           </nav>
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
         <div class="menu-item flex justify-between items-center">
-          <a href="/cv.pdf" target="_blank" class="text-lg hover:opacity-60 transition-colors header-dropdown-text">Voir mon CV</a>
+          <a href="/cv.pdf" target="_blank" class="nav-link text-lg transition-colors header-dropdown-text">
+            <span class="nav-link-text" data-text="Voir mon CV">Voir mon CV</span>
+          </a>
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
         <a href="/contact" class="menu-item block w-full rounded-lg border border-neutral-900 bg-transparent py-3 text-center font-semibold tracking-widest transition-colors header-contact-button" style="font-size: 12px;">
@@ -40,231 +62,256 @@ import Icon from './Icon.astro';
       </div>
     </div>
     
-    <div class="flex justify-end">
-      <a href="/contact" class="shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-700 transition-colors flex items-center gap-2 z-10">
+    <div class="flex justify-end max-[800px]:hidden">
+      <a id="contact-cta-button" href="/contact" class="shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors flex items-center gap-2 z-10">
         Contactez-moi
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stroke-white"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
       </a>
     </div>
-
   </div>
 </header>
 
 <style is:global>
-  #menu-toggle,
-  #menu-dropdown {
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-  }
-
-  /* Couleurs par défaut (light theme) */
-  .header-dynamic-color {
-    color: rgb(23, 23, 23);
-    transition: color 0.4s ease;
-  }
-
-  .header-dynamic-color svg path,
-  .header-dynamic-color svg circle,
-  .header-dynamic-color svg rect {
-    fill: rgb(23, 23, 23);
-    transition: fill 0.4s ease;
-  }
-
-  .header-dropdown-text {
-    color: rgb(23, 23, 23);
-    transition: color 0.4s ease;
-  }
-
-  .header-dropdown-border {
-    border-color: rgba(0, 0, 0, 0.1);
-    transition: border-color 0.4s ease;
-  }
-
-  .header-contact-button {
-    color: rgb(23, 23, 23);
-    border-color: rgb(23, 23, 23);
-    transition: color 0.4s ease, border-color 0.4s ease, background-color 0.4s ease;
-  }
-
-  .header-contact-button:hover {
-    background-color: rgb(23, 23, 23);
-    color: white;
-  }
-
-  /* Dark theme */
-  #main-header.header-dark-theme .header-dynamic-color {
-    color: white;
-  }
-
-  #main-header.header-dark-theme .header-dynamic-color svg path,
-  #main-header.header-dark-theme .header-dynamic-color svg circle,
-  #main-header.header-dark-theme .header-dynamic-color svg rect {
-    fill: white;
-  }
-
-  #main-header.header-dark-theme .header-dropdown-text {
-    color: white;
-  }
-
-  #main-header.header-dark-theme .header-dropdown-border {
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  #main-header.header-dark-theme .header-contact-button {
-    color: white;
-    border-color: white;
-  }
-
-  #main-header.header-dark-theme .header-contact-button:hover {
-    background-color: white;
-    color: rgb(23, 23, 23);
-  }
-
-  #menu-toggle {
-    background-color: rgba(255, 255, 255, 0.15);
-    transition: background-color 0.3s ease;
-  }
-
-  #menu-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
-
-  #menu-dropdown {
-    background-color: rgba(255, 255, 255, 0.15);
-  }
-
-  #main-header:not(.header-dark-theme) #menu-toggle {
-    background-color: rgba(0, 0, 0, 0.08);
-  }
-
-  #main-header:not(.header-dark-theme) #menu-toggle:hover {
-    background-color: rgba(0, 0, 0, 0.12);
-  }
-
-  #main-header:not(.header-dark-theme) #menu-dropdown {
-    background-color: rgba(0, 0, 0, 0.08);
-  }
+  #main-header.header-hidden { transform: translateY(calc(-100% - 2rem)); }
+  #menu-toggle, #menu-dropdown { -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  .header-dynamic-bg { background-color: rgb(23, 23, 23); transition: background-color 0.4s ease; }
+  #main-header.header-dark-theme .header-dynamic-bg { background-color: white; }
+  .header-dynamic-color svg path, .header-dynamic-color svg circle, .header-dynamic-color svg rect { fill: rgb(23, 23, 23); transition: fill 0.4s ease; }
+  .header-dropdown-text { color: rgb(23, 23, 23); transition: color 0.4s ease; }
+  .header-dropdown-border { border-color: rgba(0, 0, 0, 0.1); transition: border-color 0.4s ease; }
+  .header-contact-button { color: rgb(23, 23, 23); border-color: rgb(23, 23, 23); transition: color 0.4s ease, border-color 0.4s ease, background-color 0.4s ease; }
+  .header-contact-button:hover { background-color: rgb(23, 23, 23); color: white; }
+  #main-header.header-dark-theme .header-dynamic-color { color: white; }
+  #main-header.header-dark-theme .header-dynamic-color svg path, #main-header.header-dark-theme .header-dynamic-color svg circle, #main-header.header-dark-theme .header-dynamic-color svg rect { fill: white; }
+  #main-header.header-dark-theme .header-dropdown-text { color: white; }
+  #main-header.header-dark-theme .header-dropdown-border { border-color: rgba(255, 255, 255, 0.2); }
+  #main-header.header-dark-theme .header-contact-button { color: white; border-color: white; }
+  #main-header.header-dark-theme .header-contact-button:hover { background-color: white; color: rgb(23, 23, 23); }
+  #menu-toggle { background-color: rgba(255, 255, 255, 0.15); transition: background-color 0.3s ease; }
+  #menu-toggle:hover { background-color: rgba(255, 255, 255, 0.2); }
+  #menu-dropdown { background-color: rgba(255, 255, 255, 0.15); }
+  #main-header:not(.header-dark-theme) #menu-toggle { background-color: rgba(0, 0, 0, 0.08); }
+  #main-header:not(.header-dark-theme) #menu-toggle:hover { background-color: rgba(0, 0, 0, 0.12); }
+  #main-header:not(.header-dark-theme) #menu-dropdown { background-color: rgba(0, 0, 0, 0.08); }
+  #contact-cta-button { background-image: linear-gradient(to right, #51EB96, #E8F444); background-size: 0% 100%; background-repeat: no-repeat; background-position: center; transition: background-size 0.4s ease-out, color 0.4s ease-out; }
+  #contact-cta-button svg { transition: stroke 0.4s ease-out; }
+  #contact-cta-button:hover { background-size: 100% 100%; color: rgb(23, 23, 23); }
+  #contact-cta-button:hover svg { stroke: rgb(23, 23, 23); }
+  .hamburger-bar { display: block; width: 100%; height: 1.5px; border-radius: 0.5px; transition: transform 0.3s ease-in-out; transform-origin: center center; }
+  #menu-toggle.menu-open .hamburger-bar-top { transform: translateY(3.5px) rotate(45deg); }
+  #menu-toggle.menu-open .hamburger-bar-bottom { transform: translateY(-3.5px) rotate(-45deg); }
+  .nav-link { position: relative; overflow: hidden; display: inline-block; vertical-align: top; padding-bottom: 2px; opacity: 1; transition: opacity 0.3s ease; }
+  .nav-link:hover { opacity: 0.6; }
+  .nav-link-text { display: inline-block; transition: transform 0.4s cubic-bezier(0.7, 0, 0.3, 1); will-change: transform; }
+  .nav-link-text::before { content: attr(data-text); position: absolute; left: 0; top: 100%; transition: transform 0.4s cubic-bezier(0.7, 0, 0.3, 1); will-change: transform; }
+  .nav-link:hover .nav-link-text { transform: translateY(-100%); }
+  .nav-link:hover .nav-link-text::before { transform: translateY(0%); }
 </style>
 
 <script>
   import { gsap } from "gsap";
+  
+  let menuAPI: any = null;
 
-  // 🔥 Fonction d'initialisation du menu
   function initMenu() {
-    const menuToggle = document.getElementById('menu-toggle');
-    const menuDropdown = document.getElementById('menu-dropdown');
-
-    if (!menuToggle || !menuDropdown) return;
-
-    const menuContainer = menuToggle.parentElement;
-    const menuItems = gsap.utils.toArray('.menu-item');
-    let isMenuOpen = false;
-
-    gsap.set(menuDropdown, { y: -20, opacity: 0, visibility: 'hidden' });
-    gsap.set(menuItems, { y: 15, opacity: 0 });
+    const toggle = document.getElementById('menu-toggle');
+    const dropdown = document.getElementById('menu-dropdown');
+    if (!toggle || !dropdown) return;
+    
+    const items = gsap.utils.toArray('.menu-item');
+    let open = false;
+    
+    gsap.set(dropdown, { y: -20, opacity: 0, visibility: 'hidden' });
+    gsap.set(items, { y: 15, opacity: 0 });
+    toggle.classList.remove('menu-open');
 
     const openMenu = () => {
-      if (isMenuOpen) return;
-      isMenuOpen = true;
+      if (open) return;
+      open = true;
+      toggle.classList.add('menu-open');
       
-      const tl = gsap.timeline();
-      tl.to(menuDropdown, {
-        y: 0,
-        opacity: 1,
-        visibility: 'visible',
-        duration: 0.4,
-        ease: "power3.out"
-      })
-      .to(menuItems, {
-        y: 0,
-        opacity: 1,
-        duration: 0.3,
-        ease: "power2.out",
-        stagger: 0.06
-      }, "-=0.25");
+      gsap.timeline()
+        .to(dropdown, { 
+          y: 0, 
+          opacity: 1, 
+          visibility: 'visible', 
+          duration: 0.4, 
+          ease: "power3.out" 
+        })
+        .to(items, { 
+          y: 0, 
+          opacity: 1, 
+          duration: 0.3, 
+          ease: "power2.out", 
+          stagger: 0.06 
+        }, "-=0.25");
     };
 
     const closeMenu = () => {
-      if (!isMenuOpen) return;
-      isMenuOpen = false;
+      if (!open) return;
+      open = false;
+      toggle.classList.remove('menu-open');
       
-      const tl = gsap.timeline({
-        onComplete: () => {
-          gsap.set(menuDropdown, { visibility: 'hidden' });
-        }
-      });
-      tl.to(menuItems, {
-        y: 15,
-        opacity: 0,
-        duration: 0.2,
-        ease: "power2.in",
-        stagger: 0.04
+      gsap.timeline({ 
+        onComplete: () => { gsap.set(dropdown, { visibility: 'hidden' }); } 
       })
-      .to(menuDropdown, {
-        y: -20,
-        opacity: 0,
-        duration: 0.3,
-        ease: "power3.in"
-      }, "-=0.1");
+        .to(items, { 
+          y: 15, 
+          opacity: 0, 
+          duration: 0.2, 
+          ease: "power2.in", 
+          stagger: 0.04 
+        })
+        .to(dropdown, { 
+          y: -20, 
+          opacity: 0, 
+          duration: 0.3, 
+          ease: "power3.in" 
+        }, "-=0.1");
     };
 
-    menuToggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      isMenuOpen ? closeMenu() : openMenu();
-    });
-
-    document.addEventListener('click', (e) => {
-      if (menuContainer && e.target instanceof Node && !menuContainer.contains(e.target) && isMenuOpen) {
-        closeMenu();
+    const resetMenu = () => {
+      open = false;
+      toggle.classList.remove('menu-open');
+      gsap.set(dropdown, { y: -20, opacity: 0, visibility: 'hidden' });
+      gsap.set(items, { y: 15, opacity: 0 });
+    };
+    
+    const handlers = {
+      click: (e: MouseEvent) => {
+        e.stopPropagation();
+        open ? closeMenu() : openMenu();
+      },
+      outside: (e: Event) => {
+        if (toggle.parentElement && 
+            e.target instanceof Node && 
+            !toggle.parentElement.contains(e.target) && 
+            open) {
+          closeMenu();
+        }
+      },
+      escape: (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && open) closeMenu();
       }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isMenuOpen) {
-        closeMenu();
-      }
-    });
+    };
+    
+    // Cleanup old listeners
+    if ((toggle as any)._clickHandler) {
+      toggle.removeEventListener('click', (toggle as any)._clickHandler);
+    }
+    if ((document as any)._clickOutsideHandler) {
+      document.removeEventListener('click', (document as any)._clickOutsideHandler);
+    }
+    if ((document as any)._escapeKeyHandler) {
+      document.removeEventListener('keydown', (document as any)._escapeKeyHandler);
+    }
+    
+    // Attach new listeners
+    toggle.addEventListener('click', handlers.click);
+    document.addEventListener('click', handlers.outside);
+    document.addEventListener('keydown', handlers.escape);
+    
+    // Store references for cleanup
+    (toggle as any)._clickHandler = handlers.click;
+    (document as any)._clickOutsideHandler = handlers.outside;
+    (document as any)._escapeKeyHandler = handlers.escape;
+    
+    menuAPI = { closeMenu, resetMenu };
   }
 
-  // 🔥 Fonction d'initialisation du theme observer
   function initThemeObserver() {
     const header = document.getElementById('main-header');
     if (!header) return;
     
     const sections = document.querySelectorAll('[data-theme]');
-    if (sections.length === 0) return;
+    if (!sections.length) return;
     
-    const observerOptions = {
-      root: null,
-      rootMargin: '-50% 0px -50% 0px',
-      threshold: 0
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const theme = entry.target.getAttribute('data-theme');
-          if (theme === 'dark') {
-            header.classList.add('header-dark-theme');
-          } else {
-            header.classList.remove('header-dark-theme');
+    // Cleanup previous observer
+    const prevObserver = (header as any)._themeObserver;
+    if (prevObserver) prevObserver.disconnect();
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const isDark = entry.target.getAttribute('data-theme') === 'dark';
+            header.classList.toggle('header-dark-theme', isDark);
           }
-        }
-      });
-    }, observerOptions);
-
-    sections.forEach(section => {
-      observer.observe(section);
-    });
+        });
+      },
+      { 
+        root: null, 
+        rootMargin: '-100px 0px -80% 0px', 
+        threshold: 0 
+      }
+    );
+    
+    sections.forEach(section => observer.observe(section));
+    (header as any)._themeObserver = observer;
   }
 
-  // 🔥 Initialiser au chargement de la page
+  function initScrollBehavior() {
+    const header = document.getElementById('main-header');
+    if (!header) return;
+    
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    const update = () => {
+      const currentY = window.scrollY;
+      const diff = Math.abs(currentY - lastY);
+      
+      // Always show header at top
+      if (currentY < 100) {
+        header.classList.remove('header-hidden');
+        lastY = currentY;
+        ticking = false;
+        return;
+      }
+      
+      // Scrolling down
+      if (currentY > lastY) {
+        if (diff < 80) {
+          ticking = false;
+          return;
+        }
+        header.classList.add('header-hidden');
+        if (menuAPI?.resetMenu) menuAPI.resetMenu();
+      }
+      // Scrolling up
+      else if (currentY < lastY) {
+        header.classList.remove('header-hidden');
+      }
+      
+      lastY = currentY;
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    };
+    
+    // Cleanup old listener
+    const oldHandler = (window as any)._headerScrollHandler;
+    if (oldHandler) window.removeEventListener('scroll', oldHandler);
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    (window as any)._headerScrollHandler = onScroll;
+  }
+
+  // Initialize on load
   initMenu();
   initThemeObserver();
+  initScrollBehavior();
 
-  // 🔥 Réinitialiser après chaque transition Astro
+  // Reinitialize on page navigation
   document.addEventListener('astro:after-swap', () => {
     initMenu();
     initThemeObserver();
+    initScrollBehavior();
   });
 </script>
+

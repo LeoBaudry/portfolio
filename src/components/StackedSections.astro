@@ -6,6 +6,7 @@ interface Section {
   description: string;
   bgClass: string;
   textColor: string;
+  theme: "light" | "dark"; // 🔥 Ajout du theme
 }
 
 const sections: Section[] = [
@@ -14,21 +15,24 @@ const sections: Section[] = [
     title: "Designer & Explorateur Visuel",
     description: "Je crée des expériences numériques qui mêlent rigueur et sensibilité. Mon parcours navigue entre design produit, identité visuelle et code créatif. Je crois qu'un design réussi doit autant résoudre qu'émouvoir.",
     bgClass: "bg-[#EEEEEE]",
-    textColor: "text-black"
+    textColor: "text-black",
+    theme: "light" // 🔥 Fond clair = theme light
   },
   {
     number: "02",
     title: "Produit & Identité",
     description: "De la recherche utilisateur au design d'interface, de la création d'univers graphiques à la direction artistique, j'imagine et construis des systèmes visuels qui aident les projets à croître et à se distinguer.",
     bgClass: "bg-[#333333]",
-    textColor: "text-white"
+    textColor: "text-white",
+    theme: "light" // 🔥 Fond sombre = theme dark
   },
   {
     number: "03",
     title: "Collaboration & Impact",
     description: "Je m'intègre aux équipes pour apporter à la fois expertise et vision. Je conçois des expériences qui captivent, convertissent et perdurent. Chaque projet est pour moi l'occasion de donner forme à une idée forte.",
     bgClass: "bg-gradient-to-r from-[#FF7957] to-[#F3471C]",
-    textColor: "text-black"
+    textColor: "text-black",
+    theme: "light" // 🔥 Fond orange = theme light (le header sera noir)
   }
 ];
 ---
@@ -44,6 +48,7 @@ const sections: Section[] = [
 
           {/* <!-- Section sticky --> */}
           <article
+            data-theme={section.theme}
             class={`sticky ${isLastSection ? 'h-[34vh]' : 'h-[33vh]'} flex items-center justify-center 
                     px-4 sm:px-6 md:px-12 lg:px-20 xl:px-32 2xl:px-[300px]
                     ${section.bgClass} ${section.textColor}`}

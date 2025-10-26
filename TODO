@@ -1,6 +1,7 @@
 - Responsive text cards BG FOOTER
 ## IMPORTANT -> HERO A RALENTIR 
 ### -> PENSER AU LAZY LOADING, PENSER A L'ACCESSIBILITÉ, PENSER AU SEO.
+
 #20/10/25
 
 - Menu : Voir flabbergast agency ? Sinon on reste sur le classique
@@ -11,16 +12,27 @@
 
 #24/10/25
 
-- MENU : RESPONSIVE !!!!!!!!
-- MENU : Bouton contact doit disparaitre en version mobile (reste dans menu header déplié)
-- MENU : Desktop -> Hover texte = coulissement (comprendra qui pourra)
-- HERO : `data-theme="dark"` pour accessibilité menu ?
+<!-- - MENU : RESPONSIVE !!!!!!!! -->
+<!-- - MENU : Bouton contact doit disparaitre en version mobile (reste dans menu header déplié) -->
+<!-- - MENU : Desktop -> Hover texte = coulissement (comprendra qui pourra) -->
+<!-- - HERO : `data-theme="dark"` pour accessibilité menu ? -->  
+ # PENSER QUAND MEME A AJOUTER LES DATA-THEME SUR TOUS LES ELEMENTS NECESSAIRES.
+ ## -> QUELS RESULTATS AVEC UN MODE SOMBRE ?
 - - Animations GSAP pour StackedSections.astro ? 
 - - - HERO : Le timestamp doit être fonctionnel (comme pour le loader)
 - - - Organiser les dossiers (surtout components)
 - - - Penser a react et SHADCN ? 
 
+#26/10/25
+
+- MENU : PENSER au bouton contact à faire proprement. 
+UNE FOIS QUE C'EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma part ? 
+- - ET ENSUITE ? 
+- - - Sémantique MENU, ACCESSIBILITE MENU. 
+- - - FINITION FOOTER :
+
+VERIFIER SI : LAYOUT GLOBAL (HEADER/FOOTER/TRANSITIONS/LOADER) SONT : 
+- Fonctionnels
+- Responsive
 
 
-
-POUR LA PROCHAINE FOIS D'APRÈS : Les thèmes et le mode sombre
