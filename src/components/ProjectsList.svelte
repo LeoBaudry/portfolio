@@ -4,11 +4,18 @@
   
   export let projects = [];
 
-  let viewMode = 'list'; // Default view
+  let viewMode = 'list'; // Vue de base : "list" ou "grid"
   let hoveredImage = null;
   let mousePos = { x: 0, y: 0 };
   let hasMounted = false;
   
+  // stocker la largeur de la fenêtre
+  let viewportWidth = 0; 
+  
+  // logique de positionnement
+  const imageWidth = 384; // w-96 = 24rem = 384px
+  const imageOffset = 20; 
+
   const categories = ['Tous', 'Identité', 'Motion Design', '3D / Modélisation'];
   let activeCategory = 'Tous';
 
@@ -20,8 +27,6 @@
   });
 
   // --- ANIMATION GSAP ---
-
-  // Animation pour les mises à jour (après filtre/changement de vue)
   function animateUpdate() {
     gsap.from(".project-item", {
       opacity: 0,
@@ -30,18 +35,15 @@
       stagger: 0.1, 
       ease: "power3.out",
       overwrite: 'auto',
-      // clearProps aide à réinitialiser avant de ré-animer
       clearProps: "opacity,transform" 
     });
   }
 
-  // Animation pour le tout premier chargement
   async function animateInitialLoad() {
-    // Attendre que le DOM soit vraiment prêt
     await tick(); 
     gsap.fromTo(".project-item",
-      { opacity: 0, y: 30 }, // État de départ explicite
-      {                     // État d'arrivée explicite
+      { opacity: 0, y: 30 }, 
+      {                     
         opacity: 1,
         y: 0,
         duration: 0.5,
@@ -51,35 +53,31 @@
       }
     );
   }
-
-  onMount(() => {
-    hasMounted = true; 
-    animateInitialLoad(); // Lancer l'animation initiale spécifique
-  });
-
-  // Drapeau pour éviter que l'animation d'update ne se lance juste après le onMount
+  
   let isInitialLoad = true;
   onMount(() => {
-     // ... code onMount ...
-     // Après la fin de l'animation initiale (approximativement)
-     gsap.delayedCall(0.5 + 0.1 * projects.length + 0.1, () => {
+    hasMounted = true; 
+    animateInitialLoad(); 
+    gsap.delayedCall(0.5 + 0.1 * projects.length + 0.1, () => {
          isInitialLoad = false;
      });
   });
 
 
-  // Réagit aux changements DEPUIS que le composant est monté
   $: if (hasMounted && !isInitialLoad && (filteredProjects || viewMode)) {
     const reAnimate = async () => {
-      await tick(); // Attendre la mise à jour du DOM par Svelte
-      animateUpdate(); // Lancer l'animation pour les updates
+      await tick(); 
+      animateUpdate(); 
     }
     reAnimate();
   }
 
 </script>
 
-<svelte:window on:mousemove={e => mousePos = { x: e.clientX, y: e.clientY }} />
+<svelte:window 
+  on:mousemove={e => mousePos = { x: e.clientX, y: e.clientY }} 
+  bind:innerWidth={viewportWidth}
+/>
 
 <div class="w-full text-black mb-52">
   
@@ -200,7 +198,13 @@
       class="fixed w-96 aspect-video rounded-md overflow-hidden shadow-2xl
              pointer-events-none z-50
              transition-opacity duration-200"
-      style="left: {mousePos.x + 20}px; top: {mousePos.y + 20}px; opacity: {hoveredImage && viewMode === 'list' ? 1 : 0};"
+      style="
+        left: {mousePos.x + imageOffset + imageWidth > viewportWidth 
+          ? mousePos.x - imageWidth - imageOffset 
+          : mousePos.x + imageOffset}px; 
+        top: {mousePos.y + imageOffset}px; 
+        opacity: {hoveredImage && viewMode === 'list' ? 1 : 0};
+      "
     >
       <img src={hoveredImage} alt="Aperçu" class="w-full h-full object-cover" />
     </div>
