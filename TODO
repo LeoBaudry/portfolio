@@ -1,6 +1,6 @@
 - Responsive text cards BG FOOTER
 ## IMPORTANT -> HERO A RALENTIR 
-### -> PENSER AU LAZY LOADING, PENSER A L'ACCESSIBILITÉ, PENSER AU SEO.
+### -> PENSER AU LAZY LOADING, PENSER A ACCESSIBILITÉ, PENSER AU SEO.
 
 --------------------------------------------------------------------------------------------------------------\
 #                                          # 20/10/25                                                          |
@@ -32,7 +32,7 @@
 --------------------------------------------------------------------------------------------------------------/
 
 - MENU : PENSER au bouton contact à faire proprement. 
-UNE FOIS QUE C'EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma part ? 
+UNE FOIS QUE C EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma part ? 
 - - ET ENSUITE ? 
 - - - Sémantique MENU, ACCESSIBILITE MENU. 
 - - - FINITION FOOTER :
@@ -40,3 +40,6 @@ UNE FOIS QUE C'EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma 
 VERIFIER SI : LAYOUT GLOBAL (HEADER/FOOTER/TRANSITIONS/LOADER) SONT : 
 - Fonctionnels
 - Responsive
+
+
+-- REGARDER COMPOSANT SVELTE ? ( GEMINI)

@@ -1,0 +1,62 @@
+---
+// import { pb } from '@/lib/pocketbase'; 
+import Layout from '@/layouts/Layout.astro';
+import ProjectsList from '@/components/ProjectsList.svelte';
+
+// === DONNÉES PLACEHOLDER (MISES À JOUR AVEC 'categories') ===
+const projects = [
+  {
+    id: '1',
+    slug: 'projet-yumly',
+    title: 'Yumly',
+    client: 'MMI Montbéliard',
+    type: 'Branding - UX/UI Design - Développement',
+    technologies: ['Figma', 'Astro', 'Tailwind'],
+    coverImageUrl: 'https://placehold.co/800x600/2E2E2E/FFF/png?text=Yumly', 
+    categories: ['Identité'],
+  },
+  {
+    id: '2',
+    slug: 'projet-apg',
+    title: 'APG',
+    client: 'Association des Pêcheurs',
+    type: 'Refonte de site web - Identité',
+    technologies: ['Wordpress', 'Elementor', 'Photoshop'],
+    coverImageUrl: 'https://placehold.co/800x600/3498db/FFF/png?text=APG',
+    categories: ['Identité'],
+  },
+  {
+    id: '3',
+    slug: 'projet-posters',
+    title: 'Posters',
+    client: 'Projet Personnel',
+    type: 'Graphic Design - Poster Design',
+    technologies: ['Photoshop', 'Illustrator'],
+    coverImageUrl: 'https://placehold.co/800x600/e74c3c/FFF/png?text=Posters',
+    categories: ['Motion Design'],
+  },
+  {
+    id: '4',
+    slug: 'projet-3d',
+    title: 'Projets 3D',
+    client: 'Projet Personnel',
+    type: '3D Design - Animation',
+    technologies: ['Blender', 'Substance Painter'],
+    coverImageUrl: 'https://placehold.co/800x600/9b59b6/FFF/png?text=3D',
+    categories: ['3D / Modélisation'],
+  },
+];
+---
+
+<Layout title="Mes Projets">
+  <section class="page-content w-full px-10 lg:px-12">
+    <div class="pt-40 pb-4">
+      <h1 class="text-5xl md:text-8xl font-bold text-black" style="letter-spacing: -0.05em;">
+        Projets <sup>({projects.length})</sup>
+      </h1>
+    </div>
+    
+    <ProjectsList projects={projects} client:load />
+
+  </section>
+</Layout>
