@@ -98,13 +98,13 @@
       </div>
     </nav>
 
-    <div role="group" aria-label="Mode d'affichage" class="flex items-center gap-2 font-bold text-[15px] uppercase tracking-normal">
+    <div role="group" aria-label="Mode d'affichage" class="flex items-center gap-2 font-semibold text-sm uppercase tracking-normal">
       <button
         type="button"
         onclick={() => viewMode = 'list'}
         class="cursor-pointer px-3 py-1 rounded-md transition-colors"
         class:text-white={viewMode === 'list'}
-        class:bg-[#111111]={viewMode === 'list'}
+        class:bg-[#F3471C]={viewMode === 'list'}
         class:text-black={viewMode !== 'list'}
         class:bg-transparent={viewMode !== 'list'}
         aria-pressed={viewMode === 'list'}
@@ -117,7 +117,7 @@
         onclick={() => viewMode = 'grid'}
         class="cursor-pointer px-3 py-1 rounded-md transition-colors"
         class:text-white={viewMode === 'grid'}
-        class:bg-[#111111]={viewMode === 'grid'}
+        class:bg-[#F3471C]={viewMode === 'grid'}
         class:text-black={viewMode !== 'grid'}
         class:bg-transparent={viewMode !== 'grid'}
         aria-pressed={viewMode === 'grid'}
