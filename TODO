@@ -41,5 +41,20 @@ VERIFIER SI : LAYOUT GLOBAL (HEADER/FOOTER/TRANSITIONS/LOADER) SONT :
 - Fonctionnels
 - Responsive
 
-
 -- REGARDER COMPOSANT SVELTE ? ( GEMINI) c est FAIT
+
+--------------------------------------------------------------------------------------------------------------\
+-- CODE POUR FILTRES DYNAMIQUES DANS PROJECTSLIST.SVELTE 
+
+-- let categories = $derived.by(() => {
+--   const uniqueCategories = new Set();
+  
+--   projects.forEach(project => {
+--     if (project.categories && Array.isArray(project.categories)) {
+--       project.categories.forEach(cat => uniqueCategories.add(cat));
+--     }
+--   });
+  
+--   return ['Tous', ...Array.from(uniqueCategories).sort()];
+-- });
+--------------------------------------------------------------------------------------------------------------/

@@ -6,13 +6,13 @@ import Icon from './Icon.astro';
   <div class="relative grid items-center grid-cols-3">
     
     <div class="flex justify-start max-[800px]:absolute max-[800px]:top-2.5 max-[800px]:left-3 z-20">
-      <a href="/" class="z-10 header-dynamic-color">
+      <a href="/" class="cursor-pointer z-10 header-dynamic-color" aria-label="Retour à l'accueil">
         <Icon name="LOGOHEADER" class="h-10 max-[800px]:h-6 w-auto"/>
       </a>
     </div>
     
     <div class="relative w-80 justify-self-center max-[800px]:w-full max-[800px]:justify-self-stretch max-[800px]:col-span-3">
-      <button id="menu-toggle" class="relative w-full rounded-md px-5 py-3 text-left text-sm font-medium transition-colors z-10 max-[800px]:text-center">
+      <button id="menu-toggle" class="cursor-pointer relative w-full rounded-md px-5 py-3 text-left text-sm font-medium transition-colors z-10 max-[800px]:text-center">
         <span class="header-dynamic-color max-[800px]:opacity-0">Menu</span>
         <div class="hamburger-icon flex flex-col justify-between w-6 h-2 absolute right-5 top-1/2 -translate-y-1/2">
           <span class="hamburger-bar hamburger-bar-top header-dynamic-bg"></span>
@@ -26,23 +26,23 @@ import Icon from './Icon.astro';
           <nav class="mt-2">
             <ul class="space-y-2 text-lg">
               <li class="menu-item">
-                <a href="/projets" class="nav-link block transition-colors header-dropdown-text">
+                <a href="/projets" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
                   <span class="nav-link-text" data-text="Tous les projets">Tous les projets</span>
                 </a>
               </li>
               <hr class="menu-item border-black/10 my-2 header-dropdown-border">
               <li class="menu-item">
-                <a href="/projet/nom-projet-1" class="nav-link block transition-colors header-dropdown-text">
+                <a href="/projet/nom-projet-1" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
                   <span class="nav-link-text" data-text="Projet Individuel A">Projet Individuel A</span>
                 </a>
               </li>
               <li class="menu-item">
-                <a href="/projet/nom-projet-2" class="nav-link block transition-colors header-dropdown-text">
+                <a href="/projet/nom-projet-2" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
                    <span class="nav-link-text" data-text="Projet Individuel B">Projet Individuel B</span>
                 </a>
               </li>
               <li class="menu-item">
-                <a href="/projet/nom-projet-3" class="nav-link block transition-colors header-dropdown-text">
+                <a href="/projet/nom-projet-3" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
                    <span class="nav-link-text" data-text="Projet Individuel C">Projet Individuel C</span>
                 </a>
               </li>
@@ -51,25 +51,26 @@ import Icon from './Icon.astro';
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
         <div class="menu-item flex justify-between items-center">
-          <a href="/cv.pdf" target="_blank" class="nav-link text-lg transition-colors header-dropdown-text">
+          <a href="/cv.pdf" target="_blank" class="cursor-pointer nav-link text-lg transition-colors header-dropdown-text">
             <span class="nav-link-text" data-text="Voir mon CV">Voir mon CV</span>
           </a>
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
-        <a href="/contact" class="menu-item block w-full rounded-lg border border-neutral-900 bg-transparent py-3 text-center font-semibold tracking-widest transition-colors header-contact-button" style="font-size: 12px;">
+        <a href="/contact" class="cursor-pointer menu-item block w-full rounded-lg border border-neutral-900 bg-transparent py-3 text-center font-semibold tracking-widest transition-colors header-contact-button" style="font-size: 12px;">
           CONTACT
         </a>
       </div>
     </div>
     
     <div class="flex justify-end max-[800px]:hidden">
-      <a id="contact-cta-button" href="/contact" class="shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors flex items-center gap-2 z-10">
+      <a id="contact-cta-button" href="/contact" class="cursor-pointer shrink-0 rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors flex items-center gap-2 z-10">
         Contactez-moi
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="stroke-white"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
       </a>
     </div>
   </div>
 </header>
+
 
 <style is:global>
   #main-header.header-hidden { transform: translateY(calc(-100% - 2rem)); }
@@ -108,10 +109,12 @@ import Icon from './Icon.astro';
   .nav-link:hover .nav-link-text::before { transform: translateY(0%); }
 </style>
 
+
 <script>
   import { gsap } from "gsap";
   
   let menuAPI: any = null;
+
 
   function initMenu() {
     const toggle = document.getElementById('menu-toggle');
@@ -124,6 +127,7 @@ import Icon from './Icon.astro';
     gsap.set(dropdown, { y: -20, opacity: 0, visibility: 'hidden' });
     gsap.set(items, { y: 15, opacity: 0 });
     toggle.classList.remove('menu-open');
+
 
     const openMenu = () => {
       if (open) return;
@@ -147,6 +151,7 @@ import Icon from './Icon.astro';
         }, "-=0.25");
     };
 
+
     const closeMenu = () => {
       if (!open) return;
       open = false;
@@ -169,6 +174,7 @@ import Icon from './Icon.astro';
           ease: "power3.in" 
         }, "-=0.1");
     };
+
 
     const resetMenu = () => {
       open = false;
@@ -219,6 +225,7 @@ import Icon from './Icon.astro';
     menuAPI = { closeMenu, resetMenu };
   }
 
+
   function initThemeObserver() {
     const header = document.getElementById('main-header');
     if (!header) return;
@@ -250,12 +257,14 @@ import Icon from './Icon.astro';
     (header as any)._themeObserver = observer;
   }
 
+
   function initScrollBehavior() {
     const header = document.getElementById('main-header');
     if (!header) return;
     
     let lastY = window.scrollY;
     let ticking = false;
+
 
     const update = () => {
       const currentY = window.scrollY;
@@ -287,6 +296,7 @@ import Icon from './Icon.astro';
       ticking = false;
     };
 
+
     const onScroll = () => {
       if (!ticking) {
         requestAnimationFrame(update);
@@ -302,10 +312,12 @@ import Icon from './Icon.astro';
     (window as any)._headerScrollHandler = onScroll;
   }
 
+
   // Initialize on load
   initMenu();
   initThemeObserver();
   initScrollBehavior();
+
 
   // Reinitialize on page navigation
   document.addEventListener('astro:after-swap', () => {
@@ -314,4 +326,3 @@ import Icon from './Icon.astro';
     initScrollBehavior();
   });
 </script>
-
