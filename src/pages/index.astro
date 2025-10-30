@@ -1,13 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
-import StackedSections from '../components/StackedSections.astro';
-import ProjectsSection from '../components/ProjectsSection.astro';
-import Icon from '../components/Icon.astro';
-import Logo3D from '../components/Logo3D.svelte';
+import Hero from '../components/sections/Hero.astro';
+import StackedSections from '../components/sections/StackedSections.astro';
+import ProjectsSection from '../components/sections/ProjectsSection.astro';
+import Icon from '../components/ui/Icon.astro';
+import Logo3D from '../components/graphics/Logo3D.svelte';
 ---
 
-<Layout>
+
+
+<Layout disableTransitions={true}>
     
     <Hero 
         topLine1="L'originalité"
@@ -16,55 +18,62 @@ import Logo3D from '../components/Logo3D.svelte';
         backgroundVideo="/videos/hero.mp4"
     />
 
-{/* ===== Section "Imaginer, sans limites" ===== */}
-<section id="imagine-section" class="min-h-[70vh] flex items-center py-32 lg:py-32 px-6 lg:px-12 bg-neutral-50">
-    <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-        
-        <div class="space-y-4 order-2 lg:order-1 max-w-xl mx-auto lg:mx-0 text-center lg:text-left">
-            <p class="text-base lg:text-lg text-neutral-800 leading-relaxed tracking-[-0.06em]">
-                Bonjour ! Moi c'est Léo. Depuis toujours, je transforme les idées en expériences concrètes et mémorables.
-            </p>
-            <p class="text-base lg:text-lg text-neutral-800 leading-relaxed tracking-[-0.06em]">
-                Mon parcours m'a appris à allier rigueur et créativité, à maîtriser la vision autant que l'exécution, et à concevoir des projets qui captivent, engagent et dépassent les attentes.
-            </p>
-            <p class="text-base lg:text-lg text-neutral-800 leading-relaxed tracking-[-0.06em]">
-                Chaque réalisation est pour moi l'occasion de donner forme à une idée forte, avec précision, audace et sensibilité.
-            </p>
-        </div>
 
 
-        <div class="space-y-8 order-1 lg:order-2 text-center lg:text-left">
-            <div class="space-y-4">
-                <h2 class="text-5xl sm:text-6xl lg:text-7xl font-semibold text-black leading-[1.05] tracking-tight">
-                    Imaginer, sans<br/>limites
-                </h2>
+    <section id="imagine-section" role="region" aria-label="À propos et vision" class="min-h-[70vh] flex items-center py-32 lg:py-32 px-6 lg:px-12">
+        <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            
+            <div class="space-y-4 order-2 lg:order-1 max-w-xl mx-auto lg:mx-0 text-left">
+                <p class="text-base lg:text-lg text-neutral-800 leading-relaxed tracking-[-0.06em]">
+                    Bonjour ! Moi c'est Léo. Depuis toujours, je transforme les idées en expériences concrètes et mémorables.
+                </p>
+                <p class="text-base lg:text-lg text-neutral-800 leading-relaxed tracking-[-0.06em]">
+                    Mon parcours m'a appris à allier rigueur et créativité, à maîtriser la vision autant que l'exécution, et à concevoir des projets qui captivent, engagent et dépassent les attentes.
+                </p>
+                <p class="text-base lg:text-lg text-neutral-800 leading-relaxed tracking-[-0.06em]">
+                    Chaque réalisation est pour moi l'occasion de donner forme à une idée forte, avec précision, audace et sensibilité.
+                </p>
             </div>
-            <div class="flex flex-row gap-4 justify-center lg:justify-start">
-                <button 
-                    id="scroll-to-skills"
-                    class="inline-flex items-center justify-between gap-6 px-8 py-4 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full text-center whitespace-nowrap min-w-[220px] cursor-pointer"
-                >
-                    <span>Ma vision</span>
-                    <Icon name="arrow" color="white" class="w-4 h-4 rotate-90" />
-                </button>
-                <a 
-                    href="https://drive.google.com/file/d/1hGJjDHtJGs4xzaXUorJAHGboDvz0s5oA/view"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full text-center whitespace-nowrap"
-                >
-                    CV
-                </a>
+
+
+
+            <div class="space-y-8 order-1 lg:order-2 text-center lg:text-left">
+                <div class="space-y-4">
+                    <h2 class="text-5xl sm:text-6xl lg:text-7xl font-semibold text-black leading-[1.05] tracking-tight">
+                        Imaginer, sans<br/>limites
+                    </h2>
+                </div>
+                <div class="flex flex-row gap-2 sm:gap-4 justify-center lg:justify-start ">
+                    <button 
+                        id="scroll-to-skills"
+                        class="inline-flex items-center justify-between gap-3 px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full text-center whitespace-nowrap min-w-[180px] sm:min-w-[220px] cursor-pointer max-[400px]:text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7957]"
+                        aria-label="Afficher ma vision"
+                    >
+                        <span>Ma vision</span>
+                        <Icon name="arrow" color="white" class="w-3 h-3 sm:w-4 sm:h-4 rotate-90" />
+                    </button>
+                    <a 
+                        href="https://drive.google.com/file/d/1hGJjDHtJGs4xzaXUorJAHGboDvz0s5oA/view"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center justify-center px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full text-center whitespace-nowrap max-[400px]:text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7957]"
+                        aria-label="Télécharger mon CV (ouvre une nouvelle fenêtre)"
+                    >
+                        CV
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
+
+
 
     <div id="stacked-sections-anchor" class="-mt-20"></div>
     <StackedSections />
 
-    {/* ===== Section "Alternance" ===== */}
-    <section class="py-24 px-6 lg:px-12 bg-white">
+
+
+    <section class="py-24 px-6 lg:px-12 bg-white" role="region" aria-label="Informations sur l'alternance" tabindex="0">
         <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-12 lg:gap-16 items-center">
             
             <div class="flex justify-center lg:justify-start">
@@ -74,21 +83,17 @@ import Logo3D from '../components/Logo3D.svelte';
             </div>
 
             <div class="space-y-8 tracking-[-0.06em]">
-                <h2 class="text-3xl lg:text-4xl font-light uppercase">
+                <h3 class="text-3xl lg:text-4xl font-light uppercase">
                     Je recherche un stage, <span class="font-semibold">ou</span> une alternance, pour compléter mon cursus cette année.
-                </h2>
+                </h3>
                 
                 <div class="space-y-4 text-black">
-                    
                     <div class="border-t border-gray-300"></div>
-
                     <div class="flex justify-between items-start py-2">
                         <span class="text-sm pt-2">Période de stage :</span>
                         <span class="text-2xl lg:text-5xl md:text-4xl font-normal">30 Mars - 06 Juin</span>
                     </div>
-
                     <div class="border-t border-gray-300"></div>
-
                     <div class="flex justify-between items-start py-2">
                         <span class="text-sm pt-2">Rythme d'alternance :</span>
                         <div class="flex flex-col items-end">
@@ -96,9 +101,7 @@ import Logo3D from '../components/Logo3D.svelte';
                             <span class="text-sm">Au plus tôt - jusqu'en Août 2027.</span>
                         </div>
                     </div>
-
                     <div class="border-t border-gray-300"></div>
-
                 </div>
             </div>
         </div>
@@ -107,6 +110,8 @@ import Logo3D from '../components/Logo3D.svelte';
     <ProjectsSection />
     <div class="pt-24"></div>
 </Layout>
+
+
 
 <script>
   document.addEventListener('astro:page-load', () => {

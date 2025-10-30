@@ -1,9 +1,9 @@
-<div id="page-transition" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(100%); background-color: #F3471C; overflow: hidden;">
+<div id="page-transition" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 9999; pointer-events: none; transform: translateY(100%); background-color: #F3471C; overflow: hidden; display: flex; align-items: center; justify-content: center;">
   <svg id="logo_transition" width="100" viewBox="0 0 500 304" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-logo">
-    <g id="letter-L_transition" style="opacity: 0;"><path d="M79.5456 201.109L89.2795 199.672L89.2859 199.829C144.763 192.558 192.502 183.459 209.416 181.371V219.374C141.149 220.32 78.8835 234.497 30.8442 257.394V30.8679C30.8442 15.2715 10.2814 3.79079 0 0H79.5456V201.109Z" fill="white"/></g>
-    <g id="letter-E_transition" style="opacity: 0;"><path d="M209.416 162.437L101.876 175.46L107.142 144.592C122.778 145.097 148.567 140.518 160.713 133.706V95.041H131.493V71.4834H160.713V26.3945C150.129 22.735 126.736 22.2436 111.201 22.7451V0H209.416V162.437Z" fill="white"/></g>
-    <g id="letter-O1_transition" style="opacity: 0;"><path d="M339.286 234.559C304.719 225.459 266.26 220.091 225.649 219.402V0H339.286V234.559ZM274.35 195.127L290.584 197.589V19.707L274.35 19.001V195.127Z" fill="white"/></g>
-    <g id="letter-O2_transition" style="opacity: 0;"><path d="M500 0C489.719 3.79088 469.156 15.2719 469.156 30.8682V304C459.468 293.611 447.703 283.901 434.164 275.031C430.864 272.869 427.459 270.758 423.953 268.698C422.848 268.049 421.733 267.405 420.608 266.767C412.609 262.225 404.109 257.949 395.156 253.968C394.573 253.709 393.988 253.451 393.401 253.194C392.991 253.015 392.58 252.836 392.168 252.657V252.656C380.643 247.671 368.393 243.166 355.52 239.195V0H500ZM404.221 234.679L420.455 244.112V26.1494L404.221 25.1709V234.679Z" fill="white"/></g>
+    <g id="letter-L_transition"><path d="M79.5456 201.109L89.2795 199.672L89.2859 199.829C144.763 192.558 192.502 183.459 209.416 181.371V219.374C141.149 220.32 78.8835 234.497 30.8442 257.394V30.8679C30.8442 15.2715 10.2814 3.79079 0 0H79.5456V201.109Z" fill="white"/></g>
+    <g id="letter-E_transition"><path d="M209.416 162.437L101.876 175.46L107.142 144.592C122.778 145.097 148.567 140.518 160.713 133.706V95.041H131.493V71.4834H160.713V26.3945C150.129 22.735 126.736 22.2436 111.201 22.7451V0H209.416V162.437Z" fill="white"/></g>
+    <g id="letter-O1_transition"><path d="M339.286 234.559C304.719 225.459 266.26 220.091 225.649 219.402V0H339.286V234.559ZM274.35 195.127L290.584 197.589V19.707L274.35 19.001V195.127Z" fill="white"/></g>
+    <g id="letter-O2_transition"><path d="M500 0C489.719 3.79088 469.156 15.2719 469.156 30.8682V304C459.468 293.611 447.703 283.901 434.164 275.031C430.864 272.869 427.459 270.758 423.953 268.698C422.848 268.049 421.733 267.405 420.608 266.767C412.609 262.225 404.109 257.949 395.156 253.968C394.573 253.709 393.988 253.451 393.401 253.194C392.991 253.015 392.58 252.836 392.168 252.657V252.656C380.643 247.671 368.393 243.166 355.52 239.195V0H500ZM404.221 234.679L420.455 244.112V26.1494L404.221 25.1709V234.679Z" fill="white"/></g>
   </svg>
 </div>
 
@@ -19,7 +19,6 @@ const letterIds = [
   "letter-O2_transition"
 ];
 
-// Animation d'entrée
 document.addEventListener("click", (e) => {
   const target = e.target instanceof Element ? e.target : null;
   const link = target?.closest("a[href]");
@@ -47,7 +46,7 @@ document.addEventListener("click", (e) => {
   
   const enterAnimation = gsap.timeline();
   
-  enterAnimation.fromTo(overlay, { y: "100%", opacity: 1 }, {
+  enterAnimation.fromTo(overlay, { y: "100%" }, {
     y: "0%",
     duration: 0.6,
     ease: "power3.inOut"
@@ -71,35 +70,21 @@ document.addEventListener("click", (e) => {
   });
 }, true);
 
-// Animation de sortie 
 document.addEventListener("astro:after-swap", () => {
   const overlay = document.getElementById("page-transition");
   const letters = letterIds.map(id => document.getElementById(id)).filter(Boolean);
-  const pageContent = document.getElementById("page-content");
   
   if (!overlay || !letters.length) return;
   
-  gsap.set(overlay, { y: "0%", opacity: 1, pointerEvents: "auto" });
+  gsap.set(overlay, { y: "0%" });
   gsap.set(letters, { opacity: 1, y: 0 });
-  
-  if (pageContent) {
-    gsap.set(pageContent, { 
-      filter: "blur(25px)",
-      opacity: 0,
-      y: 50 
-    });
-  }
   
   const exitAnimation = gsap.timeline({
     delay: 0.5,
     onComplete: () => {
       overlay.style.pointerEvents = "none";
       overlay.style.transform = "translateY(100%)";
-      overlay.style.opacity = "0";
       document.body.style.overflow = "";
-      if (pageContent) {
-        gsap.set(pageContent, { filter: "none", opacity: 1, y: 0 });
-      }
       isAnimating = false;
     }
   });
@@ -117,15 +102,5 @@ document.addEventListener("astro:after-swap", () => {
     duration: 0.6,
     ease: "power4.inOut"
   }, 0.1);
-  
-  if (pageContent) {
-    exitAnimation.to(pageContent, {
-      filter: "blur(0px)",
-      opacity: 1,
-      y: 0,
-      duration: 0.8, 
-      ease: "power3.out"
-    }, 0.3);
-  }
 });
 </script>

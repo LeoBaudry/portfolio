@@ -1,12 +1,10 @@
 - Responsive text cards BG FOOTER
-## IMPORTANT -> HERO A RALENTIR 
 ### -> PENSER AU LAZY LOADING, PENSER A ACCESSIBILITÉ, PENSER AU SEO.
 
 --------------------------------------------------------------------------------------------------------------\
 #                                          # 20/10/25                                                          |
 --------------------------------------------------------------------------------------------------------------/
 
-- Menu : Voir flabbergast agency ? Sinon on reste sur le classique
 - MENU : Completer nav, 
 - - VOIR HTML SEMENTIQUE
 - - - ATTRIBUTS ARIAs

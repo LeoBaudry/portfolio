@@ -1,5 +1,4 @@
 ---
-// src/components/StackedSections.astro
 interface Section {
   number: string;
   title: string;
@@ -8,6 +7,7 @@ interface Section {
   textColor: string;
   theme: "light" | "dark"; 
 }
+
 
 const sections: Section[] = [
   {
@@ -37,6 +37,7 @@ const sections: Section[] = [
 ];
 ---
 
+
 <section class="relative scroll-smooth" aria-label="Services et expertises" style="scroll-padding-top: 33vh;">
   <div class="relative">
     {sections.map((section, index) => {
@@ -47,11 +48,14 @@ const sections: Section[] = [
             <div class="h-[100vh]" aria-hidden="true"></div>
           )}
 
+
           <article
+            role="region"
+            tabindex="0"
             data-theme={section.theme}
             class={`sticky ${isLastSection ? 'h-[34vh]' : 'h-[33vh]'} flex items-center justify-center 
                     px-4 sm:px-6 md:px-12 lg:px-20 xl:px-32 2xl:px-[300px]
-                    ${section.bgClass} ${section.textColor}`}
+                    ${section.bgClass} ${section.textColor} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF7957]`}
             style={`top: ${index * 33}vh; z-index: ${30 - index * 10};`}
             aria-labelledby={`section-title-${index + 1}`}
           >
@@ -71,6 +75,7 @@ const sections: Section[] = [
                 </h2>
               </div>
 
+
               <div>
                 <p class="text-xs sm:text-sm lg:text-base leading-relaxed opacity-90">
                   {section.description}
@@ -82,7 +87,15 @@ const sections: Section[] = [
       );
     })}
 
+
     {/* Espace final pour voir toutes les sections empilées */}
     <div class="h-screen" aria-hidden="true"></div>
   </div>
 </section>
+
+<style>
+  article:focus-visible {
+    outline: 2px solid #FF7957;
+    outline-offset: 2px;
+  }
+</style>

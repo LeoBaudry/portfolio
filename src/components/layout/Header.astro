@@ -1,6 +1,6 @@
 ---
 // src/components/Header.astro
-import Icon from './Icon.astro';
+import Icon from '../ui/Icon.astro';
 ---
 <header id="main-header" class="fixed z-50 p-4 top-6 left-12 right-12 max-[800px]:top-4 max-[800px]:left-2 max-[800px]:right-2 transition-transform duration-300 ease-out">
   <div class="relative grid items-center grid-cols-3">
@@ -50,10 +50,16 @@ import Icon from './Icon.astro';
           </nav>
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
-        <div class="menu-item flex justify-between items-center">
+        <div class="menu-item flex items-center gap-2">
           <a href="/cv.pdf" target="_blank" class="cursor-pointer nav-link text-lg transition-colors header-dropdown-text">
             <span class="nav-link-text" data-text="Voir mon CV">Voir mon CV</span>
           </a>
+          <span class="flex-shrink-0 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="3 2 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 arrow-cv-icon">
+              <line x1="7" y1="17" x2="17" y2="7"></line>
+              <polyline points="7 7 17 7 17 17"></polyline>
+            </svg>
+          </span>
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
         <a href="/contact" class="cursor-pointer menu-item block w-full rounded-lg border border-neutral-900 bg-transparent py-3 text-center font-semibold tracking-widest transition-colors header-contact-button" style="font-size: 12px;">
@@ -70,6 +76,7 @@ import Icon from './Icon.astro';
     </div>
   </div>
 </header>
+
 
 <style is:global>
   #main-header.header-hidden { transform: translateY(calc(-100% - 2rem)); }
@@ -97,7 +104,6 @@ import Icon from './Icon.astro';
     background-image: linear-gradient(to right, #51EB96, #E8F444); 
     background-size: 0% 100%; 
     background-repeat: no-repeat; 
-    /* MODIF: Changé 'center' en 'left' */
     background-position: left; 
     transition: background-size 0.4s ease-out, color 0.4s ease-out; 
   }
@@ -113,12 +119,21 @@ import Icon from './Icon.astro';
   .nav-link-text::before { content: attr(data-text); position: absolute; left: 0; top: 100%; transition: transform 0.4s cubic-bezier(0.7, 0, 0.3, 1); will-change: transform; }
   .nav-link:hover .nav-link-text { transform: translateY(-100%); }
   .nav-link:hover .nav-link-text::before { transform: translateY(0%); }
+  .arrow-cv-icon {
+    stroke: rgb(23, 23, 23);
+    transition: stroke 0.4s ease;
+  }
+  #main-header.header-dark-theme .arrow-cv-icon {
+    stroke: white;
+  }
 </style>
+
 
 <script>
   import { gsap } from "gsap";
   
   let menuAPI: any = null;
+
 
   function initMenu() {
     const toggle = document.getElementById('menu-toggle');
@@ -131,6 +146,7 @@ import Icon from './Icon.astro';
     gsap.set(dropdown, { y: -20, opacity: 0, visibility: 'hidden' });
     gsap.set(items, { y: 15, opacity: 0 });
     toggle.classList.remove('menu-open');
+
 
     const openMenu = () => {
       if (open) return;
@@ -225,6 +241,7 @@ import Icon from './Icon.astro';
     
     menuAPI = { closeMenu, resetMenu };
   }
+
 
   function initThemeObserver() {
     const header = document.getElementById('main-header');
