@@ -1,0 +1,378 @@
+---
+// src/pages/contact.astro
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+---
+
+<Layout>
+    <section class="min-h-screen bg-neutral-50 py-32 px-6">
+        <div class="max-w-4xl mx-auto">
+            
+            {/* Barre de progression */}
+            <div class="mb-16">
+                <div class="w-full bg-neutral-200 rounded-full h-2 overflow-hidden">
+                    <div 
+                        id="progress-bar" 
+                        class="h-full bg-gradient-to-r from-[#FF7957] to-[#F3471C] transition-all duration-500 ease-out rounded-full"
+                        style="width: 33.33%"
+                    ></div>
+                </div>
+            </div>
+
+            {/* Étape 1 : Message */}
+            <div id="step-1" class="step-content">
+                <div class="max-w-2xl mx-auto space-y-8">
+                    <div class="space-y-4">
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold text-black leading-tight tracking-[-0.06em]">
+                            👉 Entrons en contact
+                        </h1>
+                        <p class="text-lg text-neutral-800 tracking-[-0.06em]">
+                            Que ce soit pour une opportunité, une collaboration ou simplement partager des idées, je suis toujours partant pour échanger.
+                        </p>
+                    </div>
+
+                    <form class="space-y-6">
+                        <div class="space-y-2">
+                            <label for="message" class="block text-lg font-medium text-black tracking-[-0.06em]">Quel est votre message ?</label>
+                            <textarea 
+                                id="message" 
+                                rows="6"
+                                placeholder="Bonjour, qu'est-ce qui vous intéresse aujourd'hui ?"
+                                required
+                                class="w-full px-0 py-3 border-0 border-b-2 border-neutral-300 focus:border-[#FF7957] focus:ring-0 focus:outline-none bg-transparent text-neutral-800 placeholder-neutral-400 transition-colors resize-none tracking-[-0.06em]"
+                            ></textarea>
+                            <p id="message-error" class="text-sm text-red-500 hidden">Veuillez saisir un message</p>
+                        </div>
+                    </form>
+
+                    <div class="flex justify-center gap-4 pt-8">
+                        <button 
+                            id="next-step-1"
+                            class="inline-flex items-center justify-center gap-6 px-8 h-12 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full cursor-pointer transition-all duration-300 hover:px-12 tracking-[-0.06em]"
+                        >
+                            <span>SUIVANT</span>
+                            <Icon name="arrow" class="h-4 w-4 rotate-45" color="white" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Étape 2 : Informations personnelles */}
+            <div id="step-2" class="step-content hidden">
+                <div class="max-w-2xl mx-auto space-y-8">
+                    <div class="space-y-4">
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold text-black leading-tight tracking-[-0.06em]">
+                            👉 Vos informations
+                        </h1>
+                        <p class="text-lg text-neutral-800 tracking-[-0.06em]">
+                            Pour que je puisse vous répondre rapidement, merci de me laisser quelques informations.
+                        </p>
+                    </div>
+
+                    <form class="space-y-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label for="prenom" class="block text-lg font-medium text-black tracking-[-0.06em]">Prénom</label>
+                                <input 
+                                    type="text" 
+                                    id="prenom" 
+                                    placeholder="John"
+                                    required
+                                    class="w-full px-0 py-3 border-0 border-b-2 border-neutral-300 focus:border-[#FF7957] focus:ring-0 focus:outline-none bg-transparent text-neutral-800 placeholder-neutral-400 transition-colors tracking-[-0.06em]"
+                                />
+                                <p id="prenom-error" class="text-sm text-red-500 hidden">Veuillez saisir votre prénom</p>
+                            </div>
+                            <div class="space-y-2">
+                                <label for="nom" class="block text-lg font-medium text-black tracking-[-0.06em]">Nom</label>
+                                <input 
+                                    type="text" 
+                                    id="nom" 
+                                    placeholder="Doe"
+                                    required
+                                    class="w-full px-0 py-3 border-0 border-b-2 border-neutral-300 focus:border-[#FF7957] focus:ring-0 focus:outline-none bg-transparent text-neutral-800 placeholder-neutral-400 transition-colors tracking-[-0.06em]"
+                                />
+                                <p id="nom-error" class="text-sm text-red-500 hidden">Veuillez saisir votre nom</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="email" class="block text-lg font-medium text-black tracking-[-0.06em]">Email</label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                placeholder="contact@johndoe.fr"
+                                required
+                                class="w-full px-0 py-3 border-0 border-b-2 border-neutral-300 focus:border-[#FF7957] focus:ring-0 focus:outline-none bg-transparent text-neutral-800 placeholder-neutral-400 transition-colors tracking-[-0.06em]"
+                            />
+                            <p id="email-error" class="text-sm text-red-500 hidden">Veuillez saisir une adresse email valide</p>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="telephone" class="block text-lg font-medium text-black tracking-[-0.06em]">Téléphone*</label>
+                            <input 
+                                type="tel" 
+                                id="telephone" 
+                                placeholder="06 25 39 70 90"
+                                class="w-full px-0 py-3 border-0 border-b-2 border-neutral-300 focus:border-[#FF7957] focus:ring-0 focus:outline-none bg-transparent text-neutral-800 placeholder-neutral-400 transition-colors tracking-[-0.06em]"
+                            />
+                        </div>
+                    </form>
+
+                    <div class="flex justify-center items-center gap-4 pt-8">
+                        <button 
+                            id="prev-step-2"
+                            class="h-12 w-12 bg-black text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer shrink-0"
+                        >
+                            <Icon name="arrow" class="h-4 w-4 rotate-225" color="white" />
+                        </button>
+                        <button 
+                            id="next-step-2"
+                            class="inline-flex items-center justify-center gap-6 px-8 h-12 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full cursor-pointer transition-all duration-300 hover:px-12 tracking-[-0.06em]"
+                        >
+                            <span>SUIVANT</span>
+                            <Icon name="arrow" class="h-4 w-4 rotate-45" color="white" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Étape 3 : Message de remerciement */}
+            <div id="step-3" class="step-content hidden">
+                <div class="max-w-4xl mx-auto">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                        
+                        <div class="space-y-8">
+                            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-semibold text-black leading-tight tracking-[-0.06em]">
+                                👉 Merci d'avoir pris le temps de me contacter ! Je vous répondrai dès que possible.
+                            </h1>
+                        </div>
+
+                        <div class="space-y-8 md:max-lg:space-y-0 md:max-lg:flex md:max-lg:gap-8">
+                            <div class="space-y-6">
+                                <p class="text-lg text-neutral-800 tracking-[-0.06em]">
+                                    Vous pouvez aussi me retrouver sur :
+                                </p>
+                                <nav class="flex gap-4" aria-label="Réseaux sociaux">
+                                    <a href="#" aria-label="LinkedIn" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                        <Icon name="linkedin" class="h-9 w-9 text-black" hoverGradient="orange"/>
+                                    </a>
+                                    <a href="#" aria-label="Behance" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                        <Icon name="behance" class="h-9 w-9 text-black" hoverGradient="orange"/>
+                                    </a>
+                                    <a href="#" aria-label="Dribbble" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                        <Icon name="dribbble" class="h-9 w-9 text-black" hoverGradient="orange"/>
+                                    </a>
+                                </nav>
+                            </div>
+                            <div class="space-y-4">
+                                <p class="text-lg text-neutral-800 tracking-[-0.06em]">
+                                    Envoyez-moi un mail directement !
+                                </p>
+                                <div class="flex">
+                                    <a href="mailto:contact@example.com" aria-label="Email" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                        <Icon name="mail" class="h-9 w-9 text-black" hoverGradient="green"/>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center items-center gap-4 pt-12">
+                        <button 
+                            id="prev-step-3"
+                            class="h-12 w-12 bg-black text-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer shrink-0"
+                        >
+                            <Icon name="arrow" class="h-4 w-4 rotate-225" color="white" />
+                        </button>
+                        
+                        <a 
+                            href="/"
+                            class="inline-flex items-center justify-center gap-6 px-8 h-12 bg-gradient-to-r from-[#FF7957] to-[#F3471C] text-white font-medium rounded-full cursor-pointer transition-all duration-300 hover:px-12 tracking-[-0.06em]"
+                        >
+                            <span>RETOUR AU DÉBUT</span>
+                            <Icon name="arrow" class="h-4 w-4 rotate-45" color="white" />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</Layout>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 3;
+
+    // Objet pour stocker les données du formulaire
+    const formData = {
+        message: '',
+        prenom: '',
+        nom: '',
+        email: '',
+        telephone: ''
+    };
+
+    function updateProgress() {
+        const progressBar = document.getElementById('progress-bar');
+        const percentage = (currentStep / totalSteps) * 100;
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+    }
+
+    function showStep(stepNumber: number) {
+        document.querySelectorAll('.step-content').forEach(step => {
+            step.classList.add('hidden');
+        });
+
+        const currentStepElement = document.getElementById(`step-${stepNumber}`);
+        if (currentStepElement) {
+            currentStepElement.classList.remove('hidden');
+        }
+
+        currentStep = stepNumber;
+        updateProgress();
+    }
+
+    function validateStep1() {
+        const messageInput = document.getElementById('message') as HTMLTextAreaElement;
+        const messageError = document.getElementById('message-error');
+        
+        if (!messageInput.value.trim()) {
+            messageError?.classList.remove('hidden');
+            messageInput.classList.add('border-red-500');
+            return false;
+        }
+        
+        messageError?.classList.add('hidden');
+        messageInput.classList.remove('border-red-500');
+        formData.message = messageInput.value;
+        return true;
+    }
+
+    function validateStep2() {
+        const prenomInput = document.getElementById('prenom') as HTMLInputElement;
+        const nomInput = document.getElementById('nom') as HTMLInputElement;
+        const emailInput = document.getElementById('email') as HTMLInputElement;
+        const telephoneInput = document.getElementById('telephone') as HTMLInputElement;
+        
+        const prenomError = document.getElementById('prenom-error');
+        const nomError = document.getElementById('nom-error');
+        const emailError = document.getElementById('email-error');
+        
+        let isValid = true;
+        
+        // Validation prénom
+        if (!prenomInput.value.trim()) {
+            prenomError?.classList.remove('hidden');
+            prenomInput.classList.add('border-red-500');
+            isValid = false;
+        } else {
+            prenomError?.classList.add('hidden');
+            prenomInput.classList.remove('border-red-500');
+            formData.prenom = prenomInput.value;
+        }
+        
+        // Validation nom
+        if (!nomInput.value.trim()) {
+            nomError?.classList.remove('hidden');
+            nomInput.classList.add('border-red-500');
+            isValid = false;
+        } else {
+            nomError?.classList.add('hidden');
+            nomInput.classList.remove('border-red-500');
+            formData.nom = nomInput.value;
+        }
+        
+        // Validation email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailInput.value.trim() || !emailRegex.test(emailInput.value)) {
+            emailError?.classList.remove('hidden');
+            emailInput.classList.add('border-red-500');
+            isValid = false;
+        } else {
+            emailError?.classList.add('hidden');
+            emailInput.classList.remove('border-red-500');
+            formData.email = emailInput.value;
+        }
+        
+        // Téléphone optionnel
+        formData.telephone = telephoneInput.value;
+        
+        return isValid;
+    }
+
+    async function submitForm() {
+        // Ici tu peux envoyer les données à ton backend ou par email
+        console.log('Données du formulaire :', formData);
+        
+        // Exemple : envoyer à une API
+        // try {
+        //     const response = await fetch('/api/contact', {
+        //         method: 'POST',
+        //         headers: { 'Content-Type': 'application/json' },
+        //         body: JSON.stringify(formData)
+        //     });
+        //     if (response.ok) {
+        //         showStep(3);
+        //     }
+        // } catch (error) {
+        //     console.error('Erreur lors de l\'envoi:', error);
+        // }
+        
+        // Pour l'instant, on passe directement à l'étape 3
+        showStep(3);
+    }
+
+    function initEventListeners() {
+        // Navigation étape 1 → 2
+        document.getElementById('next-step-1')?.addEventListener('click', () => {
+            if (validateStep1()) {
+                showStep(2);
+            }
+        });
+
+        // Navigation étape 2
+        document.getElementById('prev-step-2')?.addEventListener('click', () => {
+            showStep(1);
+        });
+
+        document.getElementById('next-step-2')?.addEventListener('click', () => {
+            if (validateStep2()) {
+                submitForm();
+            }
+        });
+
+        // Navigation étape 3
+        document.getElementById('prev-step-3')?.addEventListener('click', () => {
+            showStep(2);
+        });
+    }
+
+    // Initialiser au chargement de la page
+    initEventListeners();
+    showStep(1);
+
+    // Réinitialiser après navigation avec View Transitions
+    document.addEventListener('astro:page-load', () => {
+        initEventListeners();
+        showStep(1);
+    });
+</script>
+
+<style>
+    .step-content {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>

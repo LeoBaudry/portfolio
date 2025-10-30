@@ -4,16 +4,18 @@ export interface Props {
   name: string;
   class?: string;
   hoverGradient?: 'orange' | 'green';
+  color?: string; // NOUVELLE PROP
 }
-const { name, class: className, hoverGradient } = Astro.props;
+const { name, class: className, hoverGradient, color } = Astro.props;
 const icons = import.meta.glob('/src/assets/*.svg', { query: '?raw', import: 'default' });
 const iconPath = `/src/assets/${name}.svg`;
+
 if (!icons[iconPath]) {
   console.error(`L'icône "${name}" n'a pas été trouvée dans /src/assets/`);
   return null;
 }
-let svgContent = String(await icons[iconPath]());
 
+let svgContent = String(await icons[iconPath]());
 const uniqueId = `${name}-${Math.random().toString(36).substr(2, 9)}`;
 
 if (className) {
@@ -21,6 +23,12 @@ if (className) {
 }
 
 svgContent = svgContent.replace('<svg', `<svg data-icon-id="${uniqueId}"`);
+
+// FORCER LA COULEUR SI SPÉCIFIÉE
+if (color) {
+  svgContent = svgContent.replace(/fill="[^"]*"/g, `fill="${color}"`);
+  svgContent = svgContent.replace(/stroke="[^"]*"/g, `stroke="${color}"`);
+}
 
 // Injecter le gradient directement DANS le SVG
 if (hoverGradient) {
@@ -37,19 +45,15 @@ const wrapperClass = `icon-wrapper ${hoverGradient ? `icon-hover-${hoverGradient
   <Fragment set:html={svgContent} />
 </div>
 
+<!-- Le script reste identique -->
 <script>
   import gsap from 'gsap';
  
-  // 1. Mettre TOUTE la logique dans une fonction
   function initIconAnimations() {
     const iconWrappers = document.querySelectorAll('.icon-wrapper[class*="icon-hover-"]');
-    
-    // Si on navigue et que l'ancienne anim est toujours là, on la stoppe
-    // (petite sécurité)
     gsap.killTweensOf(".icon-wrapper[class*='icon-hover-'] svg radialGradient");
 
     iconWrappers.forEach((wrapper) => {
-      // Prévention : vérifier si l'animation n'est pas déjà attachée
       if (wrapper.dataset.animationInitialized) return;
       wrapper.dataset.animationInitialized = "true";
 
@@ -100,7 +104,6 @@ const wrapperClass = `icon-wrapper ${hoverGradient ? `icon-hover-${hoverGradient
       link.addEventListener('mouseenter', enterAnim);
       link.addEventListener('mouseleave', leaveAnim);
 
-      // Garder une référence pour pouvoir nettoyer
       wrapper.cleanup = () => {
         link.removeEventListener('mouseenter', enterAnim);
         link.removeEventListener('mouseleave', leaveAnim);
@@ -108,14 +111,9 @@ const wrapperClass = `icon-wrapper ${hoverGradient ? `icon-hover-${hoverGradient
     });
   }
 
-  // 2. L'appeler au premier chargement
   initIconAnimations();
-
-  // 3. L'appeler après chaque navigation Astro
   document.addEventListener('astro:after-swap', initIconAnimations);
 
-  // 4. (Bonus) Nettoyer les anciens listeners avant le "swap"
-  // pour éviter les fuites de mémoire
   document.addEventListener('astro:before-swap', () => {
     document.querySelectorAll('.icon-wrapper[class*="icon-hover-"]').forEach(wrapper => {
       if (wrapper.cleanup) {

@@ -1,0 +1,109 @@
+---
+// src/components/ProjectsSection.astro
+
+const staticProjects = [
+    { 
+        title: "Yumly", 
+        img: "/images/projets/yumly-cover.jpg", 
+        slug: "/projets/yumly"
+    }, 
+    { 
+        title: "Posters", 
+        img: "/images/projets/posters-cover.jpg", 
+        slug: "/projets/posters" 
+    }, 
+    { 
+        title: "Site web de l'APG", 
+        img: "/images/projets/apg-cover.jpg", 
+        slug: "/projets/apg" 
+    }, 
+    { 
+        title: "Projets 3D", 
+        img: "/images/projets/3d-cover.jpg", 
+        slug: "/projets/projets-3d" 
+    }
+];
+
+const firstProject = staticProjects.length > 0 ? staticProjects[0] : null;
+const secondProject = staticProjects.length > 1 ? staticProjects[1] : null;
+const thirdProject = staticProjects.length > 2 ? staticProjects[2] : null;
+const fourthProject = staticProjects.length > 3 ? staticProjects[3] : null;
+---
+
+<section class="py-20 px-6 lg:px-12 bg-white text-black">
+    <div class="max-w-7xl mx-auto">
+        <h2 class="text-4xl font-semibold mb-12">Mes projets</h2>
+
+        <div class="grid grid-cols-1 gap-6">
+
+            {/* Slot 1: Projet Full-Width (Yumly) */}
+            {firstProject && (
+                <a 
+                    href={firstProject.slug} 
+                  
+                    class="project-item-home relative aspect-[4/3] md:aspect-[16/9] rounded-lg overflow-hidden group shadow-md block"
+                >
+                    <img 
+                        src={firstProject.img} 
+                        alt={firstProject.title} 
+                        class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105" 
+                    />
+                    <div class="absolute inset-0 bg-black bg-opacity-30 flex items-end p-4 transition-opacity">
+                        <h3 class="text-white font-semibold text-xl">{firstProject.title}</h3>
+                    </div>
+                </a>
+            )}
+
+            {/* Slot 2: Grille Half-Width (Posters & APG) */}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {secondProject && (
+                    <a 
+                        href={secondProject.slug} 
+                        class="project-item-home relative aspect-[4/3] rounded-lg overflow-hidden group shadow-md block"
+                    >
+                        <img 
+                            src={secondProject.img} 
+                            alt={secondProject.title} 
+                            class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105" 
+                        />
+                        <div class="absolute inset-0 bg-black bg-opacity-30 flex items-end p-4 transition-opacity">
+                            <h3 class="text-white font-semibold text-xl">{secondProject.title}</h3>
+                        </div>
+                    </a>
+                )}
+                {thirdProject && (
+                    <a 
+                        href={thirdProject.slug} 
+                        class="project-item-home relative aspect-[4/3] rounded-lg overflow-hidden group shadow-md block"
+                    >
+                        <img 
+                            src={thirdProject.img} 
+                            alt={thirdProject.title} 
+                            class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105" 
+                        />
+                        <div class="absolute inset-0 bg-black bg-opacity-30 flex items-end p-4 transition-opacity">
+                            <h3 class="text-white font-semibold text-xl">{thirdProject.title}</h3>
+                        </div>
+                    </a>
+                )}
+            </div>
+
+            {fourthProject && (
+                <a 
+                    href={fourthProject.slug} 
+                    class="project-item-home relative aspect-[4/3] md:aspect-[16/9] rounded-lg overflow-hidden group shadow-md block"
+                >
+                    <img 
+                        src={fourthProject.img} 
+                        alt={fourthProject.title} 
+                        class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105" 
+                    />
+                    <div class="absolute inset-0 bg-black bg-opacity-30 flex items-end p-4 transition-opacity">
+                        <h3 class="text-white font-semibold text-xl">{fourthProject.title}</h3>
+                    </div>
+                </a>
+            )}
+
+        </div>
+    </div>
+</section>

@@ -38,12 +38,12 @@ import Icon from './Icon.astro';
               </li>
               <li class="menu-item">
                 <a href="/projet/nom-projet-2" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
-                   <span class="nav-link-text" data-text="Projet Individuel B">Projet Individuel B</span>
+                  <span class="nav-link-text" data-text="Projet Individuel B">Projet Individuel B</span>
                 </a>
               </li>
               <li class="menu-item">
                 <a href="/projet/nom-projet-3" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
-                   <span class="nav-link-text" data-text="Projet Individuel C">Projet Individuel C</span>
+                  <span class="nav-link-text" data-text="Projet Individuel C">Projet Individuel C</span>
                 </a>
               </li>
             </ul>
@@ -71,7 +71,6 @@ import Icon from './Icon.astro';
   </div>
 </header>
 
-
 <style is:global>
   #main-header.header-hidden { transform: translateY(calc(-100% - 2rem)); }
   #menu-toggle, #menu-dropdown { -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
@@ -94,7 +93,14 @@ import Icon from './Icon.astro';
   #main-header:not(.header-dark-theme) #menu-toggle { background-color: rgba(0, 0, 0, 0.08); }
   #main-header:not(.header-dark-theme) #menu-toggle:hover { background-color: rgba(0, 0, 0, 0.12); }
   #main-header:not(.header-dark-theme) #menu-dropdown { background-color: rgba(0, 0, 0, 0.08); }
-  #contact-cta-button { background-image: linear-gradient(to right, #51EB96, #E8F444); background-size: 0% 100%; background-repeat: no-repeat; background-position: center; transition: background-size 0.4s ease-out, color 0.4s ease-out; }
+  #contact-cta-button { 
+    background-image: linear-gradient(to right, #51EB96, #E8F444); 
+    background-size: 0% 100%; 
+    background-repeat: no-repeat; 
+    /* MODIF: Changé 'center' en 'left' */
+    background-position: left; 
+    transition: background-size 0.4s ease-out, color 0.4s ease-out; 
+  }
   #contact-cta-button svg { transition: stroke 0.4s ease-out; }
   #contact-cta-button:hover { background-size: 100% 100%; color: rgb(23, 23, 23); }
   #contact-cta-button:hover svg { stroke: rgb(23, 23, 23); }
@@ -109,12 +115,10 @@ import Icon from './Icon.astro';
   .nav-link:hover .nav-link-text::before { transform: translateY(0%); }
 </style>
 
-
 <script>
   import { gsap } from "gsap";
   
   let menuAPI: any = null;
-
 
   function initMenu() {
     const toggle = document.getElementById('menu-toggle');
@@ -127,7 +131,6 @@ import Icon from './Icon.astro';
     gsap.set(dropdown, { y: -20, opacity: 0, visibility: 'hidden' });
     gsap.set(items, { y: 15, opacity: 0 });
     toggle.classList.remove('menu-open');
-
 
     const openMenu = () => {
       if (open) return;
@@ -151,7 +154,6 @@ import Icon from './Icon.astro';
         }, "-=0.25");
     };
 
-
     const closeMenu = () => {
       if (!open) return;
       open = false;
@@ -174,7 +176,6 @@ import Icon from './Icon.astro';
           ease: "power3.in" 
         }, "-=0.1");
     };
-
 
     const resetMenu = () => {
       open = false;
@@ -225,7 +226,6 @@ import Icon from './Icon.astro';
     menuAPI = { closeMenu, resetMenu };
   }
 
-
   function initThemeObserver() {
     const header = document.getElementById('main-header');
     if (!header) return;
@@ -257,14 +257,12 @@ import Icon from './Icon.astro';
     (header as any)._themeObserver = observer;
   }
 
-
   function initScrollBehavior() {
     const header = document.getElementById('main-header');
     if (!header) return;
     
     let lastY = window.scrollY;
     let ticking = false;
-
 
     const update = () => {
       const currentY = window.scrollY;
@@ -296,7 +294,6 @@ import Icon from './Icon.astro';
       ticking = false;
     };
 
-
     const onScroll = () => {
       if (!ticking) {
         requestAnimationFrame(update);
@@ -312,12 +309,10 @@ import Icon from './Icon.astro';
     (window as any)._headerScrollHandler = onScroll;
   }
 
-
   // Initialize on load
   initMenu();
   initThemeObserver();
   initScrollBehavior();
-
 
   // Reinitialize on page navigation
   document.addEventListener('astro:after-swap', () => {
