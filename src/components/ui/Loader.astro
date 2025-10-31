@@ -133,22 +133,22 @@ import '/src/styles/global.css';
 import { gsap } from "gsap";
 
 // 🔥 EXÉCUTÉ IMMÉDIATEMENT (avant DOMContentLoaded)
-const loaderContainer = document.querySelector(".loader-container");
+const loaderContainer = document.querySelector(".loader-container") as HTMLElement | null;
 const isTransitioning = sessionStorage.getItem("pageTransition");
 
 // Si on est en transition, on supprime le loader immédiatement
 if (isTransitioning === "true") {
   loaderContainer?.remove();
 } else {
-  // Sinon on vérifie si c'est un premier load
-  const navigation = performance.getEntriesByType("navigation")[0];
+// Sinon on vérifie si c'est un premier load
+  const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   const isExternalOrDirect = !document.referrer || !document.referrer.includes(location.origin);
   const isFirstLoad = navigation?.type === "reload" || isExternalOrDirect;
 
   if (!isFirstLoad) {
     loaderContainer?.remove();
   } else {
-    // C'est un premier load, on affiche le loader
+    // C'est un premier loa d, on affiche le loader
     loaderContainer.style.display = "block";
   }
 }

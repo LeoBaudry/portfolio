@@ -1,0 +1,131 @@
+---
+// src/components/ui/LiquidGlassButton.astro
+export interface Props {
+    title: string;
+    className?: string;
+    baseFrequency?: string;
+    scale?: string;
+    blurAmount?: string;
+    bgColor?: string;
+}
+
+const { 
+    title, 
+    className, 
+    baseFrequency = "0.01 0.02",
+    scale = "50", 
+    blurAmount = "8px",
+    bgColor = "rgba(255, 255, 255, 0.15)"
+} = Astro.props;
+---
+
+<svg style="display: none; position: absolute; width: 0; height: 0;">
+  <filter id="liquid-distortion">
+    <feTurbulence type="turbulence" baseFrequency={baseFrequency} numOctaves="2" result="noise" />
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale={scale} />
+  </filter>
+</svg>
+
+<div class:list={["liquid-glass-button", className]}>
+  <div class="glass-filter" style={`backdrop-filter: blur(${blurAmount}); -webkit-backdrop-filter: blur(${blurAmount}); filter: saturate(110%) brightness(1.1);`}></div>
+  <div class="glass-overlay" style={`background: ${bgColor};`}></div>
+  <div class="glass-specular"></div>
+  <div class="glass-content">
+    <span>{title}</span>
+  </div>
+</div>
+
+<style>
+  .liquid-glass-button {
+    --highlight: rgba(255, 255, 255, 0.5);
+    --text: #ffffff;
+    
+    position: relative;
+    padding: 14px 32px; 
+    border-radius: 300px; 
+    overflow: hidden; 
+    background: transparent; 
+    display: inline-flex; 
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+    pointer-events: none;
+  }
+
+  .glass-filter {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit; 
+    z-index: 1;
+  }
+
+  .glass-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: 2;
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-specular {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: 3;
+    pointer-events: none; 
+  }
+
+  .glass-content {
+    position: relative;
+    z-index: 4;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 40px;   
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    white-space: nowrap; 
+  }
+</style>
+
+
+<script>
+  const currentScript = document.currentScript;
+
+  if (!currentScript) {
+    console.warn("LiquidGlassButton: document.currentScript is null; interactive behavior disabled.");
+  } else {
+    const button = currentScript.previousElementSibling;
+
+    if (!(button instanceof HTMLElement)) {
+      console.warn("LiquidGlassButton: Could not find button element.");
+    } else {
+      const btn = button as HTMLElement;
+      const specular = btn.querySelector('.glass-specular');
+
+      if (!(specular instanceof HTMLElement)) {
+        console.warn("LiquidGlassButton: Could not find .glass-specular element.");
+      } else {
+        const specularEl = specular as HTMLElement;
+
+        function handleMouseMove(e: { clientX: number; clientY: number; }) {
+          const rect = btn.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          specularEl.style.background = `radial-gradient(
+            circle at ${x}px ${y}px,
+            rgba(255, 255, 255, 0.25) 0%, /* Point le plus lumineux */
+            rgba(255, 255, 255, 0.1) 30%,  /* Transition */
+            rgba(255, 255, 255, 0) 70%     /* Fin de la lumière */
+          )`;
+        }
+
+        function handleMouseLeave() {
+          specularEl.style.background = 'none';
+        }
+
+        btn.addEventListener('mousemove', handleMouseMove);
+        btn.addEventListener('mouseleave', handleMouseLeave);
+      }
+    }
+  }
+</script>
