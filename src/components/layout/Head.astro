@@ -1,0 +1,58 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: string;
+  canonical?: string;
+}
+
+const {
+  title,
+  description = "Étudiant en multimédia passionné par le design 3D et la création d'expériences visuelles immersives. Recherche stage (30 mars - 6 juin).",
+  image = "/og-image.jpg",
+  type = "website",
+  canonical = Astro.url.pathname
+} = Astro.props;
+
+// Configuration du site
+const siteName = "Léo Baudry";
+const defaultHomeTitle = "Léo Baudry";
+
+const isHomepage = Astro.url.pathname === '/' || Astro.url.pathname === '';
+const pageTitle = title 
+  ? (isHomepage ? title : `${siteName} - ${title}`)
+  : defaultHomeTitle;
+
+// Gestion du cas où Astro.site est undefined
+const siteUrl = Astro.site || new URL(Astro.url.pathname, `http://localhost:${import.meta.env.DEV ? '4321' : '3000'}`);
+const canonicalURL = new URL(canonical, siteUrl);
+const ogImage = new URL(image, siteUrl);
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="generator" content={Astro.generator} />
+
+<!-- Balises Meta SEO -->
+<title>{pageTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:locale" content="fr_FR" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content={canonicalURL} />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />

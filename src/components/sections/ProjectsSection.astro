@@ -1,45 +1,36 @@
 ---
-const staticProjects = [
-    { 
-        title: "Yumly", 
-        tag: "Design",
-        year: "2024-2025",
-        img: "/imgs/ville.jpg",
-        slug: "/projets/yumly"
-    }, 
-    { 
-        title: "Posters", 
-        tag: "Graphisme",
-        year: "2024-2025",
-        img: "/imgs/ville.jpg", 
-        slug: "/projets/posters" 
-    }, 
-    { 
-        title: "Site web de l'APG", 
-        tag: "Développement",
-        year: "2025",
-        img: "/imgs/ville.jpg", 
-        slug: "/projets/apg" 
-    }, 
-    { 
-        title: "Projets 3D", 
-        tag: "3D",
-        year: "2023-2025",
-        img: "/imgs/ville.jpg", 
-        slug: "/projets/3d" 
-    }
-];
+import pb from '../../lib/pb/pb.ts';
+import type { ProjetsResponse, TagsResponse } from '../../lib/pb/pocketbase-typegen';
+
+const projectRecords = await pb.collection('projets').getList<ProjetsResponse<{
+    tags: TagsResponse[]
+}>>(1, 4, {
+    sort: 'created',
+    expand: 'tags',
+});
+
+const projects = projectRecords.items.map(project => {
+    const firstTag = project.expand?.tags?.[0]?.nom || 'Projet';
+    
+    return {
+        title: project.title,
+        tag: firstTag,
+        year: project.year,
+        img: pb.files.getURL(project, project.cover_image, { thumb: '1000x1000' }),
+        slug: `/projets/${project.slug}`
+    };
+});
 ---
 
 <h2 class="text-4xl sm:text-5xl lg:text-6xl font-semibold text-left pt-24 pb-12 lg:pb-16 px-6 lg:px-24">Mes projets</h2>
 
 <section class="projects-fullscreen-section relative" aria-label="Galerie des projets">
     <div class="sr-only" role="status" aria-live="polite" id="project-status">
-        Projet actif: {staticProjects[0].title}
+        Projet actif: {projects.length > 0 ? projects[0].title : 'Aucun projet'}
     </div>
     
     <div class="projects-container relative h-screen w-full">
-        {staticProjects.map((project, index) => (
+        {projects.map((project, index) => (
             <div 
                 class="project-slide absolute top-0 left-0 w-full h-screen opacity-0 pointer-events-none z-10" 
                 data-project-index={index}
@@ -52,7 +43,8 @@ const staticProjects = [
                     <div class="project-image-container absolute inset-0 z-10">
                         <img 
                             src={project.img} 
-                            alt="" class="w-full h-full object-cover"
+                            alt={`Image de couverture pour ${project.title}`} 
+                            class="w-full h-full object-cover"
                         />
                     </div>
                     
@@ -80,7 +72,7 @@ const staticProjects = [
                             <span class="text-white font-medium uppercase tracking-wider text-xs md:text-base">{project.year}</span>
                         </div>
                         <div class="absolute top-0 h-full flex items-center pl-4 md:pl-8 left-2/3 w-1/3 md:left-3/4 md:w-1/4">
-                            <span class="text-white font-medium uppercase tracking-wider text-xs md:text-base">{index + 1}/{staticProjects.length}</span>
+                            <span class="text-white font-medium uppercase tracking-wider text-xs md:text-base">{index + 1}/{projects.length}</span>
                         </div>
                     </div>
                 </a>

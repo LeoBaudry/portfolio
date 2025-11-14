@@ -148,8 +148,10 @@ if (isTransitioning === "true") {
   if (!isFirstLoad) {
     loaderContainer?.remove();
   } else {
-    // C'est un premier loa d, on affiche le loader
-    loaderContainer.style.display = "block";
+    // C'est un premier load, on affiche le loader
+    if (loaderContainer) {
+      loaderContainer.style.display = "block";
+    }
   }
 }
 

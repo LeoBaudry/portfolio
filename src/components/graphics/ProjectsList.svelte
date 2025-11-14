@@ -2,7 +2,8 @@
   import { onMount, tick } from 'svelte';
   import { gsap } from 'gsap';
   
-  let { projects = [] } = $props();
+  // MODIFIÉ 1: On reçoit 'allTags' en prop, et on combine les props
+  let { projects = [], allTags = ['Tous'] } = $props();
 
   let viewMode = $state('list');
   let hoveredImage = $state(null);
@@ -14,7 +15,7 @@
   const imageWidth = 384;
   const imageOffset = 20;
 
-  const categories = ['Tous', 'Identité', 'Motion Design', '3D / Modélisation'];
+  // SUPPRIMÉ: 'const categories' n'est plus codé en dur
   let activeCategory = $state('Tous');
 
   let filteredProjects = $derived(projects.filter(p => {
@@ -40,7 +41,7 @@
     await tick(); 
     gsap.fromTo(".project-item",
       { opacity: 0, y: 30 }, 
-      {                     
+      { 
         opacity: 1,
         y: 0,
         duration: 0.5,
@@ -81,7 +82,8 @@
     <nav aria-label="Filtres de catégories" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-normal">
       <span class="text-gray-500" id="filter-label">Filtres :</span>
       <div role="group" aria-labelledby="filter-label" class="flex flex-wrap gap-x-4 gap-y-2">
-        {#each categories as category}
+        
+        {#each allTags as category}
           <button
             type="button"
             onclick={() => activeCategory = category}
@@ -153,23 +155,23 @@
             />
             <div 
               class="absolute inset-0 p-6 flex flex-col justify-end
-                    opacity-0 group-hover:opacity-100 
-                    bg-gradient-to-t from-black/70 to-transparent
-                    transition-opacity duration-300 ease-in-out"
+                      opacity-0 group-hover:opacity-100 
+                      bg-gradient-to-t from-black/70 to-transparent
+                      transition-opacity duration-300 ease-in-out"
               aria-hidden="true"
             >
               <h3 
                 class="text-white font-bold text-2xl
-                      transform translate-y-4 group-hover:translate-y-0 
-                      transition-transform duration-300 ease-in-out"
+                        transform translate-y-4 group-hover:translate-y-0 
+                        transition-transform duration-300 ease-in-out"
               >
                 {project.title}
               </h3>
               <div 
                 class="absolute bottom-6 right-6 text-right text-white text-xs font-mono
-                      opacity-0 group-hover:opacity-100 
-                      transform translate-y-4 group-hover:translate-y-0
-                      transition-all duration-300 delay-100 ease-in-out"
+                        opacity-0 group-hover:opacity-100 
+                        transform translate-y-4 group-hover:translate-y-0
+                        transition-all duration-300 delay-100 ease-in-out"
               >
                 {#if Array.isArray(project.technologies)}
                   {project.technologies.join(' / ')}
@@ -199,10 +201,10 @@
             <a 
               href={`/projets/${project.slug}`}
               class="flex flex-col gap-1 py-3 px-3
-                    md:grid md:grid-cols-12 md:items-center md:py-2
-                    text-black bg-white
-                    hover:bg-black hover:text-white
-                    transition-colors duration-150 cursor-pointer group"
+                      md:grid md:grid-cols-12 md:items-center md:py-2
+                      text-black bg-white
+                      hover:bg-black hover:text-white
+                      transition-colors duration-150 cursor-pointer group"
               onmouseenter={() => hoveredImage = project.coverImageUrl}
               aria-label={`${project.title} - ${project.type} pour ${project.client}`}
             >
@@ -220,8 +222,8 @@
 
   <div 
     class="fixed w-96 aspect-video rounded-md overflow-hidden shadow-2xl
-          pointer-events-none z-50
-          transition-opacity duration-200"
+            pointer-events-none z-50
+            transition-opacity duration-200"
     style="
       left: {mousePos.x + imageOffset + imageWidth > viewportWidth 
         ? mousePos.x - imageWidth - imageOffset 

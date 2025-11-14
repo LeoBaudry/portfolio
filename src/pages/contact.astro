@@ -4,7 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import Icon from '../components/ui/Icon.astro';
 ---
 
-<Layout>
+<Layout title="Me contacter">
     <section class="min-h-screen bg-neutral-50 py-32 px-6">
         <div class="max-w-4xl mx-auto">
             
@@ -302,27 +302,53 @@ import Icon from '../components/ui/Icon.astro';
         return isValid;
     }
 
+    // --- MODIFICATION PRINCIPALE ICI ---
     async function submitForm() {
-        // Ici tu peux envoyer les données à ton backend ou par email
-        console.log('Données du formulaire :', formData);
+        // Sélectionner le bouton et son texte
+        const submitButton = document.getElementById('next-step-2') as HTMLButtonElement | null;
+        const buttonText = submitButton ? submitButton.querySelector('span') : null;
+
+        // Désactiver le bouton et montrer le chargement
+        if (submitButton && buttonText) {
+            submitButton.disabled = true;
+            buttonText.textContent = 'ENVOI EN COURS...';
+        }
+
+        console.log('Envoi des données:', formData);
         
-        // Exemple : envoyer à une API
-        // try {
-        //     const response = await fetch('/api/contact', {
-        //         method: 'POST',
-        //         headers: { 'Content-Type': 'application/json' },
-        //         body: JSON.stringify(formData)
-        //     });
-        //     if (response.ok) {
-        //         showStep(3);
-        //     }
-        // } catch (error) {
-        //     console.error('Erreur lors de l\'envoi:', error);
-        // }
-        
-        // Pour l'instant, on passe directement à l'étape 3
-        showStep(3);
+        try {
+            // Envoyer les données à notre API route
+            const response = await fetch('/api/contact', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                // Succès ! On passe à l'étape 3
+                showStep(3);
+            } else {
+                // Erreur côté serveur (ex: 400, 500)
+                alert("Une erreur est survenue lors de l'envoi. Veuillez réessayer.");
+                // Réactiver le bouton pour que l'utilisateur puisse corriger
+                if (submitButton && buttonText) {
+                    submitButton.disabled = false;
+                    buttonText.textContent = 'SUIVANT';
+                }
+            }
+
+        } catch (error) {
+            // Erreur réseau (pas de connexion, etc.)
+            console.error('Erreur lors de l\'envoi:', error);
+            alert("Erreur réseau. Veuillez vérifier votre connexion et réessayer.");
+            // Réactiver le bouton
+            if (submitButton && buttonText) {
+                submitButton.disabled = false;
+                buttonText.textContent = 'SUIVANT';
+            }
+        }
     }
+    // --- FIN DE LA MODIFICATION ---
 
     function initEventListeners() {
         // Navigation étape 1 → 2
@@ -339,7 +365,7 @@ import Icon from '../components/ui/Icon.astro';
 
         document.getElementById('next-step-2')?.addEventListener('click', () => {
             if (validateStep2()) {
-                submitForm();
+                submitForm(); // Appelle la nouvelle fonction
             }
         });
 
@@ -355,8 +381,16 @@ import Icon from '../components/ui/Icon.astro';
 
     // Réinitialiser après navigation avec View Transitions
     document.addEventListener('astro:page-load', () => {
+        // Ré-attacher les écouteurs d'événements
         initEventListeners();
-        showStep(1);
+        // Toujours s'assurer qu'on commence à l'étape 1
+        showStep(1); 
+        // Réinitialiser l'état du formulaire au cas où
+        formData.message = '';
+        formData.prenom = '';
+        formData.nom = '';
+        formData.email = '';
+        formData.telephone = '';
     });
 </script>
 

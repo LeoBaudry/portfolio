@@ -1,51 +1,35 @@
 ---
-// import { pb } from '@/lib/pocketbase'; 
+import pb from '@/lib/pb/pb.ts';
 import Layout from '@/layouts/Layout.astro';
 import ProjectsList from '@/components/graphics/ProjectsList.svelte';
+import type { ProjetsResponse, TagsResponse } from '@/lib/pb/pocketbase-typegen.ts';
 
-// === DONNÉES PLACEHOLDER (MISES À JOUR AVEC 'categories') ===
-const projects = [
-  {
-    id: '1',
-    slug: 'projet-yumly',
-    title: 'Yumly',
-    client: 'MMI Montbéliard',
-    type: 'Branding - UX/UI Design - Développement',
-    technologies: ['Figma', 'Astro', 'Tailwind'],
-    coverImageUrl: 'https://placehold.co/800x600/2E2E2E/FFF/png?text=Yumly', 
-    categories: ['Identité'],
-  },
-  {
-    id: '2',
-    slug: 'projet-apg',
-    title: 'APG',
-    client: 'Association des Pêcheurs',
-    type: 'Refonte de site web - Identité',
-    technologies: ['Wordpress', 'Elementor', 'Photoshop'],
-    coverImageUrl: 'https://placehold.co/800x600/3498db/FFF/png?text=APG',
-    categories: ['Identité'],
-  },
-  {
-    id: '3',
-    slug: 'projet-posters',
-    title: 'Posters',
-    client: 'Projet Personnel',
-    type: 'Graphic Design - Poster Design',
-    technologies: ['Photoshop', 'Illustrator'],
-    coverImageUrl: 'https://placehold.co/800x600/e74c3c/FFF/png?text=Posters',
-    categories: ['Motion Design'],
-  },
-  {
-    id: '4',
-    slug: 'projet-3d',
-    title: 'Projets 3D',
-    client: 'Projet Personnel',
-    type: '3D Design - Animation',
-    technologies: ['Blender', 'Substance Painter'],
-    coverImageUrl: 'https://placehold.co/800x600/9b59b6/FFF/png?text=3D',
-    categories: ['3D / Modélisation'],
-  },
-];
+// 1. Récupérer tous les projets
+const projectRecords = await pb.collection('projets').getFullList<ProjetsResponse<{
+  tags: TagsResponse[]
+}>>({
+  sort: 'created', // Les plus récents en premier
+  expand: 'tags'    // Important pour récupérer les noms des tags
+});
+
+// 2. Récupérer tous les tags pour les filtres
+const tagsRecords = await pb.collection('tags').getFullList<TagsResponse>({
+  sort: 'nom' // Tri alphabétique
+});
+
+// 3. Formater les projets pour le composant Svelte
+const projects = projectRecords.map(p => ({
+  id: p.id,
+  slug: p.slug, // Le composant Svelte ajoutera "/projets/"
+  title: p.title,
+  client: p.clients,
+  type: p.type_services, // Le champ texte "Branding - UX/UI..."
+  coverImageUrl: pb.files.getURL(p, p.cover_image),
+  categories: p.expand?.tags?.map(t => t.nom) || [] // Le tableau de noms de tags pour le filtre
+}));
+
+// 4. Formater la liste des tags pour les filtres
+const allTags = ['Tous', ...tagsRecords.map(t => t.nom)];
 ---
 
 <Layout title="Mes Projets">
@@ -56,7 +40,7 @@ const projects = [
       </h1>
     </div>
     
-    <ProjectsList projects={projects} client:load />
+    <ProjectsList projects={projects} allTags={allTags} client:load />
 
   </section>
 </Layout>

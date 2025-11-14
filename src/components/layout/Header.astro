@@ -1,6 +1,18 @@
 ---
 // src/components/Header.astro
 import Icon from '../ui/Icon.astro';
+import pb from '../../lib/pb/pb.ts';
+import type { ProjetsResponse } from '../../lib/pb/pocketbase-typegen';
+
+let projets: ProjetsResponse[] = [];
+try {
+projets = await pb.collection('projets').getFullList<ProjetsResponse>({
+sort: 'created',
+fields: 'id,title,slug'
+});
+} catch (error) {
+console.error('Erreur lors de la récupération des projets:', error);
+}
 ---
 <header id="main-header" class="fixed z-50 p-4 top-6 left-12 right-12 max-[800px]:top-4 max-[800px]:left-2 max-[800px]:right-2 transition-transform duration-300 ease-out">
   <div class="relative grid items-center grid-cols-3">
@@ -23,35 +35,32 @@ import Icon from '../ui/Icon.astro';
       <div id="menu-dropdown" class="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-full p-6 rounded-md invisible">
         <div class="menu-item mb-6">
           <span class="text-xs tracking-widest header-dropdown-text">PROJETS</span>
+          
           <nav class="mt-2">
             <ul class="space-y-2 text-lg">
+              
               <li class="menu-item">
                 <a href="/projets" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
                   <span class="nav-link-text" data-text="Tous les projets">Tous les projets</span>
                 </a>
               </li>
-              <hr class="menu-item border-black/10 my-2 header-dropdown-border">
-              <li class="menu-item">
-                <a href="/projet/nom-projet-1" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
-                  <span class="nav-link-text" data-text="Projet Individuel A">Projet Individuel A</span>
-                </a>
-              </li>
-              <li class="menu-item">
-                <a href="/projet/nom-projet-2" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
-                  <span class="nav-link-text" data-text="Projet Individuel B">Projet Individuel B</span>
-                </a>
-              </li>
-              <li class="menu-item">
-                <a href="/projet/nom-projet-3" class="cursor-pointer nav-link block transition-colors header-dropdown-text">
-                  <span class="nav-link-text" data-text="Projet Individuel C">Projet Individuel C</span>
-                </a>
-              </li>
+
+              <hr class="menu-item border-black/10 my-4 header-dropdown-border" />
+
+              {projets.slice(0, 5).map((projet) => (
+                <li class="menu-item" data-slug={projet.slug}> 
+                  <a href={`/projets/${projet.slug}`} class="cursor-pointer nav-link block transition-colors header-dropdown-text">
+                    <span class="nav-link-text" data-text={projet.title}>{projet.title}</span>
+                  </a>
+                </li>
+              ))}
+              
             </ul>
           </nav>
         </div>
         <hr class="menu-item w-full border-black/10 my-6 header-dropdown-border" />
         <div class="menu-item flex items-center gap-2">
-          <a href="/cv.pdf" target="_blank" class="cursor-pointer nav-link text-lg transition-colors header-dropdown-text">
+          <a href="https://drive.google.com/file/d/1hGJjDHtJGs4xzaXUorJAHGboDvz0s5oA/view" target="_blank" class="cursor-pointer nav-link text-lg transition-colors header-dropdown-text">
             <span class="nav-link-text" data-text="Voir mon CV">Voir mon CV</span>
           </a>
           <span class="flex-shrink-0 flex items-center">
