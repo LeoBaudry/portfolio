@@ -18,41 +18,25 @@
 <!-- - MENU : Bouton contact doit disparaitre en version mobile (reste dans menu header déplié) -->
 <!-- - MENU : Desktop -> Hover texte = coulissement (comprendra qui pourra) -->
 <!-- - HERO : `data-theme="dark"` pour accessibilité menu ? -->  
- # PENSER QUAND MEME A AJOUTER LES DATA-THEME SUR TOUS LES ELEMENTS NECESSAIRES.
- ## -> QUELS RESULTATS AVEC UN MODE SOMBRE ?
-- - Animations GSAP pour StackedSections.astro ? (apparition texte)
-- - - HERO : Le timestamp doit être fonctionnel (comme pour le loader)
-- - - Organiser les dossiers (surtout components)
-<!-- - - - Penser a react et SHADCN ?  -->
+--  # PENSER QUAND MEME A AJOUTER LES !!!DATA-SECTION-THEME!!! SUR TOUS LES ELEMENTS NECESSAIRES.
+
+--  ## -> QUELS RESULTATS AVEC UN MODE SOMBRE ?   PAS BESOIN / PAS LE TEMPS / PAS ADAPTE - VOIR PLUS TARD 
+
+-- - - Animations GSAP pour StackedSections.astro ? (apparition texte)  - FAIT
+-- - - - HERO : Le timestamp doit être fonctionnel (comme pour le loader)   - FAIT 
+-- - - - Organiser les dossiers (surtout components)  -  FAIT
 
 --------------------------------------------------------------------------------------------------------------\
 #                                          # 26/10/25                                                          | 
 --------------------------------------------------------------------------------------------------------------/
 
-- MENU : PENSER au bouton contact à faire proprement. 
-UNE FOIS QUE C EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma part ? 
-- - ET ENSUITE ? 
-- - - Sémantique MENU, ACCESSIBILITE MENU. 
-- - - FINITION FOOTER :
+-- - MENU : PENSER au bouton contact à faire proprement. 
+-- UNE FOIS QUE C EST FAIT, LE HEADER EST COMPLÉTÉ À 100%, sauf si erreur de ma part ? 
+-- - - ET ENSUITE ? 
+-- - - - Sémantique MENU, ACCESSIBILITE MENU. 
 
-VERIFIER SI : LAYOUT GLOBAL (HEADER/FOOTER/TRANSITIONS/LOADER) SONT : 
-- Fonctionnels
-- Responsive
+-- VERIFIER SI : LAYOUT GLOBAL (HEADER/FOOTER/TRANSITIONS/LOADER) SONT : 
+-- - Fonctionnels - FAIT 
+-- - Responsive   - FAIT 
 
--- REGARDER COMPOSANT SVELTE ? ( GEMINI) c est FAIT
-
---------------------------------------------------------------------------------------------------------------\
--- CODE POUR FILTRES DYNAMIQUES DANS PROJECTSLIST.SVELTE 
-
--- let categories = $derived.by(() => {
---   const uniqueCategories = new Set();
-  
---   projects.forEach(project => {
---     if (project.categories && Array.isArray(project.categories)) {
---       project.categories.forEach(cat => uniqueCategories.add(cat));
---     }
---   });
-  
---   return ['Tous', ...Array.from(uniqueCategories).sort()];
--- });
---------------------------------------------------------------------------------------------------------------/
+-- REGARDER COMPOSANT SVELTE ? ( GEMINI) FAIT

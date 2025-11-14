@@ -253,35 +253,34 @@ console.error('Erreur lors de la récupération des projets:', error);
 
 
   function initThemeObserver() {
-    const header = document.getElementById('main-header');
-    if (!header) return;
-    
-    const sections = document.querySelectorAll('[data-theme]');
-    if (!sections.length) return;
-    
-    // Cleanup previous observer
-    const prevObserver = (header as any)._themeObserver;
-    if (prevObserver) prevObserver.disconnect();
-    
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const isDark = entry.target.getAttribute('data-theme') === 'dark';
-            header.classList.toggle('header-dark-theme', isDark);
-          }
-        });
-      },
-      { 
-        root: null, 
-        rootMargin: '-100px 0px -80% 0px', 
-        threshold: 0 
-      }
-    );
-    
-    sections.forEach(section => observer.observe(section));
-    (header as any)._themeObserver = observer;
-  }
+  const header = document.getElementById('main-header');
+  if (!header) return;
+  
+  const sections = document.querySelectorAll('[data-section-theme]');
+  if (!sections.length) return;
+  
+  const prevObserver = (header as any)._themeObserver;
+  if (prevObserver) prevObserver.disconnect();
+  
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const isDark = entry.target.getAttribute('data-section-theme') === 'dark';
+          header.classList.toggle('header-dark-theme', isDark);
+        }
+      });
+    },
+    { 
+      root: null, 
+      rootMargin: '-100px 0px -80% 0px', 
+      threshold: 0 
+    }
+  );
+  
+  sections.forEach(section => observer.observe(section));
+  (header as any)._themeObserver = observer;
+}
 
   function initScrollBehavior() {
     const header = document.getElementById('main-header');
