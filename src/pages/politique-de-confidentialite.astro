@@ -1,9 +1,12 @@
 ---
 // src/pages/politique-de-confidentialite.astro
 import Layout from '../layouts/Layout.astro';
+
+const pageTitle = "Politique de Confidentialité";
+const pageDescription = "Découvrez comment vos données personnelles (nom, email, message...) sont collectées, utilisées et protégées sur ce site, conformément au RGPD.";
 ---
 
-<Layout title="Politique de Confidentialité">
+<Layout title={pageTitle} description={pageDescription}>
     <section class="min-h-screen bg-neutral-50 py-32 px-6" data-section-theme="light">
         <div class="max-w-4xl mx-auto prose prose-neutral lg:prose-lg space-y-6" style="letter-spacing: -0.04em;">
 

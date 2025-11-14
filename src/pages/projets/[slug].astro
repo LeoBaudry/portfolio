@@ -1,5 +1,4 @@
 ---
-// 1. IMPORTS NÉCESSAIRES (rien ne change)
 import pb from '../../lib/pb/pb.ts';
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/ui/Icon.astro';
@@ -10,49 +9,35 @@ import type {
   TagsResponse
 } from '../../lib/pb/pocketbase-typegen.ts'; 
 
-// GETSTATICPATHS : SIMPLIFIÉ
-// On ne lui demande plus que les slugs, c'est tout ce qu'Astro veut savoir.
 export async function getStaticPaths() {
   const projets = await pb.collection('projets').getFullList({
-    fields: 'slug' // On ne prend que le slug
+    fields: 'slug' 
   });
 
   return projets.map((projet) => ({
     params: { slug: projet.slug }, 
-    // PAS DE PROPS ! Elles sont ignorées en mode serveur.
   }));
 }
 
-// ⬇️ --- C'EST ICI QUE TOUT CHANGE --- ⬇️
-
 // RÉCUPÉRATION DES DONNÉES
-const { slug } = Astro.params; // On prend le slug de l'URL
+const { slug } = Astro.params; 
 
-// Si le slug n'existe pas, on redirige
 if (!slug) {
   return Astro.redirect('/404');
 }
 
-// ON VA CHERCHER LES DONNÉES POUR CETTE PAGE PRÉCISE
-// On utilise `getFirstListItem` avec un filtre sur le slug
 const projet = await pb.collection('projets').getFirstListItem<ProjetsResponse<{
     tags: TagsResponse[],
     details_projet: DetailsResponse<{
       related_projects: ProjetsResponse[]
     }>
-  }>>(`slug = "${slug}"`, { // <-- Le filtre magique
+  }>>(`slug = "${slug}"`, { 
     expand: 'tags, details_projet, details_projet.related_projects'
   });
 
-// Si le projet n'est pas trouvé (ex: mauvais slug), on redirige
 if (!projet) {
   return Astro.redirect('/404');
 }
-
-// ⬆️ --- FIN DES CHANGEMENTS --- ⬆️
-
-// TOUT LE RESTE DE TON CODE EST MAINTENANT CORRECT
-// Car 'projet' est à nouveau défini et contient les 'expand'
 
 const getImageUrl = (record: DetailsResponse<{ related_projects: ProjetsResponse[]; }> | ProjetsResponse<{
 tags: TagsResponse[]; details_projet: DetailsResponse<{
@@ -63,7 +48,7 @@ related_projects: ProjetsResponse[];
   return pb.files.getURL(record, filename);
 };
 
-const details = projet.expand?.details_projet; // ✅ Ça ne plantera plus !
+const details = projet.expand?.details_projet; 
 
 const projectData = {
   id: projet.id,
@@ -71,11 +56,12 @@ const projectData = {
   title: projet.title,
   year: projet.year,
   coverImageUrl: getImageUrl(projet, projet.cover_image),
-  tags: projet.expand?.tags?.map(tag => tag.nom) || [], // ✅ Ça ne plantera plus
+  tags: projet.expand?.tags?.map(tag => tag.nom) || [], 
   type_services: projet.type_services,
   
   // Données de la collection 'details'
   tagline: details?.tagline,
+  description: details?.description,
   challengeTitle: details?.challenge_title,
   challengeDescription: details?.challenge_description, 
   
@@ -106,7 +92,9 @@ const projectData = {
 };
 ---
 
-<Layout title={projectData.title}>
+<Layout title={projectData.title}
+        description={projectData.description || projectData.tagline}
+        image={projectData.coverImageUrl}>
   <section class="w-full bg-white text-black">
 
     {/* === HERO === */}
@@ -214,7 +202,7 @@ const projectData = {
           <div class="absolute inset-0 items-center justify-center overflow-hidden z-0 rounded-2xl hidden lg:flex">
             <img
               src={projectData.mockupImageUrl}
-              alt=""
+              alt="arrière-plan flouté du mock-up."
               class="w-full h-full object-cover rounded-2xl opacity-80" 
               style="filter: blur(80px); transform: scale(1.2);" 
             />

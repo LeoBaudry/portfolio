@@ -4,35 +4,37 @@ import Layout from '@/layouts/Layout.astro';
 import ProjectsList from '@/components/graphics/ProjectsList.svelte';
 import type { ProjetsResponse, TagsResponse } from '@/lib/pb/pocketbase-typegen.ts';
 
-// 1. Récupérer tous les projets
+// Récupérer tous les projets
 const projectRecords = await pb.collection('projets').getFullList<ProjetsResponse<{
   tags: TagsResponse[]
 }>>({
-  sort: 'created', // Les plus récents en premier
-  expand: 'tags'    // Important pour récupérer les noms des tags
+  sort: 'created', 
+  expand: 'tags'   
 });
 
-// 2. Récupérer tous les tags pour les filtres
+// Récupérer tous les tags pour les filtres
 const tagsRecords = await pb.collection('tags').getFullList<TagsResponse>({
-  sort: 'nom' // Tri alphabétique
+  sort: 'nom' 
 });
 
-// 3. Formater les projets pour le composant Svelte
+// Formater les projets pour le composant Svelte
 const projects = projectRecords.map(p => ({
   id: p.id,
-  slug: p.slug, // Le composant Svelte ajoutera "/projets/"
+  slug: p.slug, 
   title: p.title,
   client: p.clients,
-  type: p.type_services, // Le champ texte "Branding - UX/UI..."
+  type: p.type_services, 
   coverImageUrl: pb.files.getURL(p, p.cover_image),
-  categories: p.expand?.tags?.map(t => t.nom) || [] // Le tableau de noms de tags pour le filtre
+  categories: p.expand?.tags?.map(t => t.nom) || []
 }));
 
-// 4. Formater la liste des tags pour les filtres
+// Formater la liste des tags pour les filtres
 const allTags = ['Tous', ...tagsRecords.map(t => t.nom)];
+const pageTitle = "Mes Projets";
+const pageDescription = `Découvrez tous les projets de Léo Baudry. Une collection de travaux en design 3D, développement web, et UI/UX design réalisés pendant ma formation MMI.`;
 ---
 
-<Layout title="Mes Projets">
+<Layout title={pageTitle} description={pageDescription}>  
   <section class="page-content w-full px-10 lg:px-12" data-section-theme="light">
     <div class="pt-40 pb-4">
       <h1 class="text-5xl md:text-8xl font-bold text-black" style="letter-spacing: -0.05em;">

@@ -1,9 +1,12 @@
 ---
 // src/pages/mentions-legales.astro
 import Layout from '../layouts/Layout.astro';
+
+const pageTitle = "Mentions Légales";
+const pageDescription = "Informations légales concernant le site leo-baudry.fr, édité par Léo Baudry. Retrouvez les détails sur l'éditeur, le directeur de la publication et l'hébergeur.";
 ---
 
-<Layout title="Mentions Légales">
+<Layout title={pageTitle} description={pageDescription}>
     <section class="min-h-screen bg-neutral-50 py-32 sm:py-40" data-section-theme="light">
         <div class="max-w-2xl mx-auto">
             

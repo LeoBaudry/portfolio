@@ -3,9 +3,12 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/ui/Icon.astro';
+
+const pageTitle = "Me contacter";
+const pageDescription = "Entrons en contact. Que ce soit pour une opportunité, une collaboration ou simplement partager des idées, envoyez-moi un message via le formulaire.";
 ---
 
-<Layout title="Me contacter">
+<Layout title={pageTitle} description={pageDescription}>
     <section class="min-h-screen bg-neutral-50 py-32 px-6">
         <div class="max-w-4xl mx-auto">
             

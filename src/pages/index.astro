@@ -5,20 +5,18 @@ import StackedSections from '../components/sections/StackedSections.astro';
 import ProjectsSection from '../components/sections/ProjectsSection.astro';
 import Icon from '../components/ui/Icon.astro';
 import Logo3D from '../components/graphics/Logo3D.svelte';
+
+const pageTitle = "Léo Baudry | Designer 3D & Web";
+const pageDescription = "Portfolio de Léo Baudry, étudiant MMI. Découvrez mes projets en 3D, design et développement web.";
 ---
 
-
-
-<Layout>
-    
+<Layout title={pageTitle} description={pageDescription}>    
     <Hero 
         topLine1="L'originalité"
         topLine2="n'est pas un choix,"
         bottomLine="c'est une nécessité."
         backgroundVideo="/videos/hero.mp4"
     />
-
-
 
     <section id="imagine-section" role="region" aria-label="À propos et vision" class="min-h-[70vh] flex items-center py-32 lg:py-32 px-6 lg:px-12" data-section-theme="light">
         <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
@@ -34,8 +32,6 @@ import Logo3D from '../components/graphics/Logo3D.svelte';
                     Chaque réalisation est pour moi l'occasion de donner forme à une idée forte, avec précision, audace et sensibilité.
                 </p>
             </div>
-
-
 
             <div class="space-y-8 order-1 lg:order-2 text-center lg:text-left">
                 <div class="space-y-4">
@@ -66,12 +62,8 @@ import Logo3D from '../components/graphics/Logo3D.svelte';
         </div>
     </section>
 
-
-
     <div id="stacked-sections-anchor" class="-mt-20"></div>
     <StackedSections />
-
-
 
     <section class="py-24 px-6 lg:px-12 bg-white" role="region" aria-label="Informations sur l'alternance" tabindex="0" data-section-theme="light">
         <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-12 lg:gap-16 items-center">
@@ -110,8 +102,6 @@ import Logo3D from '../components/graphics/Logo3D.svelte';
     <ProjectsSection />
     <div class="pt-24"></div>
 </Layout>
-
-
 
 <script>
   document.addEventListener('astro:page-load', () => {
