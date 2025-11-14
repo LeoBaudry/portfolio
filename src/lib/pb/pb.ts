@@ -1,11 +1,17 @@
 import PocketBase from 'pocketbase';
-type TypedPocketBase = PocketBase;
+type TypedPocketBase = PocketBase; 
 
-const pb = new PocketBase(
-  import.meta.env.PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090'
-) as TypedPocketBase;
+let path = '';
+if (import.meta.env.MODE === 'development') {
+    //  LOCAL 
+    path = 'http://127.0.0.1:8090'; 
+} else {
+    //  VPS
+    path = 'http://127.0.0.1:????'; 
+}
 
-// Désactiver le renouvellement auto des tokens pour le SSG
+const pb = new PocketBase(path) as TypedPocketBase;
+
 pb.autoCancellation(false);
 
 export default pb;

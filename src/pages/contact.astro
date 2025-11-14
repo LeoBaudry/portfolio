@@ -1,5 +1,6 @@
 ---
 // src/pages/contact.astro
+export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/ui/Icon.astro';
 ---
@@ -153,13 +154,13 @@ import Icon from '../components/ui/Icon.astro';
                                     Vous pouvez aussi me retrouver sur :
                                 </p>
                                 <nav class="flex gap-4" aria-label="Réseaux sociaux">
-                                    <a href="#" aria-label="LinkedIn" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                    <a href="https://www.linkedin.com/in/l%C3%A9o-baudry-a00b88336/" aria-label="LinkedIn" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
                                         <Icon name="linkedin" class="h-9 w-9 text-black" hoverGradient="orange"/>
                                     </a>
-                                    <a href="#" aria-label="Behance" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                    <a href="https://www.behance.net/lobaudry2" aria-label="Behance" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
                                         <Icon name="behance" class="h-9 w-9 text-black" hoverGradient="orange"/>
                                     </a>
-                                    <a href="#" aria-label="Dribbble" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                    <a href="https://dribbble.com/leo-baudry" aria-label="Dribbble" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
                                         <Icon name="dribbble" class="h-9 w-9 text-black" hoverGradient="orange"/>
                                     </a>
                                 </nav>
@@ -169,7 +170,7 @@ import Icon from '../components/ui/Icon.astro';
                                     Envoyez-moi un mail directement !
                                 </p>
                                 <div class="flex">
-                                    <a href="mailto:contact@example.com" aria-label="Email" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
+                                    <a href="mailto:leobaudry@laposte.net" aria-label="Email" class="transition-all duration-300 ease-in-out hover:-translate-y-1">
                                         <Icon name="mail" class="h-9 w-9 text-black" hoverGradient="green"/>
                                     </a>
                                 </div>
@@ -202,6 +203,7 @@ import Icon from '../components/ui/Icon.astro';
 <script>
     let currentStep = 1;
     const totalSteps = 3;
+    let isSubmitting = false; // ← Protection contre les doubles envois (bonne pratique!)
 
     // Objet pour stocker les données du formulaire
     const formData = {
@@ -262,7 +264,6 @@ import Icon from '../components/ui/Icon.astro';
         
         let isValid = true;
         
-        // Validation prénom
         if (!prenomInput.value.trim()) {
             prenomError?.classList.remove('hidden');
             prenomInput.classList.add('border-red-500');
@@ -273,7 +274,6 @@ import Icon from '../components/ui/Icon.astro';
             formData.prenom = prenomInput.value;
         }
         
-        // Validation nom
         if (!nomInput.value.trim()) {
             nomError?.classList.remove('hidden');
             nomInput.classList.add('border-red-500');
@@ -284,7 +284,6 @@ import Icon from '../components/ui/Icon.astro';
             formData.nom = nomInput.value;
         }
         
-        // Validation email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailInput.value.trim() || !emailRegex.test(emailInput.value)) {
             emailError?.classList.remove('hidden');
@@ -296,19 +295,20 @@ import Icon from '../components/ui/Icon.astro';
             formData.email = emailInput.value;
         }
         
-        // Téléphone optionnel
         formData.telephone = telephoneInput.value;
         
         return isValid;
     }
 
-    // --- MODIFICATION PRINCIPALE ICI ---
     async function submitForm() {
-        // Sélectionner le bouton et son texte
+        if (isSubmitting) {
+            return;
+        }
+        isSubmitting = true;
+        
         const submitButton = document.getElementById('next-step-2') as HTMLButtonElement | null;
         const buttonText = submitButton ? submitButton.querySelector('span') : null;
 
-        // Désactiver le bouton et montrer le chargement
         if (submitButton && buttonText) {
             submitButton.disabled = true;
             buttonText.textContent = 'ENVOI EN COURS...';
@@ -317,7 +317,6 @@ import Icon from '../components/ui/Icon.astro';
         console.log('Envoi des données:', formData);
         
         try {
-            // Envoyer les données à notre API route
             const response = await fetch('/api/contact', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -325,12 +324,9 @@ import Icon from '../components/ui/Icon.astro';
             });
 
             if (response.ok) {
-                // Succès ! On passe à l'étape 3
                 showStep(3);
             } else {
-                // Erreur côté serveur (ex: 400, 500)
                 alert("Une erreur est survenue lors de l'envoi. Veuillez réessayer.");
-                // Réactiver le bouton pour que l'utilisateur puisse corriger
                 if (submitButton && buttonText) {
                     submitButton.disabled = false;
                     buttonText.textContent = 'SUIVANT';
@@ -338,54 +334,52 @@ import Icon from '../components/ui/Icon.astro';
             }
 
         } catch (error) {
-            // Erreur réseau (pas de connexion, etc.)
             console.error('Erreur lors de l\'envoi:', error);
             alert("Erreur réseau. Veuillez vérifier votre connexion et réessayer.");
-            // Réactiver le bouton
             if (submitButton && buttonText) {
                 submitButton.disabled = false;
-                buttonText.textContent = 'SUIVANT';
-            }
+                    buttonText.textContent = 'SUIVANT';
+                }
+        } finally {
+            isSubmitting = false;
         }
     }
-    // --- FIN DE LA MODIFICATION ---
 
     function initEventListeners() {
-        // Navigation étape 1 → 2
         document.getElementById('next-step-1')?.addEventListener('click', () => {
             if (validateStep1()) {
                 showStep(2);
             }
         });
 
-        // Navigation étape 2
         document.getElementById('prev-step-2')?.addEventListener('click', () => {
             showStep(1);
         });
 
         document.getElementById('next-step-2')?.addEventListener('click', () => {
             if (validateStep2()) {
-                submitForm(); // Appelle la nouvelle fonction
+                submitForm();
             }
         });
 
-        // Navigation étape 3
         document.getElementById('prev-step-3')?.addEventListener('click', () => {
             showStep(2);
         });
     }
 
-    // Initialiser au chargement de la page
-    initEventListeners();
-    showStep(1);
+    // --- CORRECTION ICI ---
+    // On supprime les appels directs qui causaient le doublement
+    // initEventListeners(); // <-- SUPPRIMÉ
+    // showStep(1); // <-- SUPPRIMÉ
 
-    // Réinitialiser après navigation avec View Transitions
+    // On garde UNIQUEMENT l'écouteur 'astro:page-load'
+    // Il gère le premier chargement ET les navigations
     document.addEventListener('astro:page-load', () => {
-        // Ré-attacher les écouteurs d'événements
         initEventListeners();
-        // Toujours s'assurer qu'on commence à l'étape 1
         showStep(1); 
-        // Réinitialiser l'état du formulaire au cas où
+        isSubmitting = false; // Réinitialise ton flag
+        
+        // Réinitialise les données du formulaire pour une navigation propre
         formData.message = '';
         formData.prenom = '';
         formData.nom = '';
