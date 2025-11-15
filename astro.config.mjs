@@ -23,11 +23,12 @@ export default defineConfig({
   integrations: [
     react(), 
     svelte(), 
-    sitemap(), 
-    
-    // 3. AJOUTE L'ADAPTER ICI
-    node({
-      mode: 'standalone'
-    })
-  ]
+    sitemap()
+    // ❌ NE METS PAS node() ICI
+  ],
+
+  // 3. AJOUTE L'ADAPTER ICI (en dehors de integrations)
+  adapter: node({
+    mode: 'standalone'
+  })
 });
