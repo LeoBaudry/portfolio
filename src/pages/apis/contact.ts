@@ -1,4 +1,4 @@
-// src/pages/api/contact.ts
+// src/pages/apis/contact.ts
 import type { APIRoute } from 'astro';
 
 // ⬇️ ON IMPORTE TA CONNEXION PARTAGÉE ⬇️

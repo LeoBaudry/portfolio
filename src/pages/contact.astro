@@ -320,7 +320,7 @@ const pageDescription = "Entrons en contact. Que ce soit pour une opportunité, 
         console.log('Envoi des données:', formData);
         
         try {
-            const response = await fetch('/api/contact', { 
+            const response = await fetch('/apis/contact', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
