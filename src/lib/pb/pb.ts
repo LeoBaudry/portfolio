@@ -7,7 +7,7 @@ if (import.meta.env.MODE === 'development') {
     path = 'http://127.0.0.1:8090'; 
 } else {
     //  VPS
-    path = 'http://127.0.0.1:????'; 
+    path = 'https://leo-baudry.fr:443'; 
 }
 
 const pb = new PocketBase(path) as TypedPocketBase;
@@ -15,3 +15,4 @@ const pb = new PocketBase(path) as TypedPocketBase;
 pb.autoCancellation(false);
 
 export default pb;
+
