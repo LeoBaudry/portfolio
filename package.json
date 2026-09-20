@@ -24,6 +24,8 @@
     "esbuild": true
   },
   "devDependencies": {
-    "@types/three": "^0.186.0"
+    "@astrojs/check": "^0.9.10",
+    "@types/three": "^0.186.0",
+    "typescript": "^6.0.3"
   }
 }

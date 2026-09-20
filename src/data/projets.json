@@ -1,0 +1,123 @@
+[
+  {
+    "titre": "Aurore",
+    "slug": "aurore",
+    "categorie": "Identité",
+    "secteur": "Culture",
+    "annee": 2024,
+    "description": "Identité visuelle pour un festival pluridisciplinaire.",
+    "images": [
+      "/images/projects/aurore/01.svg",
+      "/images/projects/aurore/02.svg",
+      "/images/projects/aurore/03.svg",
+      "/images/projects/aurore/04.svg",
+      "/images/projects/aurore/05.svg",
+      "/images/projects/aurore/06.svg"
+    ]
+  },
+  {
+    "titre": "Solstice",
+    "slug": "solstice",
+    "categorie": "Web",
+    "secteur": "Retail",
+    "annee": 2023,
+    "description": "Site vitrine pour une marque de mobilier.",
+    "images": [
+      "/images/projects/solstice/01.svg",
+      "/images/projects/solstice/02.svg",
+      "/images/projects/solstice/03.svg",
+      "/images/projects/solstice/04.svg",
+      "/images/projects/solstice/05.svg"
+    ]
+  },
+  {
+    "titre": "Mirage",
+    "slug": "mirage",
+    "categorie": "Motion",
+    "secteur": "Mode",
+    "annee": 2022,
+    "description": "Habillage animé pour une campagne saisonnière.",
+    "images": [
+      "/images/projects/mirage/01.svg",
+      "/images/projects/mirage/02.svg",
+      "/images/projects/mirage/03.svg",
+      "/images/projects/mirage/04.svg"
+    ]
+  },
+  {
+    "titre": "Faille",
+    "slug": "faille",
+    "categorie": "Édition",
+    "secteur": "Institution",
+    "annee": 2024,
+    "description": "Refonte éditoriale d'un rapport annuel.",
+    "images": [
+      "/images/projects/faille/01.svg",
+      "/images/projects/faille/02.svg",
+      "/images/projects/faille/03.svg",
+      "/images/projects/faille/04.svg",
+      "/images/projects/faille/05.svg",
+      "/images/projects/faille/06.svg"
+    ]
+  },
+  {
+    "titre": "Lisière",
+    "slug": "lisiere",
+    "categorie": "Web",
+    "secteur": "Architecture",
+    "annee": 2023,
+    "description": "Site portfolio pour une agence d'architecture.",
+    "images": [
+      "/images/projects/lisiere/01.svg",
+      "/images/projects/lisiere/02.svg",
+      "/images/projects/lisiere/03.svg",
+      "/images/projects/lisiere/04.svg",
+      "/images/projects/lisiere/05.svg"
+    ]
+  },
+  {
+    "titre": "Verso",
+    "slug": "verso",
+    "categorie": "Identité",
+    "secteur": "Musique",
+    "annee": 2021,
+    "description": "Identité visuelle pour un label indépendant.",
+    "images": [
+      "/images/projects/verso/01.svg",
+      "/images/projects/verso/02.svg",
+      "/images/projects/verso/03.svg",
+      "/images/projects/verso/04.svg"
+    ]
+  },
+  {
+    "titre": "Échos",
+    "slug": "echos",
+    "categorie": "Motion",
+    "secteur": "Culture",
+    "annee": 2022,
+    "description": "Générique animé pour une série documentaire.",
+    "images": [
+      "/images/projects/echos/01.svg",
+      "/images/projects/echos/02.svg",
+      "/images/projects/echos/03.svg",
+      "/images/projects/echos/04.svg",
+      "/images/projects/echos/05.svg",
+      "/images/projects/echos/06.svg"
+    ]
+  },
+  {
+    "titre": "Traverse",
+    "slug": "traverse",
+    "categorie": "Web",
+    "secteur": "Tech",
+    "annee": 2024,
+    "description": "Site produit pour une startup B2B.",
+    "images": [
+      "/images/projects/traverse/01.svg",
+      "/images/projects/traverse/02.svg",
+      "/images/projects/traverse/03.svg",
+      "/images/projects/traverse/04.svg",
+      "/images/projects/traverse/05.svg"
+    ]
+  }
+]
