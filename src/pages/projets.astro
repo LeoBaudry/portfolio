@@ -354,5 +354,8 @@ import projects from '../data/projets.json';
     z-index: 15;
     object-fit: cover;
     pointer-events: none;
+    /* FIX TAILWIND RESPONSIVE : empêche l'image de s'écraser */
+    max-width: none !important; 
+    max-height: none !important;
   }
 </style>

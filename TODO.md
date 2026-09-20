@@ -99,8 +99,11 @@ Recent related memories worth re-reading before touching this again:
 - `feedback_browser_test_tooling_flaky`
 - `project_projets_page_v2`
 
-Aussi, lors du premier chargement de la page projets, quand on passe de view 1 à view 2, les textes des projets sont déjà apparent, avant de disparaitre puis de s'animer normalement (présent de base (pas normal)->début d'animation (disparait)-> réaparait)
-une fois seulement, et c'est bon jusqu'au reload de page.
+penser à animer la vue 3 aussi, et transition vue 3.
+
+images selon width : picture d'astro etc voir gemini et lui demander
+
+
 ---- partie de Gemini (à transmettre à claude code), pour l'optimisation de la vue2 et de l'animation en sortie et entrée de viewport des éléments : 
 ❌ Le mythe : Animer la disparition des éléments hors écran n'économise pas de ressources, ça en consomme plus (calculs JS/GPU). Le navigateur ne calcule déjà pas le rendu de ce qui est hors viewport.
 

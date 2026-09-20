@@ -1,7 +1,7 @@
 import Lenis from 'lenis';
 import { lenis as pageLenis } from './smooth-scroll';
 
-// Vue 1 (carrousel)
+// --- Constantes ---
 const WHEEL_THRESHOLD = 18;
 const STEP_DURATION = 1000;
 const STEP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -18,17 +18,18 @@ const STEP_INFO_REVEAL_DELAY = STEP_DURATION * 0.85;
 const DEZOOM_INFO_HIDE_DELAY = 450;
 const CAROUSEL_INFO_HIDE_DELAY = 350;
 
-// Vue 1 <-> Vue 2 morph
 const MORPH_DURATION = 700;
 const MORPH_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 const MORPH_SIBLING_FADE_DURATION = 650;
 const MORPH_SIBLING_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)'; 
 
+// La chorégraphie d'entrée : le texte current passe en premier, les autres images attendent ce délai
+const DEZOOM_OTHERS_IMAGE_DELAY = 150; 
+const DEZOOM_OTHERS_TEXT_DELAY = MORPH_SIBLING_FADE_DURATION * 0.85;
+
 const DEZOOM_CROP_CLOSED = 'inset(50% 0 50% 0)';
 const DEZOOM_MASK_HIDDEN = 'inset(100% 0 0 0)';
 const DEZOOM_MASK_VISIBLE = 'inset(0 0 0 0)';
-
-const DEZOOM_OTHERS_TEXT_DELAY = MORPH_SIBLING_FADE_DURATION * 0.85;
 
 type ViewMode = 'carousel' | 'dezoom' | 'liste';
 
@@ -48,9 +49,11 @@ export function initProjetsPage(root: ParentNode = document) {
   let current = 0;
   let switching = false;
   
-  // BarbaJS cleanup variables
+  // BarbaJS & Performance variables
   let rafId: number;
+  let isDezoomActive = false;
   let dezoomObserver: IntersectionObserver | null = null;
+  const clickHandlers: { btn: HTMLButtonElement; handler: () => void }[] = [];
 
   function updateSwitcherUI(): void {
     switcherButtons.forEach((btn) => {
@@ -65,6 +68,7 @@ export function initProjetsPage(root: ParentNode = document) {
 
     const isCarouselDezoomMorph =
       (view === 'carousel' && next === 'dezoom') || (view === 'dezoom' && next === 'carousel');
+    
     if (isCarouselDezoomMorph) {
       switching = true;
       morphBetweenCarouselAndDezoom(next).finally(() => {
@@ -91,13 +95,28 @@ export function initProjetsPage(root: ParentNode = document) {
     } else {
       pageLenis?.stop();
     }
+    
     if (view === 'dezoom') {
+      isDezoomActive = true;
       const dl = ensureDezoomLenis();
       dl?.start();
       scrollDezoomToCurrent(dl);
+      rafId = requestAnimationFrame(dezoomRaf);
+      
+      if (!isCarouselDezoomMorph) {
+        dezoomItems.forEach((el) => {
+          delete el.dataset.revealed;
+          const img = el.querySelector('img');
+          if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
+          hideDezoomItemInfoInstant(el);
+        });
+      }
     } else {
+      isDezoomActive = false;
+      cancelAnimationFrame(rafId);
       dezoomLenis?.stop();
     }
+    
     if (view === 'carousel') {
       carouselIndex = current;
       setCarouselCurrentImage(carouselIndex);
@@ -106,8 +125,73 @@ export function initProjetsPage(root: ParentNode = document) {
   }
 
   switcherButtons.forEach((btn) => {
-    btn.addEventListener('click', () => setView((btn.dataset.setView as ViewMode) ?? 'carousel'));
+    const handler = () => setView((btn.dataset.setView as ViewMode) ?? 'carousel');
+    btn.addEventListener('click', handler);
+    clickHandlers.push({ btn, handler });
   });
+
+  // --- Outils partagés ---
+
+  function settle(animation: Animation, timeoutMs = 2000): Promise<void> {
+    return new Promise((resolve) => {
+      let isDone = false;
+      const timer = window.setTimeout(() => finish(), timeoutMs);
+
+      const finish = () => {
+        if (isDone) return;
+        isDone = true;
+        clearTimeout(timer);
+        try {
+          if (animation.playState !== 'finished') animation.finish();
+          animation.commitStyles();
+        } catch {}
+        animation.cancel();
+        resolve();
+      };
+
+      animation.finished.then(finish).catch(finish);
+    });
+  }
+
+  function maskClearDistance(el: HTMLElement): number {
+    const mask = el.closest<HTMLElement>('.item-info');
+    return (mask ?? el).getBoundingClientRect().height;
+  }
+
+  function hideInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
+    const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
+    const clears = targets.map((el) => maskClearDistance(el));
+    return Promise.all(
+      targets.map((el, i) => {
+        return settle(
+          el.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${clears[i]}px)` }], {
+            duration: INFO_HIDE_DURATION,
+            delay: delay + i * INFO_PART_STAGGER,
+            easing: INFO_HIDE_EASE,
+            fill: 'forwards',
+          })
+        );
+      })
+    ).then(() => {});
+  }
+
+  function revealInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
+    const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
+    const clears = targets.map((el) => maskClearDistance(el));
+    targets.forEach((el, i) => { el.style.transform = `translateY(${clears[i]}px)`; });
+    return Promise.all(
+      targets.map((el, i) => {
+        return settle(
+          el.animate([{ transform: `translateY(${clears[i]}px)` }, { transform: 'translateY(0)' }], {
+            duration: INFO_REVEAL_DURATION,
+            delay: delay + i * INFO_PART_STAGGER,
+            easing: INFO_REVEAL_EASE,
+            fill: 'forwards',
+          })
+        );
+      })
+    ).then(() => {});
+  }
 
   // --- Vue 1 ---
 
@@ -142,59 +226,6 @@ export function initProjetsPage(root: ParentNode = document) {
       carouselInfoMeta.textContent = item?.dataset.meta ?? '';
       carouselInfoMeta.style.transform = 'translateY(0)';
     }
-  }
-
-  function settle(animation: Animation, timeoutMs = 2000): Promise<void> {
-    const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs));
-    return Promise.race([animation.finished.catch(() => {}), timeout]).then(() => {
-      try {
-        if (animation.playState !== 'finished') animation.finish();
-        animation.commitStyles();
-      } catch {
-        // Already canceled
-      }
-      animation.cancel();
-    });
-  }
-
-  function maskClearDistance(el: HTMLElement): number {
-    const mask = el.closest<HTMLElement>('.item-info');
-    return (mask ?? el).getBoundingClientRect().height;
-  }
-
-  function hideInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
-    const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
-    return Promise.all(
-      targets.map((el, i) => {
-        const clear = maskClearDistance(el);
-        return settle(
-          el.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${clear}px)` }], {
-            duration: INFO_HIDE_DURATION,
-            delay: delay + i * INFO_PART_STAGGER,
-            easing: INFO_HIDE_EASE,
-            fill: 'forwards',
-          })
-        );
-      })
-    ).then(() => {});
-  }
-
-  function revealInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
-    const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
-    return Promise.all(
-      targets.map((el, i) => {
-        const clear = maskClearDistance(el);
-        el.style.transform = `translateY(${clear}px)`;
-        return settle(
-          el.animate([{ transform: `translateY(${clear}px)` }, { transform: 'translateY(0)' }], {
-            duration: INFO_REVEAL_DURATION,
-            delay: delay + i * INFO_PART_STAGGER,
-            easing: INFO_REVEAL_EASE,
-            fill: 'forwards',
-          })
-        );
-      })
-    ).then(() => {});
   }
 
   function hideCarouselInfo(delay = 0): Promise<void> {
@@ -237,15 +268,12 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  panels.carousel?.addEventListener(
-    'wheel',
-    (e) => {
-      e.preventDefault();
-      if (switching || carouselLocked || Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
-      stepCarousel(e.deltaY > 0 ? 1 : -1);
-    },
-    { passive: false }
-  );
+  const handleWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    if (switching || carouselLocked || Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
+    stepCarousel(e.deltaY > 0 ? 1 : -1);
+  };
+  panels.carousel?.addEventListener('wheel', handleWheel, { passive: false });
 
   // --- Vue 2 ---
 
@@ -255,12 +283,10 @@ export function initProjetsPage(root: ParentNode = document) {
 
   function initDezoomObserver() {
     if (!panels.dezoom || dezoomObserver) return;
-    
     dezoomObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const el = entry.target as HTMLElement;
-          // Si l'élément a déjà été révélé (soit au scroll, soit pendant le morph initial), on ignore
           if (el.dataset.revealed) return;
           el.dataset.revealed = 'true';
           
@@ -270,6 +296,7 @@ export function initProjetsPage(root: ParentNode = document) {
               duration: MORPH_SIBLING_FADE_DURATION,
               easing: MORPH_SIBLING_EASE,
               fill: 'forwards',
+              // Pas de délai d'image ici : au scroll, ça apparait tout de suite
             });
             settle(reveal, MORPH_SIBLING_FADE_DURATION + 200).then(() => {
               img.style.clipPath = '';
@@ -280,11 +307,16 @@ export function initProjetsPage(root: ParentNode = document) {
       });
     }, {
       root: panels.dezoom,
-      threshold: 0.15 // Attendre que 15% de la carte soit visible pour déclencher l'animation
+      threshold: 0.15
     });
-
     dezoomItems.forEach(el => dezoomObserver!.observe(el));
   }
+
+  const dezoomRaf = (time: number) => {
+    if (!isDezoomActive) return;
+    dezoomLenis?.raf(time);
+    rafId = requestAnimationFrame(dezoomRaf);
+  };
 
   function ensureDezoomLenis(): Lenis | null {
     if (!panels.dezoom || !dezoomTrack) return null;
@@ -297,31 +329,22 @@ export function initProjetsPage(root: ParentNode = document) {
         eventsTarget: panels.dezoom,
         smoothWheel: true,
       });
-      const raf = (time: number) => {
-        dezoomLenis?.raf(time);
-        rafId = requestAnimationFrame(raf);
-      };
-      rafId = requestAnimationFrame(raf);
-      
-      initDezoomObserver(); // Initialiser l'observer
+      initDezoomObserver();
     }
     return dezoomLenis;
-  }
-
-  function centeredScrollFor(el: HTMLElement): number {
-    if (!panels.dezoom) return el.offsetLeft;
-    const centered = el.offsetLeft - (panels.dezoom.clientWidth - el.offsetWidth) / 2;
-    const limit = dezoomLenis?.limit ?? Infinity;
-    return Math.max(0, Math.min(centered, limit));
   }
 
   function currentFromDezoom(): number {
     if (dezoomItems.length === 0 || !panels.dezoom) return current;
     const scrollLeft = panels.dezoom.scrollLeft;
+    const panelWidth = panels.dezoom.clientWidth;
+    const limit = dezoomLenis?.limit ?? Infinity;
+
     let best = 0;
     let bestDist = Infinity;
     dezoomItems.forEach((el, i) => {
-      const dist = Math.abs(centeredScrollFor(el) - scrollLeft);
+      const centered = el.offsetLeft - (panelWidth - el.offsetWidth) / 2;
+      const dist = Math.abs(Math.max(0, Math.min(centered, limit)) - scrollLeft);
       if (dist < bestDist) {
         bestDist = dist;
         best = i;
@@ -334,7 +357,9 @@ export function initProjetsPage(root: ParentNode = document) {
     const target = dezoomItems[current];
     if (!dl || !target || !panels.dezoom) return;
     dl.resize();
-    const clamped = centeredScrollFor(target);
+    const panelWidth = panels.dezoom.clientWidth;
+    const centered = target.offsetLeft - (panelWidth - target.offsetWidth) / 2;
+    const clamped = Math.max(0, Math.min(centered, dl.limit));
     dl.scrollTo(clamped, { immediate: true, force: true });
     panels.dezoom.scrollLeft = clamped;
   }
@@ -345,7 +370,6 @@ export function initProjetsPage(root: ParentNode = document) {
     return hideInfoParts(name, meta, delay);
   }
 
-  // FIX DU FLASH : masque le texte instantanément et de force
   function hideDezoomItemInfoInstant(item: HTMLElement | undefined): void {
     const name = item?.querySelector<HTMLElement>('.info-name') ?? null;
     const meta = item?.querySelector<HTMLElement>('.info-meta') ?? null;
@@ -414,6 +438,8 @@ export function initProjetsPage(root: ParentNode = document) {
     if (view === 'dezoom') current = currentFromDezoom();
     const heroIndex = current;
 
+    const visibleSiblings = visibleDezoomItems(heroIndex);
+
     const heroSrc = heroImage(view, heroIndex)?.currentSrc;
     if (morphHero && heroSrc) {
       morphHero.src = heroSrc;
@@ -424,9 +450,8 @@ export function initProjetsPage(root: ParentNode = document) {
       await hideCarouselInfo(CAROUSEL_INFO_HIDE_DELAY);
     } else {
       await hideDezoomItemInfo(dezoomItems[heroIndex], DEZOOM_INFO_HIDE_DELAY);
-      const leavingSiblings = visibleDezoomItems(heroIndex);
-      if (leavingSiblings.length > 0) {
-        await Promise.all(leavingSiblings.map((el) => hideDezoomItemInfo(el, 0)));
+      if (visibleSiblings.length > 0) {
+        await Promise.all(visibleSiblings.map((el) => hideDezoomItemInfo(el, 0)));
       }
     }
 
@@ -434,7 +459,6 @@ export function initProjetsPage(root: ParentNode = document) {
     const leavingImg = heroImage(leavingView, heroIndex);
     const fromRect = leavingImg?.getBoundingClientRect() ?? null;
 
-    // Rendre le panel visible en premier...
     panels[next]!.hidden = false;
     view = next;
     page!.dataset.view = view;
@@ -444,40 +468,37 @@ export function initProjetsPage(root: ParentNode = document) {
       panels.carousel!.hidden = true;
     }
 
-    let leavingOthers: HTMLElement[] = [];
     if (next === 'carousel') {
       carouselIndex = heroIndex;
       setCarouselCurrentImage(heroIndex);
     } else {
+      isDezoomActive = true;
       const dl = ensureDezoomLenis();
       dl?.start();
       scrollDezoomToCurrent(dl);
-      const others = visibleDezoomItems(heroIndex);
+      rafId = requestAnimationFrame(dezoomRaf);
       
       dezoomItems.forEach((el, i) => {
-        if (i === heroIndex) return;
-        
-        // On réinitialise l'état revealed pour que le scroll puisse rejouer l'anim plus tard
+        if (i === heroIndex) {
+          el.dataset.revealed = 'true';
+          hideDezoomItemInfoInstant(el);
+          return;
+        }
         delete el.dataset.revealed;
-        
-        // On masque l'image au format "hidden"
         const img = el.querySelector('img');
         if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
-        
-        // FIX : on force le texte à se planquer de manière synchrone juste après le unhide du panel
         hideDezoomItemInfoInstant(el);
       });
 
-      // On marque EXCLUSIVEMENT les éléments initialement visibles pour que l'observer les ignore, 
-      // car on va les animer manuellement à la fin du morphing.
-      others.forEach((el) => {
+      visibleSiblings.forEach((el) => {
         el.dataset.revealed = 'true';
       });
     }
     
     if (leavingView === 'dezoom') {
+      isDezoomActive = false;
+      cancelAnimationFrame(rafId);
       dezoomLenis?.stop();
-      leavingOthers = visibleDezoomItems(heroIndex);
     }
 
     const enteringImg = heroImage(next, heroIndex);
@@ -502,8 +523,8 @@ export function initProjetsPage(root: ParentNode = document) {
       morphDone = settle(anim);
     }
 
-    const leavingOthersDone = Promise.all(
-      leavingOthers.map((el) => {
+    const leavingOthersDone = leavingView === 'dezoom' ? Promise.all(
+      visibleSiblings.map((el) => {
         const img = el.querySelector('img');
         if (!img) return Promise.resolve();
         const crop = img.animate([{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
@@ -515,7 +536,7 @@ export function initProjetsPage(root: ParentNode = document) {
           img.style.clipPath = DEZOOM_CROP_CLOSED;
         });
       })
-    ).then(() => {});
+    ).then(() => {}) : Promise.resolve();
 
     await Promise.all([morphDone, leavingOthersDone]);
 
@@ -527,7 +548,7 @@ export function initProjetsPage(root: ParentNode = document) {
     
     if (leavingView === 'dezoom') {
       panels.dezoom!.hidden = true;
-      leavingOthers.forEach((el) => {
+      visibleSiblings.forEach((el) => {
         const img = el.querySelector('img');
         if (img) img.style.clipPath = '';
       });
@@ -536,45 +557,56 @@ export function initProjetsPage(root: ParentNode = document) {
     if (next === 'carousel') {
       await showCarouselInfo(heroIndex);
     } else {
-      const others = visibleDezoomItems(heroIndex);
-      
-      // On anime UNIQUEMENT les "others" qui sont dans le viewport au moment du passage en vue 2.
-      // Le reste sera géré par le dezoomObserver lors du scroll.
       const othersDone = Promise.all([
-        ...others.map((el) => {
+        ...visibleSiblings.map((el) => {
           const img = el.querySelector('img');
           if (!img) return Promise.resolve();
           const reveal = img.animate([{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
             duration: MORPH_SIBLING_FADE_DURATION,
+            delay: DEZOOM_OTHERS_IMAGE_DELAY, // LA MAGIE EST ICI : On retient les images voisines 150ms
             easing: MORPH_SIBLING_EASE,
             fill: 'forwards',
           });
-          return settle(reveal, MORPH_SIBLING_FADE_DURATION + 200).then(() => {
+          return settle(reveal, MORPH_SIBLING_FADE_DURATION + DEZOOM_OTHERS_IMAGE_DELAY + 200).then(() => {
             img.style.clipPath = '';
           });
         }),
-        ...others.map((el) => showDezoomItemInfo(el, DEZOOM_OTHERS_TEXT_DELAY)),
+        // Le délai du texte voisin = le délai de l'image + le ratio
+        ...visibleSiblings.map((el) => showDezoomItemInfo(el, DEZOOM_OTHERS_IMAGE_DELAY + DEZOOM_OTHERS_TEXT_DELAY)),
       ]);
+      
+      // Le texte du hero se lance en premier, avec un délai de 0
       await showDezoomItemInfo(dezoomItems[heroIndex]);
       await othersDone;
     }
   }
 
-  // --- Initial state ---
+  // --- Initial state & Events ---
 
   page.dataset.view = view;
   updateSwitcherUI();
   pageLenis?.stop();
 
+  let resizeTimer: number;
   const handleResize = () => {
-    if (view === 'dezoom') dezoomLenis?.resize();
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      if (view === 'dezoom') dezoomLenis?.resize();
+    }, 150);
   };
   window.addEventListener('resize', handleResize);
 
   return {
     destroy: () => {
+      isDezoomActive = false;
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleResize);
+      panels.carousel?.removeEventListener('wheel', handleWheel);
+      
+      clickHandlers.forEach(({ btn, handler }) => {
+        btn.removeEventListener('click', handler);
+      });
+      
       if (dezoomObserver) {
         dezoomObserver.disconnect();
         dezoomObserver = null;
