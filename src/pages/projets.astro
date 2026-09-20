@@ -1,0 +1,358 @@
+---
+import Layout from '../layouts/Layout.astro';
+import projects from '../data/projets.json';
+---
+
+<Layout title="Projets — Portfolio">
+  <div class="projects-page" data-view="carousel">
+    <!-- Vue 1: grand carrousel plein écran, un projet à la fois. -->
+    <section class="view-carousel">
+      <div class="carousel-track">
+        {projects.map((project, i) => (
+          <div
+            class="carousel-item"
+            class:list={{ 'is-current': i === 0 }}
+            data-name={project.titre}
+            data-meta={`${project.categorie} ${project.secteur} (${String(i + 1).padStart(2, '0')})`}
+          >
+            <img src={project.images[0]} alt="" />
+          </div>
+        ))}
+      </div>
+      <!-- One shared info block, not per-image - it stays put at the
+           bottom-left while the images swipe past underneath it, sliding
+           itself under its own mask between projects. -->
+      <div class="carousel-info item-info">
+        <div class="info-content">
+          <span class="info-name">{projects[0].titre}</span>
+          <span class="info-meta font-mono">
+            {projects[0].categorie} {projects[0].secteur} (01)
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Vue 2: carrousel dézoomé, plusieurs projets visibles à la fois. -->
+    <section class="view-dezoom" hidden>
+      <div class="dezoom-track">
+        {projects.map((project, i) => (
+          <div class="dezoom-item">
+            <div class="item-info">
+              <div class="info-content">
+                <span class="info-name">{project.titre}</span>
+                <span class="info-meta font-mono">
+                  {project.categorie} {project.secteur} ({String(i + 1).padStart(2, '0')})
+                </span>
+              </div>
+            </div>
+            <img src={project.images[0]} alt="" />
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Vue 3: liste, une ligne par projet, défilement vertical normal. -->
+    <section class="view-liste" hidden>
+      {projects.map((project, i) => (
+        <div class="liste-row">
+          <div class="item-info">
+            <span class="info-name">{project.titre}</span>
+            <span class="info-meta font-mono">
+              {project.categorie} {project.secteur} ({String(i + 1).padStart(2, '0')})
+            </span>
+          </div>
+          <div class="liste-images">
+            {project.images.slice(0, 4).map((src) => (
+              <img src={src} alt="" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <!-- Vue 1 <-> Vue 2 morph: a single dedicated image, not part of either
+         view, physically resized over the real one during the transition -
+         see morphBetweenCarouselAndDezoom in projets-page.ts. -->
+    <img class="morph-hero" alt="" aria-hidden="true" hidden />
+
+    <div class="view-switcher" role="tablist" aria-label="Changer de vue">
+      <button type="button" class="view-btn" data-set-view="carousel" aria-label="Grand carrousel">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <rect x="4" y="5" width="16" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+      </button>
+      <button type="button" class="view-btn" data-set-view="dezoom" aria-label="Carrousel dézoomé">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <rect x="2" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
+          <rect x="9" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
+          <rect x="16" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+      </button>
+      <button type="button" class="view-btn" data-set-view="liste" aria-label="Liste">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.5" />
+          <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="1.5" />
+          <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .projects-page {
+    min-height: 100dvh;
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .info-name {
+    font-size: 1rem;
+  }
+
+  .info-meta {
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* --- Vue 1: carrousel --- */
+
+  .view-carousel {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .carousel-track {
+    position: relative;
+    height: 100%;
+  }
+
+  /* Stacked full-bleed layers, not a scrolled track - only the current item
+     (and briefly, the incoming one sliding over it) are ever visible. Index
+     wraps in plain JS, so looping past the last/first project never has to
+     scroll a physical track back across the others. */
+  .carousel-item {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    transform: translateX(0);
+  }
+
+  .carousel-item.is-current {
+    visibility: visible;
+    z-index: 1;
+  }
+
+  .carousel-item img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The mask: fixed in place at the bottom-left, clips .info-content as it
+     translates through - appearing rises up into view, disappearing sinks
+     back down out of it. */
+  .carousel-info {
+    position: absolute;
+    left: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 2;
+    overflow: hidden;
+  }
+
+  .carousel-info .info-content {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .carousel-info .info-name {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  .carousel-info .info-meta {
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+
+  /* --- Vue 2: carrousel dézoomé --- */
+
+  .view-dezoom {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .dezoom-track {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    /* max-content, not the block-level default of auto: a flex container
+       without it stays constrained to its parent's width even though its
+       children overflow that box, which would leave Lenis (given this as
+       its "content") measuring the wrong, too-narrow scroll range. */
+    width: max-content;
+    gap: 0.5rem;
+    padding: 0 1rem;
+  }
+
+  .dezoom-item {
+    flex: 0 0 auto;
+    height: 56dvh;
+    aspect-ratio: 16 / 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .dezoom-item img {
+    flex: 1;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  /* Same mask/content split as .carousel-info, used only for whichever
+     card is selected when morphing to/from vue 1 - the other cards' text
+     never animates on its own, it just fades with the rest of their card.
+     flex-shrink:0 matters here: overflow:hidden makes a flex item's
+     automatic minimum size 0 instead of its content size, so without this
+     the sibling img's flex:1 happily squeezed this down to nothing. */
+  .dezoom-item .item-info {
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .dezoom-item .info-content {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  /* --- Vue 3: liste --- */
+
+  .view-liste {
+    padding: 7rem 0 4rem;
+  }
+
+  .liste-row {
+    border-bottom: 1px solid rgba(245, 244, 241, 0.15);
+  }
+
+  .liste-row .item-info {
+    padding: 1.5rem 1.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .liste-row .info-name {
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+  }
+
+  .liste-images {
+    display: flex;
+  }
+
+  .liste-images img {
+    flex: 1 1 0;
+    width: 0;
+    height: 22vw;
+    object-fit: cover;
+    border-right: 1px solid var(--color-ink);
+  }
+
+  .liste-images img:last-child {
+    border-right: none;
+  }
+
+  /* Every project has at least 4 images, so capping the markup itself at 4
+     (see projets.astro) and only ever hiding down from there guarantees the
+     same count for every row at a given width - 2 on mobile, 3 up to
+     tablet, 4 above that. */
+  @media (max-width: 900px) {
+    .liste-images img {
+      height: 30vw;
+    }
+    .liste-images img:nth-child(n + 4) {
+      display: none;
+    }
+    .dezoom-item {
+      height: 46dvh;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .liste-images img {
+      height: 45vw;
+    }
+    .liste-images img:nth-child(n + 3) {
+      display: none;
+    }
+    .dezoom-item {
+      height: 34dvh;
+    }
+    .dezoom-track {
+      gap: 0.35rem;
+      padding: 0 0.75rem;
+    }
+  }
+
+  /* --- View switcher --- */
+
+  .view-switcher {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 20;
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(17, 18, 20, 0.55);
+    border-radius: 0.5rem;
+  }
+
+  .view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid rgba(245, 244, 241, 0.3);
+    background: transparent;
+    color: rgba(245, 244, 241, 0.5);
+    cursor: pointer;
+  }
+
+  .view-btn.is-active {
+    color: var(--color-paper);
+    border-color: var(--color-paper);
+  }
+
+  /* --- Vue 1 <-> Vue 2 morph ---
+     One real <img>, physically resized from the outgoing image's on-screen
+     rect to the incoming one's (in JS, via morphBetweenCarouselAndDezoom) -
+     not the View Transitions API's own old/new screenshot cross-fade. Vue 1
+     is full-bleed and vue 2 is a fixed 16:10 card, so object-fit:cover
+     crops the same photo differently in each; cross-fading between two
+     *different* crops of it read as a visible cut right as the transition
+     ended, which is exactly what animating one element's own width/height
+     avoids - the browser recomputes its object-fit crop live every frame,
+     so it reads as the same photo continuously reframing itself. */
+  .morph-hero {
+    position: fixed;
+    /* Below .view-switcher (20), not above it - the switcher is
+       persistent UI chrome and shouldn't get covered by the image while
+       it's mid-morph. */
+    z-index: 15;
+    object-fit: cover;
+    pointer-events: none;
+  }
+</style>
