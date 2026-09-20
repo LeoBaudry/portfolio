@@ -1,0 +1,15 @@
+---
+type Tag = 'p' | 'h1' | 'h2' | 'h3' | 'span' | 'div';
+
+interface Props {
+  as?: Tag;
+  mode?: 'lines' | 'chars';
+  class?: string;
+}
+
+const { as: Tag = 'p', mode = 'lines', class: className } = Astro.props;
+---
+
+<Tag data-reveal={mode} class={className}>
+  <slot />
+</Tag>

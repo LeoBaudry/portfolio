@@ -1,7 +1,63 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import RevealText from '../components/RevealText.astro';
+import ProjectsReel from '../components/ProjectsReel.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 ---
 
-<Layout>
-  <h1>Astro</h1>
+<Layout title="Portfolio">
+  <div class="page-content">
+    <ProjectsReel />
+  </div>
+
+  <div class="footer-reveal">
+    <section class="text-block text-block--pre-footer">
+      <div class="text-block-inner">
+        <RevealText as="p" class="body-text">
+          Chaque projet part d'une contrainte concrète. Le détail vient ensuite, jamais
+          l'inverse.
+        </RevealText>
+      </div>
+    </section>
+
+    <SiteFooter />
+  </div>
 </Layout>
+
+<style>
+  .page-content {
+    position: relative;
+  }
+
+  /*
+   * Footer reveal (content.md §6): the footer's containing block must be
+   * scoped to just {last text block, footer}, not the whole page - a
+   * sticky bottom:0 element can hold for the entire scroll range as soon
+   * as its containing block reaches the true end of the document, so
+   * wrapping the whole page would keep it permanently hidden behind the
+   * opaque content above instead of revealing it during this span.
+   */
+  .footer-reveal {
+    position: relative;
+  }
+
+  .text-block {
+    padding: 8rem 1.5rem;
+  }
+
+  .text-block-inner {
+    max-width: 40rem;
+    margin: 0 auto;
+  }
+
+  .text-block--pre-footer {
+    position: relative;
+    z-index: 1;
+    background: var(--color-paper);
+  }
+
+  .body-text {
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+    line-height: 1.4;
+  }
+</style>

@@ -1,0 +1,58 @@
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p class="footer-name">Prénom Nom</p>
+    <p class="footer-pitch">Recherche un poste de [intitulé de poste].</p>
+    <div class="footer-links">
+      <a href="mailto:contact@example.com" class="font-mono">contact@example.com</a>
+      <a href="#" class="font-mono">LinkedIn</a>
+      <a href="#" class="font-mono">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 0;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .footer-inner {
+    width: 100%;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .footer-name {
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    margin: 0;
+  }
+
+  .footer-pitch {
+    margin: 0;
+    opacity: 0.8;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .footer-links a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-paper) 40%, transparent);
+  }
+</style>
