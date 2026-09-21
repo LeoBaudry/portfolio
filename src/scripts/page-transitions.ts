@@ -10,13 +10,21 @@ const WIPE_OUT_DURATION = 0.9;
 const SAFE_TOP_THRESHOLD_PX = 8;
 const CONTENT_PARALLAX_VH = '10vh'; 
 
-function contentSafeToLift(content: HTMLElement): boolean {
-  // 1. Si on est tout en haut, on peut tout bouger d'un bloc sans risque
+/**
+ * Determines the strategy for the outgoing parallax lift.
+ * 
+ * If the page is scrolled and a ScrollTrigger pin is active (e.g., the 
+ * homepage reel), applying a CSS transform to #transition-root would change 
+ * the containing block for fixed descendants, causing them to jump off-screen.
+ * In that scenario, we must animate `top` instead, and manually transform 
+ * the pinned elements.
+ */
+function canLiftViaTransform(content: HTMLElement): boolean {
   if (Math.abs(content.getBoundingClientRect().top) < SAFE_TOP_THRESHOLD_PX) {
     return true;
   }
-  // 2. Si on a scrollé, on vérifie s'il y a des "pins" (épingles) ScrollTrigger actifs.
-  const hasActivePin = ScrollTrigger.getAll().some(st => st.pin && st.isActive);
+  
+  const hasActivePin = ScrollTrigger.getAll().some((st) => st.pin && st.isActive);
   return !hasActivePin;
 }
 
@@ -47,21 +55,19 @@ export function initPageTransitions(): void {
     tl.fromTo(overlay, { yPercent: 100 }, { yPercent: 0, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
     
     if (content) {
-      if (contentSafeToLift(content)) {
-        // Scénario A : Sûr (haut de page ou page sans ScrollTrigger). 
-        // On bouge tout d'un seul bloc via 'y'.
+      if (canLiftViaTransform(content)) {
         tl.to(content, { y: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
       } else {
-        // Scénario B : Dangereux (au milieu de la section projets de la homepage).
-        // 1. On bouge le contenu normal de la page via 'top' (aucun saut de repère)
+        // Safe fallback for scrolled pages with active pins: animate layout 'top' 
+        // to avoid reparenting, then manually lift the pinned elements to match.
         tl.to(content, { top: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
         
-        // 2. On isole exactement les éléments qui sont "collés" à l'écran à cet instant...
         const activePins = ScrollTrigger.getAll()
-          .filter(st => st.pin && st.isActive)
-          .map(st => st.pin);
+          .filter((st) => st.pin && st.isActive)
+          // Type assertion required here: filter() guarantees st.pin exists, 
+          // but TS doesn't narrow the type automatically without a custom guard.
+          .map((st) => st.pin as Element);
           
-        // 3. ...et on les fait monter manuellement en même temps que le reste !
         if (activePins.length > 0) {
           tl.to(activePins, { y: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
         }
@@ -83,18 +89,15 @@ export function initPageTransitions(): void {
 
     const content = document.getElementById('transition-root');
     
-    if (content) {
-      // Nettoyage impératif des transforms pour que ScrollTrigger mesure 
-      // la nouvelle page entrante à sa taille parfaite sans erreur.
-      gsap.set(content, { clearProps: 'transform,top' });
-      ScrollTrigger.refresh();
-    }
+    // The incoming DOM is fresh and carries no stale inline transforms.
+    // We only need to ensure ScrollTrigger measures it accurately right now, 
+    // before the screen uncovers and before we apply the incoming parallax offset.
+    ScrollTrigger.refresh();
 
     const tl = gsap.timeline();
     tl.to(overlay, { yPercent: -100, duration: WIPE_OUT_DURATION, ease: WIPE_EASE }, 0);
 
     if (content) {
-      // L'animation entrante, qui se joue enfin systématiquement sans sauter.
       tl.fromTo(
         content,
         { y: CONTENT_PARALLAX_VH },
