@@ -10,14 +10,43 @@ const WIPE_OUT_DURATION = 0.9;
 const SAFE_TOP_THRESHOLD_PX = 8;
 const CONTENT_PARALLAX_VH = '10vh'; 
 
+// --- GESTION DU BLOCAGE DU SCROLL ---
+let isScrollLocked = false;
+
+function preventScroll(e: Event) {
+  if (isScrollLocked) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}
+
+function preventScrollKeys(e: KeyboardEvent) {
+  if (!isScrollLocked) return;
+  const keys = ['Space', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
+  if (keys.includes(e.code)) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}
+
+function toggleScrollLock(locked: boolean) {
+  isScrollLocked = locked;
+  if (locked) {
+    // L'option { capture: true } est magique ici : elle permet d'intercepter l'événement
+    // AVANT que Lenis n'ait le temps de le lire pour calculer son inertie.
+    window.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+    window.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+    window.addEventListener('keydown', preventScrollKeys, { passive: false, capture: true });
+  } else {
+    window.removeEventListener('wheel', preventScroll, { capture: true });
+    window.removeEventListener('touchmove', preventScroll, { capture: true });
+    window.removeEventListener('keydown', preventScrollKeys, { capture: true });
+  }
+}
+// ------------------------------------
+
 /**
- * Determines the strategy for the outgoing parallax lift.
- * 
- * If the page is scrolled and a ScrollTrigger pin is active (e.g., the 
- * homepage reel), applying a CSS transform to #transition-root would change 
- * the containing block for fixed descendants, causing them to jump off-screen.
- * In that scenario, we must animate `top` instead, and manually transform 
- * the pinned elements.
+ * Détermine la stratégie pour le décalage (parallax) de la page sortante.
  */
 function canLiftViaTransform(content: HTMLElement): boolean {
   if (Math.abs(content.getBoundingClientRect().top) < SAFE_TOP_THRESHOLD_PX) {
@@ -48,6 +77,10 @@ export function initPageTransitions(): void {
 
   document.addEventListener('astro:before-preparation', (event: any) => {
     transitionInFlight = true;
+    
+    // 🔒 On verrouille le scroll dès qu'on clique sur un lien !
+    toggleScrollLock(true);
+    
     const content = document.getElementById('transition-root');
     const originalLoader = event.loader;
 
@@ -58,14 +91,10 @@ export function initPageTransitions(): void {
       if (canLiftViaTransform(content)) {
         tl.to(content, { y: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
       } else {
-        // Safe fallback for scrolled pages with active pins: animate layout 'top' 
-        // to avoid reparenting, then manually lift the pinned elements to match.
         tl.to(content, { top: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
         
         const activePins = ScrollTrigger.getAll()
           .filter((st) => st.pin && st.isActive)
-          // Type assertion required here: filter() guarantees st.pin exists, 
-          // but TS doesn't narrow the type automatically without a custom guard.
           .map((st) => st.pin as Element);
           
         if (activePins.length > 0) {
@@ -89,12 +118,15 @@ export function initPageTransitions(): void {
 
     const content = document.getElementById('transition-root');
     
-    // The incoming DOM is fresh and carries no stale inline transforms.
-    // We only need to ensure ScrollTrigger measures it accurately right now, 
-    // before the screen uncovers and before we apply the incoming parallax offset.
     ScrollTrigger.refresh();
 
     const tl = gsap.timeline();
+    
+    // 🔓 On déverrouille le scroll EXACTEMENT quand le rideau finit de s'effacer
+    tl.eventCallback('onComplete', () => {
+      toggleScrollLock(false);
+    });
+
     tl.to(overlay, { yPercent: -100, duration: WIPE_OUT_DURATION, ease: WIPE_EASE }, 0);
 
     if (content) {
