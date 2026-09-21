@@ -482,6 +482,10 @@ export function initProjetsPage(root: ParentNode = document) {
         if (i === heroIndex) {
           el.dataset.revealed = 'true';
           hideDezoomItemInfoInstant(el);
+          // LE FIX : On efface d'urgence tout vieux masque 
+          // posé lors d'un précédent passage sur la vue 2
+          const img = el.querySelector('img');
+          if (img) img.style.clipPath = '';
           return;
         }
         delete el.dataset.revealed;

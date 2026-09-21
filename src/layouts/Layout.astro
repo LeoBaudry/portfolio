@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 
 interface Props {
@@ -15,15 +16,40 @@ const { title = 'Portfolio' } = Astro.props;
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <ClientRouter />
   </head>
-  <body>
+  <!--
+    transition:animate="none" on body: Astro's ClientRouter otherwise plays
+    its own default crossfade on every element via the native View
+    Transition API's ::view-transition-old/new pseudo-elements, INCLUDING
+    persisted ones (transition:persist keeps the DOM node continuous, but
+    the browser still renders a default fade of its own on top of it unless
+    told not to). That native fade running at the same time as GSAP driving
+    the same nodes in page-transitions.ts is what produced the tearing/
+    "two different elements" look last time - every element GSAP touches
+    during the transition needs its own transition:animate="none" too.
+  -->
+  <body transition:animate="none">
     <!-- Temporary nav, until the real one is designed. -->
-    <nav class="temp-nav">
+    <nav class="temp-nav" id="temp-nav" transition:persist transition:animate="none">
       <a href="/">Index</a>
       <a href="/projets">Projets</a>
     </nav>
 
-    <slot />
+    <!--
+      Persisted across every navigation (content.md §8's "reveal par le
+      bas"): a single fixed panel that both covers the outgoing page and
+      uncovers the incoming one, driven entirely by page-transitions.ts via
+      astro:before-preparation / astro:after-swap / astro:page-load. Its
+      transform is 100% GSAP-owned (see page-transitions.ts) - it must never
+      get a CSS transform of its own, GSAP's yPercent stacks on top of
+      rather than replacing one.
+    -->
+    <div id="page-wipe" class="page-wipe" aria-hidden="true" transition:persist transition:animate="none"></div>
+
+    <div id="transition-root" class="transition-root" transition:animate="none">
+      <slot />
+    </div>
     <script>
       import '../scripts/main';
     </script>
@@ -52,5 +78,22 @@ const { title = 'Portfolio' } = Astro.props;
 
   .temp-nav a:hover {
     text-decoration: underline;
+  }
+
+  .page-wipe {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: var(--color-ink);
+    pointer-events: none;
+    /* No transform here - page-transitions.ts owns it entirely via GSAP's
+       yPercent. A CSS transform here doesn't get folded into that; GSAP
+       stacks its own translate on top of the computed one instead of
+       replacing it, so the element ends up offset by both at once and
+       never actually reaches "covering the viewport". */
+  }
+
+  .transition-root {
+    position: relative;
   }
 </style>

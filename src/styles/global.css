@@ -52,6 +52,18 @@ body {
   color: var(--color-ink);
 }
 
+/* Lenis drives scrolling everywhere on the site; the native scrollbar is
+   hidden globally (not just mid-transition) so it never shows its own,
+   separately-timed thumb fighting Lenis's. */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 /* Hidden until the reveal-text script has split + positioned the lines,
    avoids a flash of unanimated full-size text. */
 [data-reveal] {

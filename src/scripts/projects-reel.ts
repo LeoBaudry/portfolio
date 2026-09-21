@@ -62,9 +62,9 @@ function localProgress(value: number, start: number, end: number): number {
   return clamp((value - start) / (end - start), 0, 1);
 }
 
-export function initProjectsReel(root: ParentNode = document): void {
+export function initProjectsReel(root: ParentNode = document): { destroy: () => void } | undefined {
   const section = root.querySelector<HTMLElement>('.projects-reel');
-  if (!section) return;
+  if (!section) return undefined;
 
   const sticky = section.querySelector<HTMLElement>('.reel-sticky');
   const heroImage = section.querySelector<HTMLElement>('.reel-hero-image');
@@ -79,7 +79,7 @@ export function initProjectsReel(root: ParentNode = document): void {
   const counterEl = section.querySelector<HTMLElement>('.reel-counter');
 
   const n = projectEls.length;
-  if (!sticky || n === 0) return;
+  if (!sticky || n === 0) return undefined;
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -134,7 +134,7 @@ export function initProjectsReel(root: ParentNode = document): void {
     if (scrollHint) gsap.set(scrollHint, { opacity: 0 });
     if (introText) gsap.set(introText, { opacity: 0 });
     showProject(0);
-    return;
+    return undefined;
   }
 
   // The whole project-0 panel (image + bars) stays invisible during the
@@ -172,7 +172,7 @@ export function initProjectsReel(root: ParentNode = document): void {
   });
 
   let resizeTimer: number;
-  window.addEventListener('resize', () => {
+  const handleResize = () => {
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
       const openIndex = curtainTarget === 'open' ? displayedIndex : -1;
@@ -186,7 +186,8 @@ export function initProjectsReel(root: ParentNode = document): void {
       gridlines = buildGridlines();
       gsap.set(gridlines, { scaleY: curtainTarget === 'open' ? 1 : 0 });
     }, 200);
-  });
+  };
+  window.addEventListener('resize', handleResize);
 
   let displayedIndex = 0;
   let transitioning = false;
@@ -422,23 +423,40 @@ export function initProjectsReel(root: ParentNode = document): void {
   // when there is no fine pointer (touch/mobile).
   const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
 
+  let handleMouseMove: ((event: MouseEvent) => void) | undefined;
+  let updateCursor: (() => void) | undefined;
+
   if (cursor && hasFinePointer) {
     let mouseX = 0;
     let mouseY = 0;
     let curX = 0;
     let curY = 0;
 
-    window.addEventListener('mousemove', (event) => {
+    handleMouseMove = (event: MouseEvent) => {
       mouseX = event.clientX;
       mouseY = event.clientY;
-    });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
 
-    gsap.ticker.add(() => {
+    updateCursor = () => {
       curX += (mouseX - curX) * CURSOR_LAG;
       curY += (mouseY - curY) * CURSOR_LAG;
       cursor.style.transform = `translate(${curX}px, ${curY}px)`;
-    });
+    };
+    gsap.ticker.add(updateCursor);
   } else if (cursor) {
     cursor.classList.add('is-fixed-position');
   }
+
+  return {
+    destroy: () => {
+      window.removeEventListener('resize', handleResize);
+      if (handleMouseMove) window.removeEventListener('mousemove', handleMouseMove);
+      if (updateCursor) gsap.ticker.remove(updateCursor);
+      pinTrigger?.kill();
+      transitions.forEach((tl) => tl.kill());
+      curtainOpenTl.kill();
+      modeATweens.forEach((t) => t.kill());
+    },
+  };
 }
