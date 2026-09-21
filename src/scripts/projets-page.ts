@@ -3,8 +3,8 @@ import { lenis as pageLenis } from './smooth-scroll';
 
 // --- Constantes ---
 const WHEEL_THRESHOLD = 18;
-const STEP_DURATION = 1000;
-const STEP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+const STEP_DURATION = 850;
+const STEP_EASE = 'cubic-bezier(0.77, 0, 0.175, 1)';
 
 const INFO_HIDE_DURATION = 320;
 const INFO_HIDE_EASE = 'cubic-bezier(0.4, 0, 1, 1)';
