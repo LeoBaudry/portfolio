@@ -66,7 +66,6 @@ const PANEL_FADE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 type ViewMode = 'carousel' | 'dezoom' | 'liste';
 
-// FIX PERF : Caches globaux pour éviter la lecture constante du DOM et les Layout Thrashing (Reflows)
 interface RowCache {
   images: HTMLElement[];
   curtain: HTMLElement | null;
@@ -160,7 +159,6 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  // FIX PERF : Helper universel pour retirer 60 lignes redondantes d'animation
   function animateAndSettle(el: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions): Promise<void> {
     const durationMs = (options.duration as number) || 0;
     const delayMs = (options.delay as number) || 0;
@@ -209,15 +207,33 @@ export function initProjetsPage(root: ParentNode = document) {
   let carouselIndex = 0;
   let carouselLocked = false;
   let carouselAnimation: Animation | null = null;
+  
+  // FIX QUEUEING : On stocke l'intention de clic pour l'appliquer au projet entrant
+  let queuedCarouselMorph = false;
+  const carouselLinks = Array.from(panels.carousel?.querySelectorAll<HTMLAnchorElement>('.morph-link') ?? []);
+  
+  carouselLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      if (carouselLocked) {
+        // Le clic a eu lieu pendant une animation de transition !
+        // On annule ce faux clic, et on se prépare à déclencher le projet de destination.
+        e.preventDefault();
+        e.stopPropagation();
+        queuedCarouselMorph = true;
+      }
+    });
+  });
 
   function setCarouselCurrentImage(index: number): void {
     carouselAnimation?.cancel();
     carouselAnimation = null;
     carouselLocked = false;
+    queuedCarouselMorph = false;
     carouselItems.forEach((el, i) => {
       el.classList.toggle('is-current', i === index);
-      el.style.transform = 'translateX(0)';
+      el.style.transform = '';
       el.style.zIndex = '';
+      el.style.clipPath = '';
     });
   }
 
@@ -244,6 +260,7 @@ export function initProjetsPage(root: ParentNode = document) {
     return revealInfoParts(carouselInfoName, carouselInfoMeta, delay);
   }
 
+  // --- VUE 1 : CURTAIN REVEAL PUR ---
   function stepCarousel(dir: 1 | -1): void {
     if (carouselLocked || switching || n < 2) return;
     const fromIndex = carouselIndex;
@@ -257,19 +274,42 @@ export function initProjetsPage(root: ParentNode = document) {
     });
 
     toEl.style.zIndex = '2';
+    fromEl.style.zIndex = '1';
     toEl.classList.add('is-current');
 
+    // FIX FLASH : Le vieux projet ne subit AUCUN mouvement et AUCUN scale. 
+    // Il attend juste que le nouveau rideau le recouvre.
+    fromEl.style.transform = '';
+
+    // On crée un rideau pur via clip-path. 
+    // Vers l'avant (1) = le rideau se tire de droite à gauche.
+    const clipStart = dir === 1 ? 'inset(0% 0% 0% 100%)' : 'inset(0% 100% 0% 0%)';
+
     const animation = (carouselAnimation = toEl.animate(
-      [{ transform: `translateX(${dir * 100}%)` }, { transform: 'translateX(0)' }],
+      [
+        { clipPath: clipStart },
+        { clipPath: 'inset(0% 0% 0% 0%)' }
+      ],
       { duration: STEP_DURATION, easing: STEP_EASE, fill: 'forwards' }
     ));
+
     settle(animation).then(() => {
       carouselAnimation = null;
       toEl.style.zIndex = '';
+      toEl.style.clipPath = '';
+      fromEl.style.zIndex = '';
       fromEl.classList.remove('is-current');
       carouselIndex = toIndex;
       current = carouselIndex;
       carouselLocked = false;
+      
+      // FIX QUEUEING : Si on a cliqué pendant l'animation, on lance l'ouverture
+      // du projet fraîchement arrivé (toIndex) !
+      if (queuedCarouselMorph) {
+        queuedCarouselMorph = false;
+        const activeLink = carouselItems[current].querySelector<HTMLAnchorElement>('.morph-link');
+        if (activeLink) activeLink.click();
+      }
     });
   }
 
@@ -455,7 +495,6 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  // Utilise le cache DOM pour éviter les reflows et querySelectors redondants
   function hideListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
     const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
     if (!curtain) return Promise.resolve();
@@ -1081,7 +1120,7 @@ export function initProjetsPage(root: ParentNode = document) {
   let resizeTimer: number;
   const handleResize = () => {
     clearTimeout(resizeTimer);
-    clearDistanceCache = new WeakMap(); // On vide le cache des distances au redimensionnement pour éviter des décalages erronés
+    clearDistanceCache = new WeakMap();
     resizeTimer = window.setTimeout(() => {
       if (view === 'dezoom') dezoomLenis?.resize();
     }, 150);
