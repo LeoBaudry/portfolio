@@ -15,7 +15,9 @@ import projects from '../data/projets.json';
             data-name={project.titre}
             data-meta={`${project.categorie} ${project.secteur} (${String(i + 1).padStart(2, '0')})`}
           >
-            <img src={project.images[0]} alt="" />
+            <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
+              <img src={project.images[0]} alt="" />
+            </a>
           </div>
         ))}
       </div>
@@ -45,7 +47,9 @@ import projects from '../data/projets.json';
                 </span>
               </div>
             </div>
-            <img src={project.images[0]} alt="" />
+            <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
+              <img src={project.images[0]} alt="" />
+            </a>
           </div>
         ))}
       </div>
@@ -60,12 +64,30 @@ import projects from '../data/projets.json';
             <span class="info-meta font-mono">
               {project.categorie} {project.secteur} ({String(i + 1).padStart(2, '0')})
             </span>
+            <!-- Ink curtain over the whole title block - see
+                 hideListeTitle/revealListeTitle in projets-page.ts. Same
+                 single-curtain, JS-flipped-transform-origin technique as
+                 the image curtains below. -->
+            <div class="liste-title-curtain" aria-hidden="true"></div>
           </div>
-          <div class="liste-images">
+          <a href={`/projets/${project.slug}`} data-morph-source class="liste-images">
             {project.images.slice(0, 4).map((src) => (
-              <img src={src} alt="" />
+              <div class="liste-image">
+                <img src={src} alt="" />
+                <!-- Solid ink curtain, not a clip-path crop, for perf (see
+                     hideListeRow/showListeRow in projets-page.ts) - transform
+                     is the only thing animated, so this stays on the
+                     compositor instead of the clip-path repaint every frame
+                     that made leaving vue3 laggy. One curtain per image (not
+                     per row, so each can be staggered slightly behind the
+                     last) - its own transform-origin is flipped between
+                     'top' and 'bottom' in JS depending on whether it's
+                     revealing or hiding, rather than keeping two separate
+                     top-/bottom-anchored curtains around. -->
+                <div class="liste-image-curtain" aria-hidden="true"></div>
+              </div>
             ))}
-          </div>
+          </a>
         </div>
       ))}
     </section>
@@ -75,26 +97,35 @@ import projects from '../data/projets.json';
          see morphBetweenCarouselAndDezoom in projets-page.ts. -->
     <img class="morph-hero" alt="" aria-hidden="true" hidden />
 
-    <div class="view-switcher" role="tablist" aria-label="Changer de vue">
-      <button type="button" class="view-btn" data-set-view="carousel" aria-label="Grand carrousel">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <rect x="4" y="5" width="16" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
-        </svg>
-      </button>
-      <button type="button" class="view-btn" data-set-view="dezoom" aria-label="Carrousel dézoomé">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <rect x="2" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
-          <rect x="9" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
-          <rect x="16" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
-        </svg>
-      </button>
-      <button type="button" class="view-btn" data-set-view="liste" aria-label="Liste">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.5" />
-          <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="1.5" />
-          <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="1.5" />
-        </svg>
-      </button>
+    <!-- .view-switcher-mask is the mask (fixed, overflow:hidden, no
+         padding/background of its own - just the boundary). .view-switcher
+         (the whole panel: background, padding, radius, AND the buttons
+         together) is what project-morph.ts animates as one unit, sinking
+         down through the mask's bottom edge and rising back, same
+         technique as #temp-nav above - not just the icons within a static
+         panel, the panel goes with them. -->
+    <div class="view-switcher-mask">
+      <div class="view-switcher" role="tablist" aria-label="Changer de vue">
+        <button type="button" class="view-btn" data-set-view="carousel" aria-label="Grand carrousel">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+        </button>
+        <button type="button" class="view-btn" data-set-view="dezoom" aria-label="Carrousel dézoomé">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <rect x="2" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <rect x="9" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <rect x="16" y="7" width="6" height="10" fill="none" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+        </button>
+        <button type="button" class="view-btn" data-set-view="liste" aria-label="Liste">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.5" />
+            <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="1.5" />
+            <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </Layout>
@@ -115,6 +146,17 @@ import projects from '../data/projets.json';
     letter-spacing: 0.06em;
     text-transform: uppercase;
     opacity: 0.7;
+  }
+
+  /* Wraps a single project image (carousel, dezoom) for the project-morph
+     transition (see project-morph.ts) without taking part in layout itself
+     - its child <img> keeps behaving exactly as if it were still a direct
+     child of .carousel-item / .dezoom-item, positioned/sized by their
+     existing rules. Vue 3's own link (.liste-images) doesn't use this: it
+     needs to actually be a flex container, so it carries that layout
+     directly instead of collapsing. */
+  .morph-link {
+    display: contents;
   }
 
   /* --- Vue 1: carrousel --- */
@@ -246,11 +288,32 @@ import projects from '../data/projets.json';
   }
 
   .liste-row .item-info {
+    position: relative;
     padding: 1.5rem 1.5rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     gap: 1rem;
+    /* The mask - without this, hideInfoParts/revealInfoParts's translateY
+       has nothing to clip against, so the "hidden" state is just the text
+       sitting there in plain view, shifted down, instead of actually
+       hidden - every other masked text on the site (.carousel-info,
+       .dezoom-item .item-info) already has this, this one was missed. */
+    overflow: hidden;
+  }
+
+  /* Covers the whole title block - see hideListeTitle/revealListeTitle in
+     projets-page.ts. transform-origin is set from JS right before each
+     animation (bottom to hide, top to reveal) rather than keeping two
+     separate curtains around. */
+  .liste-title-curtain {
+    position: absolute;
+    inset: 0;
+    background: var(--color-ink);
+    pointer-events: none;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    z-index: 1;
   }
 
   .liste-row .info-name {
@@ -261,16 +324,53 @@ import projects from '../data/projets.json';
     display: flex;
   }
 
-  .liste-images img {
+  /* One wrapper per image (not per row) so each can reveal/hide on its own
+     stagger - see LISTE_IMAGE_STAGGER in projets-page.ts, the "in line,
+     slightly delayed compared to each other" request. position:relative
+     anchors that image's own curtain below to just its own box, not the
+     whole row. */
+  .liste-image {
+    position: relative;
     flex: 1 1 0;
     width: 0;
     height: 22vw;
-    object-fit: cover;
     border-right: 1px solid var(--color-ink);
   }
 
-  .liste-images img:last-child {
+  .liste-image:last-child {
     border-right: none;
+  }
+
+  .liste-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Solid ink panel, not a clip-path crop - see hideListeRow/showListeRow
+     in projets-page.ts for why (perf). Reveals bottom-to-top (shrinks from
+     scaleY(1), anchored top, so the remaining cover recedes upward) and
+     hides bottom-to-top too (grows to scaleY(1), anchored bottom, so
+     coverage advances upward) - JS flips transform-origin between the two
+     rather than keeping separate curtains for each direction. */
+  .liste-image-curtain {
+    position: absolute;
+    /* A couple px taller than the image on each edge, not a flush inset:0
+       - .liste-row's own border-bottom sits right at the images' bottom
+       edge, and a flush curtain left a sub-pixel sliver of it showing
+       through (as a thin white line) once scaleY had it mostly covered.
+       The overshoot is invisible against the images themselves, well
+       inside the border's own thickness. */
+    top: -2px;
+    right: 0;
+    bottom: -2px;
+    left: 0;
+    background: var(--color-ink);
+    pointer-events: none;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    z-index: 1;
   }
 
   /* Every project has at least 4 images, so capping the markup itself at 4
@@ -278,10 +378,10 @@ import projects from '../data/projets.json';
      same count for every row at a given width - 2 on mobile, 3 up to
      tablet, 4 above that. */
   @media (max-width: 900px) {
-    .liste-images img {
+    .liste-image {
       height: 30vw;
     }
-    .liste-images img:nth-child(n + 4) {
+    .liste-image:nth-child(n + 4) {
       display: none;
     }
     .dezoom-item {
@@ -290,10 +390,10 @@ import projects from '../data/projets.json';
   }
 
   @media (max-width: 600px) {
-    .liste-images img {
+    .liste-image {
       height: 45vw;
     }
-    .liste-images img:nth-child(n + 3) {
+    .liste-image:nth-child(n + 3) {
       display: none;
     }
     .dezoom-item {
@@ -307,11 +407,22 @@ import projects from '../data/projets.json';
 
   /* --- View switcher --- */
 
-  .view-switcher {
+  .view-switcher-mask {
     position: fixed;
     right: 1.5rem;
     bottom: 1.5rem;
     z-index: 20;
+    /* The boundary only - no padding/background of its own, so its height
+       matches .view-switcher's rendered height (padding included)
+       exactly. That's what makes translating .view-switcher down by its
+       own full height (project-morph.ts's maskClearDistance) clear the
+       mask completely - a mask with its own extra padding left a sliver
+       of the panel still peeking out the bottom, the "doesn't fully
+       cover" bug. */
+    overflow: hidden;
+  }
+
+  .view-switcher {
     display: flex;
     gap: 0.75rem;
     padding: 0.5rem;

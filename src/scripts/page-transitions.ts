@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { resetPageScroll } from './smooth-scroll';
 
 gsap.registerPlugin(CustomEase, ScrollTrigger);
 
@@ -29,7 +30,9 @@ function preventScrollKeys(e: KeyboardEvent) {
   }
 }
 
-function toggleScrollLock(locked: boolean) {
+// Exported: project-morph.ts reuses this for its own transition rather than
+// duplicating a second scroll lock.
+export function toggleScrollLock(locked: boolean) {
   isScrollLocked = locked;
   if (locked) {
     // L'option { capture: true } est magique ici : elle permet d'intercepter l'événement
@@ -44,6 +47,17 @@ function toggleScrollLock(locked: boolean) {
   }
 }
 // ------------------------------------
+
+// A project card's <a> is marked data-morph-source (see projets.astro), and
+// a project page's own back link is marked data-morph-back (see
+// [slug].astro) - navigating from either hands the whole transition to
+// project-morph.ts's own image-morph (forward or reverse) instead of this
+// file's plain wipe. Both files check this independently on the same
+// astro:before-preparation event rather than coordinating through shared
+// mutable state.
+export function isMorphNavigation(el: unknown): el is HTMLElement {
+  return el instanceof HTMLElement && (el.hasAttribute('data-morph-source') || el.hasAttribute('data-morph-back'));
+}
 
 /**
  * Détermine la stratégie pour le décalage (parallax) de la page sortante.
@@ -76,8 +90,12 @@ export function initPageTransitions(): void {
   let transitionInFlight = false;
 
   document.addEventListener('astro:before-preparation', (event: any) => {
+    // project-morph.ts owns this navigation entirely instead - see
+    // isMorphNavigation's comment.
+    if (isMorphNavigation(event.sourceElement)) return;
+
     transitionInFlight = true;
-    
+
     // 🔒 On verrouille le scroll dès qu'on clique sur un lien !
     toggleScrollLock(true);
     
@@ -109,7 +127,7 @@ export function initPageTransitions(): void {
   });
 
   document.addEventListener('astro:after-swap', () => {
-    window.scrollTo(0, 0);
+    resetPageScroll();
   });
 
   document.addEventListener('astro:page-load', () => {

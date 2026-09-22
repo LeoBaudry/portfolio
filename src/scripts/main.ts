@@ -1,10 +1,12 @@
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './smooth-scroll';
 import { initPageTransitions } from './page-transitions';
+import { initProjectMorph } from './project-morph';
 import { initRevealText } from './reveal-text';
 import { initProjectsReel } from './projects-reel';
 import { initFooterParallax } from './footer';
 import { initProjetsPage } from './projets-page';
+import { initProjectPage } from './project-page';
 
 // astro:page-load fires after every navigation (including the first), so
 // per-page setup lives here instead of at module scope - module top-level
@@ -16,8 +18,9 @@ document.addEventListener('astro:page-load', () => {
   const reel = initProjectsReel();
   initFooterParallax();
   const projets = initProjetsPage();
+  const projectPage = initProjectPage();
 
-  teardown = [reel?.destroy, projets?.destroy].filter(
+  teardown = [reel?.destroy, projets?.destroy, projectPage?.destroy].filter(
     (fn): fn is () => void => typeof fn === 'function'
   );
 });
@@ -33,3 +36,4 @@ document.addEventListener('astro:before-swap', () => {
 });
 
 initPageTransitions();
+initProjectMorph();

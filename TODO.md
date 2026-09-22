@@ -2,31 +2,440 @@
 
 `src/pages/projets.astro` and `src/scripts/projets-page.ts` hold the current
 three-view (carousel / dezoom / liste) implementation with a working
-vue1<->vue2 morph transition. Vue3 (liste) is done, no changes needed there.
+vue1<->vue2 morph transition. Vue 3 (liste) is done, no changes needed there.
 
 Previous items 1-4 (sibling text caught in image mask, ~5% image left
 hidden after reveal, entering choreography sequencing/easing, leaving
 choreography's extra siblings'-text phase) are done - fixed in
 `morphBetweenCarouselAndDezoom()` / `initDezoomObserver()`.
 
-penser à animer la vue 3 aussi, et transition vue 3.
+Vue 3 (liste) now has its own enter/leave transition (row stagger, distinct
+from the vue1<->vue2 morph and from the page wipe) - see transitionListe()
+in projets-page.ts.
 
-images selon width : picture d'astro etc voir gemini et lui demander
+/projets/[slug].astro added: individual project pages, reached from any of
+the 3 views via a morph transition (clicked image grows into the page's
+hero) - see src/scripts/project-morph.ts.
 
+## 2026-09-22 session — chrome masking, vue3 perf, dezoom centering
 
----- partie de Gemini (à transmettre à claude code), pour l'optimisation de la vue2 et de l'animation en sortie et entrée de viewport des éléments : 
-❌ Le mythe : Animer la disparition des éléments hors écran n'économise pas de ressources, ça en consomme plus (calculs JS/GPU). Le navigateur ne calcule déjà pas le rendu de ce qui est hors viewport.
+Fixed this session, all still need a real-browser confirm (see "Next
+session" below):
 
-✅ Les VRAIES optimisations (Zéro coût JS) :
+- Vue1's info text wasn't animating out when opening a project (it worked
+  fine for the vue1<->vue2 view switch). Root cause: vue1's carousel image
+  is already full-bleed, so project-morph.ts's floating clone appeared
+  already at ~its final size/position - it covered the whole screen the
+  instant it became visible, before the leave-out animations (which ran
+  concurrently, not before) had a chance to actually play or be seen.
+- Same root cause explained `#temp-nav` and `.view-switcher` (bottom-right
+  icons) popping away instantly instead of animating - nothing was ever
+  animating them at all, they just happened to be covered by the clone.
+  project-morph.ts's event.loader is now sequenced so all of the leave
+  animations (info text, temp-nav, view-switcher/project-back) actually
+  play - visible, on the real outgoing page - *before* the clone is ever
+  shown/covers anything. temp-nav and view-switcher/project-back now slide
+  off toward their nearest viewport edge (same eases as
+  hideInfoParts/revealInfoParts) instead of just vanishing on swap, and
+  slide back in once the morph settles on the other side - see
+  hideChromeEl/revealChromeEl in project-morph.ts.
+- Vue3 (liste) leaving was genuinely laggy, not just slow-feeling: each row
+  was animating up to 4 separate `<img>` clip-paths at once (clip-path
+  forces a repaint per animated element per frame), so several visible rows
+  staggering at the same time meant a dozen-plus concurrent repaints.
+  hideListeRow/showListeRow now animate the row's single `.liste-images`
+  wrapper instead of each image - same visual result (the images sit flush
+  against it with no gap), a fraction of the animation count.
+- Dezoom card centering before its morph: implemented via a new
+  registerMorphCenterHook in project-morph.ts, called before the source
+  rect is captured - projets-page.ts's handleMorphCenter recenters a
+  clicked dezoom card (if it wasn't already centered) and corrects
+  `current`/sessionStorage to the card that was actually clicked (previously
+  whatever currentFromDezoom() guessed from the scroll position *before*
+  the click, which could be a different, more-centered card).
 
-HTML : Ajoute loading="lazy" decoding="async" sur tes <img> (chargement différé sans bloquer la page).
+## 2026-09-22 session, round 2 - chrome mask technique + curtain-based vue3
 
-CSS : Ajoute content-visibility: auto; sur .dezoom-item (le navigateur suspend complètement le rendu des cartes hors-champ).
+User feedback on the round 1 fixes above, addressed:
 
-✨ Si tu veux animer juste pour l'esthétique ("Wow effect") :
+- `.project-back` was flashing fully visible on arriving at a project page,
+  then getting covered by the still-mid-flight clone, then popping visible
+  again at settle - because it's freshly mounted on the incoming page (not
+  persisted like `#temp-nav`), so it started fully visible with nothing
+  hiding it first. Fixed with `snapChromeHidden()` in project-morph.ts -
+  snaps it to its hidden position the instant the swap happens, before
+  anything can paint. Same latent bug existed for `.view-switcher` on the
+  backward arrival at /projets; fixed the same way.
+- The round 1 chrome hide/reveal (`#temp-nav`, `.view-switcher`,
+  `.project-back`) just translated the whole element toward the nearest
+  viewport edge - it animated, but didn't read as "mask" the way the rest
+  of the site does (info text sinking under a fixed overflow:hidden
+  boundary). Reworked to match exactly: each now has its own dedicated
+  overflow:hidden mask ancestor (`#temp-nav` itself, `.view-switcher`
+  itself, new `.project-back-mask`) sized to fit it, and what animates is
+  an inner element sliding down by its own height, swallowed by the mask's
+  bottom edge - same technique, same eases, as
+  hideInfoParts/revealInfoParts. Required a small markup split in
+  Layout.astro / projets.astro / [slug].astro (see `.temp-nav-inner`,
+  `.view-switcher-inner`, `.project-back-mask`).
+- Vue3 (liste) was still laggy after round 1's "1 clip-path per row instead
+  of 4" fix - user correctly suspected clip-path itself, not just the
+  count: it forces a repaint of the image's own pixels every frame, and
+  isn't compositor-only work the way a transform is, unlike most other
+  animations on this page. Replaced entirely with two solid
+  `var(--color-ink)` curtain divs per row (`.liste-images-curtain-top/
+  -bottom`, in projets.astro) animating only `transform: scaleY()` -
+  fully GPU/compositor-driven, same visual crop (verified the scaleY math
+  reproduces the exact original clip-path crop, not an approximation) and
+  identical timing. See hideListeRow/showListeRow's comment in
+  projets-page.ts for the derivation.
 
-Utilise GSAP ScrollTrigger ou un IntersectionObserver.
+Live-tested this round via a Chrome tab: confirmed via instrumented
+`astro:after-swap` logging that `.project-back`/`.view-switcher-inner`
+start already-hidden (non-zero translateY) at the very moment they're
+mounted, not visible-then-hidden; confirmed both settle back to identity
+transform; confirmed vue3 renders and transitions with no visible artifacts
+and no new console errors (only the same known
+`document.hidden`-related `InvalidStateError` from the flaky automation
+tab, not a real bug - see feedback_browser_test_tooling_flaky).
 
-N'anime que transform et opacity.
+## 2026-09-22 session, round 3 - user feedback on round 2
 
-Évite le clip-path pendant le scroll (trop lourd) et ne fais jamais de display: none (ça casserait les calculs de défilement de Lenis).
+- Vue3 leaving: a thin white line was showing right under each row's image
+  band - the row's own `border-bottom` (a faint near-white line, always
+  there, normally hidden by the photo's own visual noise) became visible
+  once the curtain covering it was solid ink, and a curtain flush with the
+  image's exact box (`inset: 0`) left a sub-pixel rounding gap right at
+  that edge. Fixed by overshooting the curtain 2px past the image band on
+  every edge (`top/bottom: -2px` instead of `inset: 0`) - invisible against
+  the photo itself, plugs the gap.
+- `.view-switcher`'s mask didn't fully cover, and only the icons were
+  masked, not the panel+background as a unit - both from the same
+  structural mistake: `.view-switcher` was simultaneously the mask
+  (overflow:hidden) *and* had its own padding, while a separate
+  `.view-switcher-inner` (just the icons) was what actually translated -
+  so translating by the icons' own height left a padding-sized sliver
+  uncovered, and the background panel never moved at all. Restructured:
+  new `.view-switcher-mask` (fixed, overflow:hidden, no padding/size of its
+  own) wraps `.view-switcher` (now just the panel - background, padding,
+  radius, buttons, unchanged from before this whole feature started), and
+  `.view-switcher` itself is what project-morph.ts translates - whole
+  panel moves as one piece, and since the mask has no extra padding its
+  height matches the panel's exactly, so a full-height translate clears it
+  completely. Verified via `getBoundingClientRect()`: mask and panel rects
+  are now identical.
+- Vue3 -> project page and back looked harsh compared to a normal vue1/2
+  -> vue3 switch - because it was structurally different: on this return
+  path, every row was set instantly fully open on page load except the
+  current row's *text* (images always popped instantly, no defer at all),
+  whereas a normal switch runs the full staggered showListeRows() reveal.
+  Fixed by making the backward-restore path structurally match a normal
+  entrance: applyRestoredView now closes *every* row (not just leaves the
+  current one deferred), and revealAfterMorphSettle calls showListeRows()
+  itself once the clone settles - same staggered curtain-grow-open + text
+  reveal, same function, as switching into vue3 normally. Confirmed live
+  via an astro:page-load listener that rows are genuinely in the closed
+  (scaleY(1)) state right after restore, before the deferred reveal runs -
+  not just reaching the same end state by a different (instant) path.
+
+## 2026-09-22 session, round 4 - vue3 leaving looked broken, wrong scroll
+
+User report: leaving vue3 (liste) for a project page "looked very bad,
+nothing fits, shows halfway scroll through", and once landed, all the
+project's extra images popped in at once instead of one at a time on
+scroll - the ask was "going to a new project page should always be at the
+top of it".
+
+Root cause: `lenis` in smooth-scroll.ts is a single instance that lives for
+the *entire session* (module scope, never torn down between page
+navigations) and its raf loop never stops running on its own. The existing
+`window.scrollTo(0, 0)` reset on swap moved the real scroll position, but
+not Lenis's own remembered target - so a couple of frames later Lenis would
+smoothly "correct" the page back toward wherever it used to be scrolled
+(e.g. deep in the liste), which is exactly what read as "halfway scroll
+through" while leaving, and as several `.project-extra` blocks landing
+already in view (triggering their IntersectionObserver reveals all at once)
+instead of the page genuinely sitting at the top.
+
+Fixed with a new `resetPageScroll()` in smooth-scroll.ts (Lenis-aware:
+`lenis.scrollTo(0, {immediate:true, force:true})` when Lenis exists, a raw
+`window.scrollTo(0,0)` otherwise), used by both page-transitions.ts and
+project-morph.ts instead of the raw call. Also `pageLenis.stop()`/`start()`
+now bracket the whole morph transition in project-morph.ts (stopped when a
+morph nav starts, so Lenis can't keep drifting the still-visible outgoing
+page during the leave animations either; restarted once forward lands on a
+project page, or immediately if the transition gets aborted mid-flight -
+backward intentionally leaves the restart to projets-page.ts's own
+view-specific pageLenis start()/stop(), which already existed).
+
+That stop() surfaced a real, easy-to-miss bug of its own: liste's own
+`scrollListeToCurrent()` calls `pageLenis.scrollTo(target, {immediate:true})`
+*without* `force: true` - Lenis silently no-ops a scrollTo while stopped
+unless forced, and this now runs while project-morph.ts has just stopped
+it (it only restarts pageLenis for liste a few lines later in the same
+init function) - so a backward-morph restore into liste was quietly
+landing at the top instead of the actual saved row. Fixed by adding
+`force: true` there too. Lesson: adding a `.stop()` anywhere in a codebase
+with a session-long singleton like this Lenis instance means auditing
+*every* existing `scrollTo` call against that instance, not just the new
+code path - `force: true` is easy to forget on the ones that already
+"worked" only because the instance happened to always be running before.
+
+Confirmed live in Chrome: scrolled deep into liste, clicked a row, landed
+scrollY:0 on the project page and it stayed 0 (no drift), then confirmed
+going back restored the actual clicked row (not the top) with the fix.
+
+## 2026-09-22 session, round 5 - "nothing changed" + missing content below hero
+
+Two real, separate bugs found after the user reported round 4's backward
+(project page -> vue3) fix hadn't changed anything, and separately asked
+whether missing content below a project's hero image was normal (it
+wasn't):
+
+- **Project pages: every image below the hero was permanently stuck
+  unloaded.** `.project-extra img` had `loading="lazy"`, but
+  `initProjectPage` (project-page.ts) sets every one of those images'
+  `clip-path` to fully hidden (`inset(100% 0 0 0)`) the instant it runs -
+  combined with no explicit width/height (so `height: auto` collapses to
+  0px before the image has loaded and its aspect ratio is known), this
+  left the browser's native lazy-load distance heuristic with nothing to
+  ever trigger on: 0 visible area, 0 layout height, nothing "getting
+  close". Confirmed live (`img.complete`/`naturalWidth` stayed 0/false
+  indefinitely, even scrolled to the very bottom of the page - setting
+  `img.loading = 'eager'` on one made it load in under a second). Fixed by
+  dropping `loading="lazy"` - the custom IntersectionObserver reveal
+  already staggers *when* each image animates in, native lazy-load was
+  redundant and, combined with the clip-path, actively broken. Doing this
+  properly (keep lazy loading, give images real dimensions so they don't
+  collapse) needs actual width/height data this project doesn't have yet -
+  see the old "images selon width : picture d'astro" note below, still
+  open.
+- **Round 4's liste-restore fix was wrong: closing every row (not just the
+  current one) during the backward morph left the whole page solid ink for
+  the ~0.8s the clone takes to shrink back**, which is why the user saw no
+  improvement - a closed row and "nothing rendered" look identical since
+  the curtain color matches the page background. The actual clone only
+  ever targets a row's *first* image (see allCopiesOf's comment in
+  project-morph.ts) - every other image, in every row including the
+  current one, was never covered by anything and never needed hiding.
+  Reverted applyRestoredView's liste branch and revealAfterMorphSettle back
+  to the pre-round-3 shape: only the current row's *text* defers/reveals
+  (exactly matching how dezoom only ever defers its current item + visible
+  siblings, never the whole view), every row's images stay open/visible
+  the whole time. Confirmed live via a page-load listener that rows are
+  open (not closed) immediately after restore now.
+- Also restarted the dev server mid-session (`astro dev stop` + `astro dev
+  --background`) per [[feedback_browser_test_tooling_flaky]] - big rewrite,
+  wanted to rule out stale HMR state before concluding "nothing changed"
+  meant the code itself was wrong.
+
+## 2026-09-22 session, round 6 - unified scroll-reveal for vue3 rows
+
+User asked for: (1) liste rows revealing in sequence (bottom-to-top mask)
+during the backward morph instead of popping in all at once, and (2) rows
+animating in the same way the *first* time they're scrolled to during
+normal vertical scrolling, not just during transitions. Implemented both
+with one mechanism instead of two:
+
+- New `initListeRevealObserver()` in projets-page.ts: a single
+  IntersectionObserver, set up once and left running for the page's
+  lifetime, that reveals any not-yet-`revealed` row (via the existing
+  `showListeRow`) the moment it's scrolled into view - whether that
+  scrolling happens during a transition (the clone still mid-flight) or
+  from a user just scrolling down normally, long after any transition
+  ended.
+- `dataset.revealed` (set in `setListeRowOpenInstant`/`showListeRow`,
+  cleared in `setListeRowClosedInstant`/`hideListeRow`) is what the
+  observer checks before acting, and it resets whenever a row is hidden
+  again - so re-entering liste later replays the reveal, same as dezoom
+  already does, matching "first time" to mean "first time this visit",
+  not "once ever in the session".
+- `applyRestoredView`'s liste branch and `transitionListe`'s
+  entering-liste branch got much simpler as a result: they only need to
+  handle the *current* row specially (instantly open, since the clone
+  covers its first image - see round 5's note) or the *currently-visible*
+  rows (still get the nice staggered showListeRows() call on a normal
+  switch) - every other row is just left closed and the persistent
+  observer picks it up whenever the user actually gets there. `showListeRow`
+  itself is unchanged.
+- Also fixed a related bug this surfaced: `hideListeRows`/`showListeRows`'s
+  old "instantly force offscreen rows to the target state" behavior could
+  strand an already-revealed row (closed it, but revealed stayed true, so
+  the observer would then refuse to ever reopen it - see setListeRowClosedInstant's
+  comment). Now offscreen rows are only touched if they're not yet revealed
+  (nothing to do) or already revealed (left alone, correct either way).
+
+**Real bug found and fixed via this round's testing, not by design:** a
+`let listeRevealObserver` was declared *after* the line that first called
+`initListeRevealObserver()` (which reads it) - `let`/`const` are in their
+temporal dead zone until their own declaration line runs, unlike a
+`function` declaration, so this threw `ReferenceError: Cannot access
+'listeRevealObserver' before initialization` on **every single page
+load**, silently aborting the rest of `initProjetsPage()` - meaning
+`registerMorphLeaveHook`/`registerMorphCenterHook` and everything after
+the crash point never ran. This is what actually caused the confusing,
+inconsistent test results this round (view switches "not sticking",
+sessionStorage reads/writes seemingly not happening, backward restores
+landing on the wrong view) - not real transition bugs, just an uncaught
+exception wiping out half of every page's setup. Fixed by moving the
+declaration above its first use. `astro check` does not catch this kind
+of runtime-only TDZ ordering issue - only live testing did.
+
+**Still open, not resolved this round:** a white line reported appearing
+"a few px above the large 1st project image" shortly after starting to
+leave an individual project page (before the swap to vue3). Investigated
+extensively (zoomed screenshots at various points via an artificially
+slowed-down transition, computed-style audits of every element near the
+hero's top edge, background-color checks) without finding a structural
+cause or reproducing it live - every audited element in that region is
+ink-colored with no border, and the "few px" symptom didn't show up in
+any capture. Best-effort hypothesis if it resurfaces: `body`'s own
+background is `--color-paper` (near-white, see global.css) and is the
+only near-white candidate anywhere in the page, so if this is still
+happening, look for a sub-pixel gap that exposes body's background
+somewhere in the leave sequence - but this needs a live browser
+(ideally the user describing/recording it) to actually pin down, the
+automation tab's `document.hidden`-while-testing behavior makes catching
+a specific animation frame very unreliable (see
+feedback_browser_test_tooling_flaky.md).
+
+## 2026-09-22 session, round 7 - per-image stagger, real mask fix, pacing
+
+More user feedback on vue3 <-> [slug] and the scroll-reveal:
+
+- `.liste-row .item-info` was missing `overflow: hidden` - the ONE masked
+  text on the site without it (`.carousel-info`, `.dezoom-item .item-info`
+  all have it). Without it, hideInfoParts/revealInfoParts's translateY had
+  nothing to clip against, so the "hidden" state was just the title sitting
+  there in plain view, shifted down ("appears instant, and too low") -
+  explains "you went the easy way, it just slides" too. Added the missing
+  `overflow: hidden` in projets.astro.
+- Only the *clicked* row ever animated on leaving vue3 for a project page;
+  every other visible row's text/images just vanished with the page swap.
+  `handleMorphLeave`'s liste-row branch now calls the same `hideListeRows()`
+  used when leaving liste via the view switcher, so every visible row
+  closes together.
+- The clicked row's images were popping open instantly on the way back
+  (`setListeRowOpenInstant`), not doing the real reveal. Split
+  `showListeRow` into `revealListeRowImages` + text, so the current row's
+  images can reveal properly (concurrent with the clone, same as any other
+  row) while its *text* alone still waits for the clone to settle
+  (`hideCurrentInfoInstant` -> revealed in `revealAfterMorphSettle`) -
+  matches "title should only animate after the image is done", since with
+  the mask fix above the wait is now actually invisible instead of showing
+  text sitting in the wrong spot.
+- The 4 images in a row were one shared curtain pair (a round 1/2 perf
+  consolidation, back when this was clip-path-based and every extra
+  animated element was expensive) - now `transform`-only, so cost isn't
+  the concern it was. Restructured to a curtain pair *per image*
+  (`.liste-image` wrapping each `<img>`, in projets.astro) and gave each a
+  100ms stagger behind the previous one (`LISTE_IMAGE_STAGGER` in
+  projets-page.ts) - the "in line, slightly delayed compared to each
+  other" ask.
+- Scroll-reveal threshold raised 0.15 -> 0.4 (`initListeRevealObserver`) -
+  rows are tall, and revealing at only 15% visible meant most of the row
+  (and the reveal animation) was still below the fold when it played,
+  reading as underwhelming rather than as a real "it opens" moment.
+- Pacing bumped modestly (project-morph.ts): `MORPH_DURATION` 0.8 -> 0.95,
+  `CHROME_HIDE_DURATION` 0.32 -> 0.38, `CHROME_REVEAL_DURATION` 0.38 ->
+  0.45.
+
+Verified with a single, minimal live check this round (navigate, switch to
+liste, screenshot, check console) rather than the exhaustive multi-step
+testing of previous rounds - the user asked to cut back on
+claude-in-chrome usage given the token cost, so the rest of this round
+relies on code review + `astro check` (0 errors) rather than an end-to-end
+click-through. Worth the user's own pass, more than previous rounds.
+
+**Still open:** the white line above the project hero on leaving (see
+round 6's note - unreproduced, no structural cause found).
+
+## 2026-09-22 session, round 8 - the real "nonsense" bug + full choreography
+
+Round 7's `handleMorphLeave` change (call `hideListeRows()` for every visible
+row, including the clicked one) was a real regression: it closed the
+clicked row's *first* image - the exact image the morph clone is supposed
+to grow from - via its own curtain, before the clone ever became visible.
+So the sequence read as "image vanishes, then a new image pops in from
+nowhere and morphs" instead of one continuous photo growing into the hero.
+Confirmed live this round that the fix holds: the clicked row's first image
+now stays fully visible throughout, untouched by any curtain.
+
+Full requested choreography for vue3 -> [slug] via `handleListeRowMorphLeave`
+(new, in projets-page.ts) - clicked row's title first (small nudge +
+curtain, not a full slide) -> every other visible row's title right behind
+it -> *then* images close, skipping only the clicked row's first:
+
+- Image curtains (and the new title curtain) simplified from two
+  (top-anchored + bottom-anchored, meeting in the middle) to one per
+  element, with `transform-origin` flipped in JS right before each
+  animation - reveal is top-anchored shrinking to 0 (bottom-to-top,
+  unchanged, already praised as "perfect"), hide is now bottom-anchored
+  growing to 1 (also bottom-to-top, replacing the old symmetric
+  meet-in-the-middle close) - matches the explicit "mask disappearance
+  bottom to top" request for both directions.
+- New `.liste-title-curtain` (projets.astro) gives titles the same
+  curtain-based masking as images, instead of the old full-height
+  translateY slide - fixes "you went the easy way, it just slides" for
+  real this time, plus a small `LISTE_TITLE_NUDGE_PX` (10px) secondary
+  motion per "without moving too much, just going down a little bit".
+- Backward restore's current-row title-defer (`hideCurrentInfoInstant`/
+  `revealAfterMorphSettle`) now uses `setListeTitleClosedInstant`/
+  `revealListeTitle` (the curtain) instead of the old generic
+  translateY-based helpers.
+- `handleMorphCenter` extended to liste rows: clicking a project row now
+  auto-scrolls (`alignListeRowToBottom`) so that row's image band lines up
+  with the viewport's bottom edge before the morph starts, same mechanism
+  already used for dezoom card centering. Untouched: what "except the
+  first one" in the request meant exactly wasn't fully clear - implemented
+  as a plain align-to-bottom-if-needed with no special-casing for row 0;
+  worth confirming this matches intent.
+- Deliberately did NOT touch reveal-text.ts/RevealText - the destination
+  [slug] page's own intro text uses GSAP ScrollTrigger with `start: 'top
+  85%'`, which should already fire close to immediately once the page
+  loads (the text is at the top, already "in view"), concurrent with the
+  clone's own continued travel to the hero position after the swap - this
+  is very likely already happening as asked ("text starts appearing while
+  only the 1st image is still on screen"), just not independently verified
+  this round.
+
+**A second TDZ bug** (same class as round 6's, see
+[[feedback_lenis_singleton_stop_force]]-style lesson but for ordering, not
+force): `LISTE_IMAGE_STAGGER`/`LISTE_TITLE_NUDGE_PX` were declared *after*
+the "close every row" init step that (transitively) reads them, throwing
+`ReferenceError` on every page load again. Moved both constants above
+`const listeRows = ...`. Caught this one via live testing before reporting
+done - `astro check` does not catch it.
+
+Per the user's request this round, live verification was intentionally
+kept to the minimum needed to confirm the core regression was actually
+fixed (not the full multi-phase choreography timing, which needs a human's
+eyes/judgment anyway) - see
+[[feedback_minimize_browser_automation_tokens]]. Worth the user's own full
+pass on: title-then-titles-then-images pacing, the small title nudge
+amount, and the new bottom-to-top hide direction actually reading as
+intended.
+
+## Next session - real-browser confirm
+
+Still true from round 1, now covering rounds 2 through 6's changes too:
+nothing here has been judged for *smoothness/timing* by a human in a real
+foreground tab. First thing next time:
+- Click through all 3 views' forward+backward morph and confirm the
+  chrome (temp-nav, view-switcher, project-back) now reads as sinking
+  under a mask, not sliding, and that view-switcher's whole panel moves
+  together (not just the icons) with full coverage.
+- Confirm vue3's leaving/entering curtains genuinely feel less laggy, and
+  that the white-line-under-each-row artifact is actually gone (not just
+  structurally patched).
+- Confirm vue3 -> project page -> back now feels like a normal vue3
+  entrance (staggered reveal), not a harsh instant pop.
+- Clicking an off-center dezoom card recenters it before morphing, and
+  `current` survives correctly (back button lands on the right card).
+
+Scroll lock during the morph transition - `toggleScrollLock(true)` fires on
+every morph nav in project-morph.ts and intercepts wheel/touchmove/keydown
+at the window level with `capture: true`, ahead of Lenis entirely - reading
+the code, this should already hold regardless of Lenis's own state, but
+still worth a real scroll-during-morph check since it's never been
+confirmed live.

@@ -1,0 +1,158 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import RevealText from '../../components/RevealText.astro';
+import projects from '../../data/projets.json';
+
+export function getStaticPaths() {
+  return projects.map((project) => ({
+    params: { slug: project.slug },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+---
+
+<Layout title={`${project.titre} — Portfolio`}>
+  <article class="project-page">
+    <!-- Normal flow, not fixed: on entry this fills 60% of the viewport
+         with just text on a plain background, so the full-bleed hero right
+         under it already peeks in from the bottom before any scroll
+         happens. Scrolling carries the hero (and everything below it) past
+         like any other page - nothing here is pinned. -->
+    <div class="project-intro">
+      <RevealText as="p" class="project-meta font-mono">
+        {project.categorie} — {project.secteur} — {project.annee}
+      </RevealText>
+      <RevealText as="h1" class="project-title">{project.titre}</RevealText>
+      <RevealText as="p" class="project-description">{project.description}</RevealText>
+    </div>
+
+    <header class="project-hero">
+      <img src={project.images[0]} alt="" class="project-hero-image" data-project-hero />
+    </header>
+
+    <div class="project-content">
+      <!-- Remaining images, one per block, each revealed on its own as it
+           scrolls into view - see initProjectPage in project-page.ts.
+           Deliberately no native lazy-loading attribute here: initProjectPage
+           sets each img's clip-path to fully hidden (inset(100% 0 0 0)) the
+           instant it runs, before the browser's own lazy-load distance
+           check ever gets a chance to fire - combined with no width/height
+           so height:auto collapses to 0 before the image loads, that left
+           every one of these permanently stuck unloaded (0 visible area,
+           0 layout height - nothing left to trigger a native "getting
+           close" check on). No real width/height data to give these yet
+           (see TODO.md's Picture/Image component note) to fix this the
+           right way and keep native lazy-loading; eager for now is correct
+           over silently broken. -->
+      {project.images.slice(1).map((src: string) => (
+        <div class="project-extra">
+          <img src={src} alt="" data-reveal-image />
+        </div>
+      ))}
+    </div>
+
+    <!-- .project-back-mask is the fixed-position mask (overflow:hidden,
+         auto-sized to the link's own line height); project-morph.ts
+         animates the link itself (still .project-back, same selector as
+         before) inside it, same technique as #temp-nav/.view-switcher on
+         /projets. -->
+    <div class="project-back-mask">
+      <a href="/projets" data-morph-back class="project-back font-mono">← Projets</a>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .project-page {
+    position: relative;
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .project-intro {
+    min-height: 60dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0 1.5rem;
+    max-width: 40rem;
+    margin: 0 auto;
+  }
+
+  .project-meta {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .project-title {
+    font-size: clamp(1.75rem, 5vw, 3rem);
+    line-height: 1.05;
+  }
+
+  .project-description {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    line-height: 1.5;
+    max-width: 32rem;
+    opacity: 0.9;
+  }
+
+  .project-hero {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .project-hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .project-content {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 8rem;
+  }
+
+  .project-extra {
+    margin-bottom: 2rem;
+  }
+
+  .project-extra img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .project-back-mask {
+    position: fixed;
+    left: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 20;
+    overflow: hidden;
+  }
+
+  .project-back {
+    display: block;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    opacity: 0.8;
+    /* Sitting over the hero photo as often as over the plain background
+       (the hero already peeks into the bottom of the first viewport before
+       any scroll) - mix-blend-mode:difference (same as .temp-nav) reads on
+       both. */
+    color: #fff;
+    mix-blend-mode: difference;
+  }
+
+  .project-back:hover {
+    opacity: 1;
+  }
+</style>

@@ -14,3 +14,20 @@ if (!prefersReducedMotion) {
   gsap.ticker.add((time) => lenis!.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
 }
+
+// A raw `window.scrollTo(0, 0)` moves the actual scroll position but not
+// Lenis's own idea of it - `lenis` here is a single instance that lives for
+// the whole session (module scope, never torn down between page
+// navigations), so its internal targetScroll/animatedScroll can be left
+// holding a stale value from whatever the previous page was scrolled to.
+// If its raf loop (always running, driven by gsap.ticker above) is still
+// live when that happens, it can spend the next several frames smoothly
+// "correcting" the real scroll position back toward that stale target -
+// on a page transition this reads as the new page briefly scrolling itself
+// to a wrong position on its own. `force: true` because this needs to work
+// even while `lenis.stop()` has been called (see project-morph.ts, which
+// stops it for the whole transition and expects this to still land).
+export function resetPageScroll(): void {
+  if (lenis) lenis.scrollTo(0, { immediate: true, force: true });
+  else window.scrollTo(0, 0);
+}

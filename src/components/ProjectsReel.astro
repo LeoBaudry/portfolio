@@ -26,7 +26,9 @@ const featured = projects.slice(0, 5);
 
     {featured.map((project, i) => (
       <div class="reel-project" data-index={i}>
-        <img src={project.images[0]} alt="" class="reel-image" />
+        <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
+          <img src={project.images[0]} alt="" class="reel-image" />
+        </a>
         <div class="reel-overlay" aria-hidden="true"></div>
         <div class="reel-bars" aria-hidden="true"></div>
         <div class="reel-info">
@@ -191,6 +193,13 @@ const featured = projects.slice(0, 5);
     overflow: hidden;
   }
 
+  /* Wraps .reel-image for the project-morph transition (see
+     project-morph.ts) without taking part in layout - same technique as
+     projets.astro's .morph-link. */
+  .morph-link {
+    display: contents;
+  }
+
   .reel-image {
     position: absolute;
     inset: 0;
@@ -204,6 +213,9 @@ const featured = projects.slice(0, 5);
     inset: 0;
     background: linear-gradient(to top, color-mix(in srgb, var(--color-ink) 55%, transparent), transparent 45%);
     z-index: 1;
+    /* Purely decorative - must not block clicks through to .reel-image's
+       link underneath it. */
+    pointer-events: none;
   }
 
   .reel-bars {

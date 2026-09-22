@@ -30,10 +30,22 @@ const { title = 'Portfolio' } = Astro.props;
     during the transition needs its own transition:animate="none" too.
   -->
   <body transition:animate="none">
-    <!-- Temporary nav, until the real one is designed. -->
+    <!--
+      Temporary nav, until the real one is designed. #temp-nav itself is the
+      mask (overflow:hidden, auto-sized to .temp-nav-inner's own height) -
+      project-morph.ts's chrome hide/reveal (see project-morph.ts) animates
+      .temp-nav-inner's own translateY within it, sinking it down out of
+      view through the mask's bottom edge and rising back the same way,
+      rather than sliding the whole nav off past the viewport - the same
+      "content moves, mask stays put" technique as the info-text mask
+      elsewhere on the site (see hideInfoParts/revealInfoParts in
+      projets-page.ts).
+    -->
     <nav class="temp-nav" id="temp-nav" transition:persist transition:animate="none">
-      <a href="/">Index</a>
-      <a href="/projets">Projets</a>
+      <div class="temp-nav-inner">
+        <a href="/">Index</a>
+        <a href="/projets">Projets</a>
+      </div>
     </nav>
 
     <!--
@@ -46,6 +58,22 @@ const { title = 'Portfolio' } = Astro.props;
       rather than replacing one.
     -->
     <div id="page-wipe" class="page-wipe" aria-hidden="true" transition:persist transition:animate="none"></div>
+
+    <!--
+      Persisted clone used only for the project-card -> project-page morph
+      (see project-morph.ts). Positioned via top/left/width/height, not
+      transform - it has no position:fixed descendants of its own to worry
+      about, but staying off transform keeps it consistent with #page-wipe's
+      rule and avoids the same stacking trap if it's ever animated further.
+    -->
+    <img
+      id="project-morph-clone"
+      class="project-morph-clone"
+      alt=""
+      aria-hidden="true"
+      transition:persist
+      transition:animate="none"
+    />
 
     <div id="transition-root" class="transition-root" transition:animate="none">
       <slot />
@@ -62,13 +90,19 @@ const { title = 'Portfolio' } = Astro.props;
     top: 1.25rem;
     right: 1.5rem;
     z-index: 100;
+    /* The mask - no explicit height, so it auto-sizes to .temp-nav-inner's
+       own (untransformed) height, same as .carousel-info elsewhere. */
+    overflow: hidden;
+    mix-blend-mode: difference;
+  }
+
+  .temp-nav-inner {
     display: flex;
     gap: 1.25rem;
     font-family: var(--font-mono);
     font-size: 0.8rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    mix-blend-mode: difference;
   }
 
   .temp-nav a {
@@ -95,5 +129,13 @@ const { title = 'Portfolio' } = Astro.props;
 
   .transition-root {
     position: relative;
+  }
+
+  .project-morph-clone {
+    display: none;
+    position: fixed;
+    z-index: 210;
+    object-fit: cover;
+    pointer-events: none;
   }
 </style>
