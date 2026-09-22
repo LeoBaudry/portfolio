@@ -167,6 +167,12 @@ export function initProjetsPage(root: ParentNode = document) {
   }
 
   function animateAndSettle(el: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions): Promise<void> {
+    // A second animate() call while a previous one from here is still
+    // playing on the same element (e.g. dezoom's entrance reveal still
+    // in-flight when a fast first click's leave-hide starts) doesn't cancel
+    // it - WAAPI just runs both, so the element flickers through whichever
+    // resolves last. The newest call always wins.
+    el.getAnimations().forEach((anim) => anim.cancel());
     const durationMs = (options.duration as number) || 0;
     const delayMs = (options.delay as number) || 0;
     return settle(el.animate(keyframes, options), durationMs + delayMs + 200);

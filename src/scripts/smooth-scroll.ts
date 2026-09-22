@@ -28,6 +28,20 @@ if (!prefersReducedMotion) {
 // even while `lenis.stop()` has been called (see project-morph.ts, which
 // stops it for the whole transition and expects this to still land).
 export function resetPageScroll(): void {
-  if (lenis) lenis.scrollTo(0, { immediate: true, force: true });
-  else window.scrollTo(0, 0);
+  if (lenis) {
+    // Astro's own router restores the previous scroll position on
+    // back/forward navigation via a raw native scrollTo(), bypassing Lenis
+    // entirely (see moveToLocation in astro/dist/transitions/router.js) -
+    // Lenis's targetScroll is left stale at whatever it was before that
+    // jump. If it's still 0 from before we ever left this page, the
+    // scrollTo(0) below sees target === targetScroll and no-ops (Lenis's
+    // own early-return for "already there"), leaving the real, native
+    // scroll position stuck wherever Astro jumped it. resize() first
+    // resyncs targetScroll/animatedScroll from the actual current native
+    // position, so the scrollTo(0) that follows is never a no-op.
+    lenis.resize();
+    lenis.scrollTo(0, { immediate: true, force: true });
+  } else {
+    window.scrollTo(0, 0);
+  }
 }

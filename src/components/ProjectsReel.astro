@@ -160,10 +160,25 @@ const featured = projects.slice(0, 5);
     color: var(--color-paper);
     font-size: clamp(1.25rem, 3vw, 1.75rem);
     line-height: 1.4;
-    opacity: 0;
-    /* .reel-intro-text above opts the whole overlay out of pointer events
-       so clicks reach the hero/project links underneath it - this is the
-       one piece of it that's actual selectable text, so it opts back in. */
+    /* Each line (split + masked individually by projects-reel.ts, see its
+       SplitText call) carries its own hidden state once split - this just
+       hides the raw, not-yet-split paragraph for the brief window before
+       that JS runs, so there's no flash of unmasked full-size text. Cleared
+       in SplitText's onSplit callback. */
+    visibility: hidden;
+    /* Deliberately NOT pointer-events:auto here (stays inherited none from
+       .reel-intro-text) - this container's own box stays full-size even
+       while its lines are masked away, and project 0 renders directly
+       behind it. Selection is opted back in per-line below instead, since
+       a line outside its own mask's visible region isn't hit-tested at all
+       - selectable only while actually visible, click-through the rest of
+       the time (including onto project 0). */
+  }
+
+  /* projects-reel.ts splits this into per-line masks at runtime (SplitText)
+     - :global() because Astro's scoped-CSS attribute only applies to
+       markup present at build time, not elements created later via JS. */
+  :global(.reel-intro-line) {
     pointer-events: auto;
   }
 

@@ -42,21 +42,25 @@ export function initRevealText(root: ParentNode = document): void {
 
     SplitText.create(el, {
       type: mode,
+      mask: mode,
       linesClass: 'reveal-line',
       charsClass: 'reveal-char',
       autoSplit: true,
       onSplit(self) {
         el.dataset.revealReady = 'true';
         const items = mode === 'chars' ? self.chars : self.lines;
-        
-        return gsap.fromTo(items, 
+
+        // Mask stays put (SplitText's own overflow:clip wrapper around each
+        // item, via `mask` above), the item itself rises from fully below
+        // it - same "mask stays, content moves" technique as
+        // hideInfoParts/hideChromeEl elsewhere on the site, not a clip-path
+        // sweep over a static item.
+        return gsap.fromTo(items,
           {
-            clipPath: 'inset(100% 0% 0% 0%)',
-            y: 10 
+            yPercent: 100,
           },
           {
-            clipPath: 'inset(0% 0% 0% 0%)',
-            y: 0,
+            yPercent: 0,
             duration: mode === 'chars' ? CHAR_DURATION : LINE_DURATION,
             ease: EASE,
             stagger: mode === 'chars' ? CHAR_STAGGER : LINE_STAGGER,

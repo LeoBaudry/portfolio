@@ -1,7 +1,8 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { SplitText } from 'gsap/SplitText';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 /**
  * A/B comparison flag from content.md §5. Flip this to compare the two
@@ -52,6 +53,15 @@ const PHASE_TEXT_EXIT_START = 0.55;
 const PHASE_TEXT_EXIT_END = 0.65;
 const PHASE_GRID_START = 0.65;
 const GRID_STAGGER_FRACTION = 0.2; // share of the grid phase spent staggering line starts
+const TEXT_LINE_STAGGER_FRACTION = 0.35; // share of the text in/out phase spent staggering line starts
+
+// Same easing language as the rest of the site's mask reveals: power3.out
+// matches reveal-text.ts's EASE exactly (decelerate into place); power2.in
+// mirrors project-morph.ts's CHROME_HIDE_EASE (accelerate away). Applied
+// manually via parseEase since this section is scroll-scrubbed, not a
+// one-shot tween - scrub still wants an eased curve, just sampled by hand.
+const TEXT_REVEAL_EASE = gsap.parseEase('power3.out');
+const TEXT_HIDE_EASE = gsap.parseEase('power2.in');
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -71,6 +81,26 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   const heroFade = section.querySelector<HTMLElement>('.reel-hero-fade');
   const scrollHint = section.querySelector<HTMLElement>('.reel-scroll-hint');
   const introText = section.querySelector<HTMLElement>('.reel-intro-body');
+  // Split into lines, each wrapped in its own stationary overflow:clip mask
+  // (SplitText's `mask` option) - the mask itself never moves, the line
+  // slides vertically inside it (yPercent, see updateIntro). Same "mask
+  // stays put, content moves" technique as hideInfoParts/hideChromeEl
+  // elsewhere on the site (content.md §4's original spec), not reveal-
+  // text.ts's clip-path sweep - that one's a different, later technique
+  // (see its own "FIX" comment) and unrelated to this.
+  let introLines: HTMLElement[] = [];
+  if (introText) {
+    SplitText.create(introText, {
+      type: 'lines',
+      linesClass: 'reel-intro-line',
+      mask: 'lines',
+      autoSplit: true,
+      onSplit(self) {
+        introLines = self.lines as HTMLElement[];
+        introText.style.visibility = 'visible';
+      },
+    });
+  }
   const projectEls = Array.from(section.querySelectorAll<HTMLElement>('.reel-project'));
   const gridLinesContainer = section.querySelector<HTMLElement>('.reel-grid-lines');
   const counterCurrent = section.querySelector<HTMLElement>('.reel-counter-current');
@@ -132,7 +162,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     gsap.set(barsByProject.flat(), { scaleX: 0 });
     if (heroFade) gsap.set(heroFade, { opacity: 1 });
     if (scrollHint) gsap.set(scrollHint, { opacity: 0 });
-    if (introText) gsap.set(introText, { opacity: 0 });
+    if (introLines.length > 0) gsap.set(introLines, { yPercent: 0 });
     showProject(0);
     return undefined;
   }
@@ -334,9 +364,26 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
 
     const textInP = localProgress(introProgress, PHASE_TEXT_START, PHASE_TEXT_END);
     const textOutP = localProgress(introProgress, PHASE_TEXT_EXIT_START, PHASE_TEXT_EXIT_END);
-    const textOpacity = clamp(textInP - textOutP, 0, 1);
-    if (introText) {
-      gsap.set(introText, { opacity: textOpacity, y: (1 - textOpacity) * 16 });
+    // The mask (each line's auto-generated overflow:clip wrapper, see the
+    // SplitText call above) never moves - the line itself translates inside
+    // it, rising up from fully below (yPercent 100, out of the mask's view)
+    // to rest (yPercent 0). While translated out, it's also not hit-testable
+    // - a child positioned outside a clipping ancestor's visible region
+    // isn't hit-tested there, same as hideInfoParts elsewhere on the site.
+    // Each line gets its own local progress within textInP/textOutP (same
+    // double-localization as the gridlines' stagger below), so lines rise
+    // independently with a slight delay between them instead of the whole
+    // paragraph moving as one block.
+    if (introLines.length > 0) {
+      const lineWindow = 1 - TEXT_LINE_STAGGER_FRACTION;
+      introLines.forEach((line, i) => {
+        const lineStart =
+          introLines.length > 1 ? (i / (introLines.length - 1)) * TEXT_LINE_STAGGER_FRACTION : 0;
+        const lineInP = TEXT_REVEAL_EASE(localProgress(textInP, lineStart, lineStart + lineWindow));
+        const lineOutP = TEXT_HIDE_EASE(localProgress(textOutP, lineStart, lineStart + lineWindow));
+        const lineReveal = clamp(lineInP - lineOutP, 0, 1);
+        gsap.set(line, { yPercent: (1 - lineReveal) * 100 });
+      });
     }
 
     const gridP = localProgress(introProgress, PHASE_GRID_START, 1);
