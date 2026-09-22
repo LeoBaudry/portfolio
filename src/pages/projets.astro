@@ -385,7 +385,13 @@ import projects from '../data/projets.json';
       display: none;
     }
     .dezoom-item {
-      height: 46dvh;
+      /* aspect-ratio derives width from height (×1.6) - on a viewport
+         taller than it is wide, the dvh figure alone lets that derived
+         width exceed the screen's actual width, clipping the card's own
+         text at the edge. Capping height by a vw-derived ceiling too
+         (44vw × 1.6 ≈ 70vw) keeps the card's width within the viewport
+         regardless of aspect ratio. */
+      height: min(46dvh, 44vw);
     }
   }
 
@@ -397,7 +403,7 @@ import projects from '../data/projets.json';
       display: none;
     }
     .dezoom-item {
-      height: 34dvh;
+      height: min(34dvh, 51vw);
     }
     .dezoom-track {
       gap: 0.35rem;
