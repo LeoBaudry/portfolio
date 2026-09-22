@@ -1,8 +1,4 @@
-// Individual project page: the extra images below the intro (project-page's
-// .project-extra blocks) reveal one at a time as they scroll into view -
-// same clip-path-grows-from-bottom language as the dezoom sibling reveal in
-// projets-page.ts (initDezoomObserver), reused here via plain values since
-// that file's constants are private to its own closure.
+// project-page.ts
 const REVEAL_DURATION = 650;
 const REVEAL_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const MASK_HIDDEN = 'inset(100% 0 0 0)';
@@ -45,7 +41,8 @@ export function initProjectPage(root: ParentNode = document): { destroy: () => v
           .catch(() => {});
       });
     },
-    { threshold: 0.2 }
+    // FIX : Seuil abaissé à 0 pour forcer le déclenchement immédiat de l'affichage des images
+    { threshold: 0 }
   );
 
   images.forEach((img) => observer.observe(img));

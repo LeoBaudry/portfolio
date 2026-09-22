@@ -15,11 +15,6 @@ const { project } = Astro.props;
 
 <Layout title={`${project.titre} — Portfolio`}>
   <article class="project-page">
-    <!-- Normal flow, not fixed: on entry this fills 60% of the viewport
-         with just text on a plain background, so the full-bleed hero right
-         under it already peeks in from the bottom before any scroll
-         happens. Scrolling carries the hero (and everything below it) past
-         like any other page - nothing here is pinned. -->
     <div class="project-intro">
       <RevealText as="p" class="project-meta font-mono">
         {project.categorie} — {project.secteur} — {project.annee}
@@ -33,19 +28,6 @@ const { project } = Astro.props;
     </header>
 
     <div class="project-content">
-      <!-- Remaining images, one per block, each revealed on its own as it
-           scrolls into view - see initProjectPage in project-page.ts.
-           Deliberately no native lazy-loading attribute here: initProjectPage
-           sets each img's clip-path to fully hidden (inset(100% 0 0 0)) the
-           instant it runs, before the browser's own lazy-load distance
-           check ever gets a chance to fire - combined with no width/height
-           so height:auto collapses to 0 before the image loads, that left
-           every one of these permanently stuck unloaded (0 visible area,
-           0 layout height - nothing left to trigger a native "getting
-           close" check on). No real width/height data to give these yet
-           (see TODO.md's Picture/Image component note) to fix this the
-           right way and keep native lazy-loading; eager for now is correct
-           over silently broken. -->
       {project.images.slice(1).map((src: string) => (
         <div class="project-extra">
           <img src={src} alt="" data-reveal-image />
@@ -53,11 +35,6 @@ const { project } = Astro.props;
       ))}
     </div>
 
-    <!-- .project-back-mask is the fixed-position mask (overflow:hidden,
-         auto-sized to the link's own line height); project-morph.ts
-         animates the link itself (still .project-back, same selector as
-         before) inside it, same technique as #temp-nav/.view-switcher on
-         /projets. -->
     <div class="project-back-mask">
       <a href="/projets" data-morph-back class="project-back font-mono">← Projets</a>
     </div>
@@ -105,6 +82,8 @@ const { project } = Astro.props;
     width: 100%;
     height: 100dvh;
     overflow: hidden;
+    /* FIX : Éradique la ligne blanche de rendu sous-pixel */
+    margin-top: -1px; 
   }
 
   .project-hero-image {
@@ -144,10 +123,6 @@ const { project } = Astro.props;
     text-transform: uppercase;
     text-decoration: none;
     opacity: 0.8;
-    /* Sitting over the hero photo as often as over the plain background
-       (the hero already peeks into the bottom of the first viewport before
-       any scroll) - mix-blend-mode:difference (same as .temp-nav) reads on
-       both. */
     color: #fff;
     mix-blend-mode: difference;
   }

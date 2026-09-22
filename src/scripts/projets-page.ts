@@ -8,11 +8,6 @@ import {
   registerMorphCenterHook,
 } from './project-morph';
 
-// Remembers which view/project was showing when leaving for an individual
-// project page, so coming back (the back link, or the browser back button)
-// restores it instead of resetting to the carousel's first project - also
-// what project-morph.ts's reverse morph reads to find the correct on-page
-// target to animate back into.
 const PROJETS_STATE_KEY = 'projets-view-state';
 
 function saveProjetsState(view: string, current: number): void {
@@ -37,7 +32,6 @@ function readProjetsState(): { view: 'carousel' | 'dezoom' | 'liste'; current: n
   return null;
 }
 
-// --- Constantes ---
 const WHEEL_THRESHOLD = 18;
 const STEP_DURATION = 850;
 const STEP_EASE = 'cubic-bezier(0.77, 0, 0.175, 1)';
@@ -59,7 +53,6 @@ const MORPH_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 const MORPH_SIBLING_FADE_DURATION = 650;
 const MORPH_SIBLING_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)'; 
 
-// La chorégraphie d'entrée : le texte current passe en premier, les autres images attendent ce délai
 const DEZOOM_OTHERS_IMAGE_DELAY = 150; 
 const DEZOOM_OTHERS_TEXT_DELAY = MORPH_SIBLING_FADE_DURATION * 0.85;
 
@@ -67,13 +60,6 @@ const DEZOOM_CROP_CLOSED = 'inset(50% 0 50% 0)';
 const DEZOOM_MASK_HIDDEN = 'inset(100% 0 0 0)';
 const DEZOOM_MASK_VISIBLE = 'inset(0 0 0 0)';
 
-// Vue 3 (liste) transition: same "grow open from the bottom entering,
-// crop-to-a-line leaving" motion as vue 2's own sibling cards below, and the
-// same hideInfoParts/revealInfoParts text treatment - but via the
-// var(--color-ink) curtain elements in hideListeRow/showListeRow, not the
-// DEZOOM_MASK_*/DEZOOM_CROP_CLOSED clip-paths those sibling cards still use
-// (clip-path on liste's larger images was the real cause of "leaving vue3
-// is laggy" - see hideListeRow's comment). Staggered row by row.
 const LISTE_ROW_STAGGER = 60;
 const PANEL_FADE_DURATION = 320;
 const PANEL_FADE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -92,23 +78,17 @@ export function initProjetsPage(root: ParentNode = document) {
   const switcherButtons = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-set-view]'));
   const morphHero = page.querySelector<HTMLImageElement>('.morph-hero');
 
-  // Only restore if this load is actually the reverse leg of a project-page
-  // round trip (project-morph.ts already knows this synchronously - its
-  // astro:before-preparation ran well before this page-load). Restoring on
-  // any load that merely finds something in sessionStorage doesn't
-  // distinguish that from a plain refresh or a fresh visit, which is why a
-  // refresh was landing back wherever a project was last opened from
-  // instead of the carousel.
   const restored = isBackwardMorphPending() ? readProjetsState() : null;
   let view: ViewMode = restored?.view ?? 'carousel';
   let current = restored?.current ?? 0;
   let switching = false;
   
-  // BarbaJS & Performance variables
   let rafId: number;
   let isDezoomActive = false;
   let dezoomObserver: IntersectionObserver | null = null;
   const clickHandlers: { btn: HTMLButtonElement; handler: () => void }[] = [];
+
+  let listeMorphSettled = !isBackwardMorphPending();
 
   function updateSwitcherUI(): void {
     switcherButtons.forEach((btn) => {
@@ -136,8 +116,6 @@ export function initProjetsPage(root: ParentNode = document) {
     btn.addEventListener('click', handler);
     clickHandlers.push({ btn, handler });
   });
-
-  // --- Outils partagés ---
 
   function settle(animation: Animation, timeoutMs = 2000): Promise<void> {
     return new Promise((resolve) => {
@@ -199,8 +177,6 @@ export function initProjetsPage(root: ParentNode = document) {
       })
     ).then(() => {});
   }
-
-  // --- Vue 1 ---
 
   const carouselItems = Array.from(panels.carousel?.querySelectorAll<HTMLElement>('.carousel-item') ?? []);
   const carouselInfoMask = panels.carousel?.querySelector<HTMLElement>('.carousel-info') ?? null;
@@ -282,8 +258,6 @@ export function initProjetsPage(root: ParentNode = document) {
   };
   panels.carousel?.addEventListener('wheel', handleWheel, { passive: false });
 
-  // --- Vue 2 ---
-
   const dezoomTrack = panels.dezoom?.querySelector<HTMLElement>('.dezoom-track') ?? null;
   const dezoomItems = Array.from(panels.dezoom?.querySelectorAll<HTMLElement>('.dezoom-item') ?? []);
   let dezoomLenis: Lenis | null = null;
@@ -303,7 +277,6 @@ export function initProjetsPage(root: ParentNode = document) {
               duration: MORPH_SIBLING_FADE_DURATION,
               easing: MORPH_SIBLING_EASE,
               fill: 'forwards',
-              // Pas de délai d'image ici : au scroll, ça apparait tout de suite
             });
             settle(reveal, MORPH_SIBLING_FADE_DURATION + 200).then(() => {
               img.style.clipPath = '';
@@ -371,12 +344,6 @@ export function initProjetsPage(root: ParentNode = document) {
     panels.dezoom.scrollLeft = clamped;
   }
 
-  // Animated counterpart to scrollDezoomToCurrent's instant jump - used only
-  // to recenter a clicked dezoom card before its project-morph starts (see
-  // handleMorphCenter below), so the morph always begins from a centered
-  // position instead of wherever the card happened to be sitting when
-  // clicked. A no-op if it's already there (nothing to animate) so clicking
-  // an already-centered card doesn't add any delay.
   function centerDezoomItem(item: HTMLElement): Promise<void> {
     if (!panels.dezoom || !dezoomLenis) return Promise.resolve();
     const panelWidth = panels.dezoom.clientWidth;
@@ -415,47 +382,11 @@ export function initProjetsPage(root: ParentNode = document) {
     if (meta) meta.style.transform = '';
   }
 
-  // --- Vue 3 ---
-
   const listeRows = Array.from(panels.liste?.querySelectorAll<HTMLElement>('.liste-row') ?? []);
-  // Both declared up here, ahead of every function that reads them (which
-  // includes the "close every row" init step a few lines down) - same
-  // temporal-dead-zone reasoning as listeRevealObserver right below: a
-  // `const` used before its own declaration line has run throws
-  // "Cannot access ... before initialization", unlike a `function`
-  // declaration, which is fully hoisted. This bit twice already in this
-  // file - see feedback_lenis_singleton_stop_force-style lesson, but for
-  // TDZ ordering instead of stop()/force.
   const LISTE_IMAGE_STAGGER = 100;
   const LISTE_TITLE_NUDGE_PX = 10;
-  // Declared here, before it's used below - initListeRevealObserver is
-  // called from the setup right after this (still earlier in the file
-  // than its own function declaration), and `let` bindings are in their
-  // temporal dead zone until this exact line runs, unlike a `function`
-  // declaration - referencing it from a call made before this point threw
-  // "Cannot access 'listeRevealObserver' before initialization" and
-  // silently aborted the rest of initProjetsPage on every single page
-  // load (registerMorphLeaveHook/registerMorphCenterHook and everything
-  // after never ran), which is what was actually behind the view-state/
-  // navigation flakiness this bug produced.
   let listeRevealObserver: IntersectionObserver | null = null;
-  // Every row's images start closed instead of the CSS default (open), so
-  // initListeRevealObserver has something to actually reveal the first
-  // time each one is scrolled to (see setListeRowClosedInstant/
-  // initListeRevealObserver further down). Whichever row ends up current
-  // (view switch or restore) gets instantly re-opened by its own code
-  // path right after, same as it always has.
-  //
-  // Text is deliberately NOT pre-hidden here the same way - this runs at
-  // page-init time, while .view-liste is normally still `hidden` (default
-  // view is carousel), and maskClearDistance measures the *current*
-  // rendered height to know how far to translate; on a `display:none`
-  // ancestor that's always 0, so the "hidden" position it would compute is
-  // indistinguishable from "already visible" (translateY(0) either way) -
-  // a silent no-op, not a real hide. showListeRow's own revealInfoParts
-  // call already snaps text to a freshly-measured hidden position
-  // immediately before animating it open, once the row is actually laid
-  // out - that's the only text-hiding this needs.
+
   listeRows.forEach((row) => setListeRowClosedInstant(row));
   initListeRevealObserver();
 
@@ -475,73 +406,35 @@ export function initProjetsPage(root: ParentNode = document) {
     return best;
   }
 
+  // FIX RESTAURATION SCROLL : Met à jour la limite Lenis immédiatement et centre exactement le projet ciblé
   function scrollListeToCurrent(): void {
     const target = listeRows[current];
     if (!target) return;
-    // force: true - on a backward-morph restore this runs while
-    // project-morph.ts still has pageLenis stopped (it only restarts it,
-    // for this view, a little further down in this same function), and
-    // Lenis silently no-ops a scrollTo without `force` while stopped -
-    // without it this call did nothing, leaving the page wherever the
-    // native scroll reset (astro:after-swap) had left it (the top) instead
-    // of the actual restored row.
-    if (pageLenis) pageLenis.scrollTo(target, { immediate: true, force: true });
-    else target.scrollIntoView({ block: 'start' });
+    if (pageLenis) {
+      pageLenis.resize(); // Empêche le clamp du scroll dû à la petite hauteur de la page [slug] précédente
+      const rect = target.getBoundingClientRect();
+      const targetY = window.scrollY + rect.top + (rect.height / 2) - (window.innerHeight / 2);
+      const clamped = Math.max(0, Math.min(targetY, pageLenis.limit));
+      pageLenis.scrollTo(clamped, { immediate: true, force: true });
+    } else {
+      target.scrollIntoView({ block: 'center' });
+    }
   }
 
-  // Animated scroll so a clicked row's own image band ends up flush with
-  // the viewport's bottom edge, instead of morphing from wherever it
-  // happened to be sitting when clicked - same idea as centerDezoomItem,
-  // just aligned to the bottom (matching how the clone grows toward a
-  // hero that fills the screen) rather than centered. A no-op if it's
-  // already there.
-  function alignListeRowToBottom(row: HTMLElement): Promise<void> {
+  function centerListeRow(row: HTMLElement): Promise<void> {
     if (!pageLenis) return Promise.resolve();
-    const imagesEl = row.querySelector<HTMLElement>('.liste-images');
-    if (!imagesEl) return Promise.resolve();
-    const rect = imagesEl.getBoundingClientRect();
-    const target = window.scrollY + rect.bottom - window.innerHeight;
-    const clamped = Math.max(0, target);
+    pageLenis.resize(); // Double sécurité avant de scroller
+    const rect = row.getBoundingClientRect();
+    const target = window.scrollY + rect.top + (rect.height / 2) - (window.innerHeight / 2);
+    const clamped = Math.max(0, Math.min(target, pageLenis.limit));
+    
     if (Math.abs(window.scrollY - clamped) < 1) return Promise.resolve();
 
-    // force: true - project-morph.ts has already called pageLenis.stop()
-    // by the time this runs (it happens synchronously in the
-    // astro:before-preparation handler, before this centerHook is ever
-    // awaited) - without force, Lenis silently no-ops a scrollTo while
-    // stopped, which means onComplete never fires and this promise never
-    // resolves. Since project-morph.ts awaits this exact promise before
-    // doing anything else, that hung the entire navigation: scroll stayed
-    // locked (toggleScrollLock(true) already ran) and nothing ever
-    // happened. Same gotcha as scrollListeToCurrent's own force:true - see
-    // feedback_lenis_singleton_stop_force in memory.
     return new Promise((resolve) => {
       pageLenis!.scrollTo(clamped, { duration: 0.5, force: true, onComplete: () => resolve() });
     });
   }
 
-  // Leaving/entering used to crop .liste-images with an animated clip-path,
-  // which stayed genuinely laggy even after cutting it down to 1 animation
-  // per row (previous pass) - clip-path forces the browser to re-rasterize
-  // the newly exposed/hidden pixels of the image itself every frame, which
-  // isn't compositor-only work the way a transform is, and these are large
-  // images (22vw tall, full row width). Replaced with a solid
-  // var(--color-ink) curtain *per image* (.liste-image-curtain, added in
-  // projets.astro) that animates only `transform: scaleY()` - fully
-  // compositor-driven, no repaint of the photo underneath at all - one per
-  // image (not per row) so each can be staggered slightly behind the last
-  // as it reveals/hides, instead of the whole row moving as a single unit.
-  //
-  // Both directions read as "bottom to top" (matching the scroll-triggered
-  // reveal, and per explicit request for the leave direction too - a
-  // symmetric close meeting in the middle, this used to do, doesn't) - the
-  // curtain's own transform-origin is flipped in JS right before each
-  // animation instead of keeping two separate curtains around:
-  // - revealing: scaleY(1) -> scaleY(0), origin top - starts fully covered,
-  //   and as it shrinks toward its top anchor, the remaining cover's own
-  //   bottom edge recedes upward, uncovering the image from the bottom up.
-  // - hiding: scaleY(0) -> scaleY(1), origin bottom - starts uncovered, and
-  //   as it grows from its bottom anchor, the cover's own top edge advances
-  //   upward, covering the image from the bottom up.
   function listeRowImages(row: HTMLElement): HTMLElement[] {
     return Array.from(row.querySelectorAll<HTMLElement>('.liste-image'));
   }
@@ -585,11 +478,6 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  // skip lets a caller leave the row's first image alone (see
-  // handleMorphLeaveListeRow below - the clicked row's first image is the
-  // morph clone's own source and must stay untouched by this, or the
-  // source photo vanishes under its own row's curtain before the clone
-  // ever appears to take over from it).
   function hideListeRowImages(row: HTMLElement, delay = 0, skip = 0): Promise<void> {
     return Promise.all(
       listeRowImages(row)
@@ -598,13 +486,6 @@ export function initProjetsPage(root: ParentNode = document) {
     ).then(() => {});
   }
 
-  // Images-only half of showListeRow, split out so a row's images can
-  // reveal on their own timeline separate from its title - used for the
-  // current row on a backward-morph restore, whose title needs to stay
-  // masked until the clone settles (see revealAfterMorphSettle) while its
-  // images can safely reveal right away, same as any other row. Resets
-  // just the image curtains to closed first (not the title - a caller
-  // managing that separately, e.g. hideCurrentInfoInstant, owns it).
   function revealListeRowImages(row: HTMLElement, delay = 0): Promise<void> {
     listeRowImages(row).forEach((wrap) => {
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
@@ -616,10 +497,6 @@ export function initProjetsPage(root: ParentNode = document) {
     ).then(() => {});
   }
 
-  // Title curtain + a small (not full-height) translateY nudge on
-  // .item-info itself - the curtain does the actual masking (see the big
-  // comment above), the nudge is a subtle secondary motion, not something
-  // that needs its own clipping.
   function hideListeTitle(row: HTMLElement, delay = 0): Promise<void> {
     const info = row.querySelector<HTMLElement>('.item-info');
     const curtain = listeTitleCurtain(row);
@@ -709,10 +586,6 @@ export function initProjetsPage(root: ParentNode = document) {
     const titleDone = hideListeTitle(row, delay);
     const imagesDone = hideListeRowImages(row, delay);
     return Promise.all([titleDone, imagesDone]).then(() => {
-      // Canonical fully-closed resting state (see setListeRowClosedInstant)
-      // - also clears `revealed` (see its comment) so this row's own
-      // scroll-triggered reveal (initListeRevealObserver below) replays
-      // next time it's shown, same as dezoom already does on re-entry.
       setListeRowClosedInstant(row);
     });
   }
@@ -724,13 +597,6 @@ export function initProjetsPage(root: ParentNode = document) {
     return Promise.all([titleDone, imagesDone]).then(() => {});
   }
 
-  // Canonical instant "closed"/"open" states for a whole row (title +
-  // every image), shared by the animated hide/show above and the instant
-  // restore paths below - never left at an animated tween's mid-flight
-  // value. Also the single place `dataset.revealed` is set/cleared, so
-  // initListeRevealObserver (below) and every caller agree on what it
-  // means: closed = not revealed (its scroll-triggered reveal should still
-  // play), open = revealed (already shown, leave it alone).
   function setListeRowClosedInstant(row: HTMLElement): void {
     listeRowImages(row).forEach((wrap) => {
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
@@ -749,14 +615,6 @@ export function initProjetsPage(root: ParentNode = document) {
     row.dataset.revealed = 'true';
   }
 
-  // Liste can hold far more rows than fit on screen at once (8 here, could
-  // be more) - animating every row's every image on switch (up to 4 each)
-  // regardless of whether it's actually visible was the "very laggy"
-  // leaving-liste report: dozens of concurrent clip-path animations, most
-  // of them for rows nobody can see. Only the ones near the viewport get
-  // the real animation on a view switch; everything further out is left
-  // closed and picked up later by initListeRevealObserver as the user
-  // actually scrolls to it, instead of popping open instantly.
   function visibleListeRows(): { visible: HTMLElement[]; offscreen: HTMLElement[] } {
     const margin = window.innerHeight * 0.5;
     const visible: HTMLElement[] = [];
@@ -769,11 +627,6 @@ export function initProjetsPage(root: ParentNode = document) {
     return { visible, offscreen };
   }
 
-  // Only rows that are both near the viewport *and* still unrevealed get
-  // touched - an already-revealed row found offscreen is left exactly as
-  // it is (open) rather than forced closed, which would strand it: closed
-  // but marked revealed means initListeRevealObserver would never open it
-  // again (see setListeRowClosedInstant's comment on what the flag means).
   function hideListeRows(): Promise<void> {
     if (listeRows.length === 0) return Promise.resolve();
     const { visible } = visibleListeRows();
@@ -788,16 +641,6 @@ export function initProjetsPage(root: ParentNode = document) {
     return Promise.all(toShow.map((row, i) => showListeRow(row, i * LISTE_ROW_STAGGER))).then(() => {});
   }
 
-  // Rows further than visibleListeRows' margin get their real reveal here
-  // instead, the first time the user actually scrolls to them - same
-  // bottom-to-top mask/text reveal as showListeRow, just triggered by
-  // scroll position instead of a view-switch/morph settling. Set up once
-  // and left running for the page's lifetime (observing costs nothing
-  // while `.view-liste` is hidden - a hidden ancestor means these rows
-  // have no layout box, so they simply never intersect until the view
-  // becomes active). `dataset.revealed` (see setListeRowClosedInstant) is
-  // what stops this from re-triggering a row a view-switch or restore
-  // already handled.
   function initListeRevealObserver(): void {
     if (listeRevealObserver || listeRows.length === 0) return;
     listeRevealObserver = new IntersectionObserver(
@@ -806,14 +649,14 @@ export function initProjetsPage(root: ParentNode = document) {
           (entry) => entry.isIntersecting && !(entry.target as HTMLElement).dataset.revealed
         );
         toReveal.forEach((entry, i) => {
-          showListeRow(entry.target as HTMLElement, i * LISTE_ROW_STAGGER);
+          const row = entry.target as HTMLElement;
+          if (isBackwardMorphPending() && !listeMorphSettled) {
+            row.dataset.deferredReveal = 'true';
+          } else {
+            showListeRow(row, i * LISTE_ROW_STAGGER);
+          }
         });
       },
-      // Higher than dezoom/project-page's own reveal thresholds (0.15/0.2)
-      // on purpose - liste rows are tall, and revealing at only 15% visible
-      // meant most of the row (and the reveal animation playing out on it)
-      // was still off past the bottom edge, reading as underwhelming
-      // rather than as a real "look, it opens" moment.
       { threshold: 0.4 }
     );
     listeRows.forEach((row) => listeRevealObserver!.observe(row));
@@ -830,14 +673,6 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  // Vue 3 doesn't morph with the others - it's a different layout entirely
-  // (vertical rows vs. a single full-bleed/16:10 image), so there's no
-  // shared element to physically resize between them the way vue1<->vue2
-  // does. Whichever view is leaving fades out (a quick, simple cross-fade
-  // - the liste rows fading+lifting doesn't need a matching entrance choice
-  // from carousel/dezoom, which have no equivalent per-item stagger), then
-  // liste's rows stagger in - or, entering carousel/dezoom, the panel just
-  // fades in once liste's rows have staggered out.
   async function transitionListe(next: ViewMode): Promise<void> {
     const leavingPanel = panels[view];
     const enteringPanel = panels[next];
@@ -891,8 +726,6 @@ export function initProjetsPage(root: ParentNode = document) {
       await fadePanel(enteringPanel, 'in');
     }
   }
-
-  // --- Vue 1 <-> Vue 2 morph ---
 
   function heroImage(v: ViewMode, index: number): HTMLImageElement | null {
     const item = v === 'carousel' ? carouselItems[index] : v === 'dezoom' ? dezoomItems[index] : null;
@@ -957,8 +790,6 @@ export function initProjetsPage(root: ParentNode = document) {
         if (i === heroIndex) {
           el.dataset.revealed = 'true';
           hideDezoomItemInfoInstant(el);
-          // LE FIX : On efface d'urgence tout vieux masque 
-          // posé lors d'un précédent passage sur la vue 2
           const img = el.querySelector('img');
           if (img) img.style.clipPath = '';
           return;
@@ -1042,7 +873,7 @@ export function initProjetsPage(root: ParentNode = document) {
           if (!img) return Promise.resolve();
           const reveal = img.animate([{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
             duration: MORPH_SIBLING_FADE_DURATION,
-            delay: DEZOOM_OTHERS_IMAGE_DELAY, // LA MAGIE EST ICI : On retient les images voisines 150ms
+            delay: DEZOOM_OTHERS_IMAGE_DELAY,
             easing: MORPH_SIBLING_EASE,
             fill: 'forwards',
           });
@@ -1050,24 +881,14 @@ export function initProjetsPage(root: ParentNode = document) {
             img.style.clipPath = '';
           });
         }),
-        // Le délai du texte voisin = le délai de l'image + le ratio
         ...visibleSiblings.map((el) => showDezoomItemInfo(el, DEZOOM_OTHERS_IMAGE_DELAY + DEZOOM_OTHERS_TEXT_DELAY)),
       ]);
       
-      // Le texte du hero se lance en premier, avec un délai de 0
       await showDezoomItemInfo(dezoomItems[heroIndex]);
       await othersDone;
     }
   }
 
-  // --- Initial state & Events ---
-
-  // Only used when arriving via a backward project-morph (see
-  // isBackwardMorphPending's comment in project-morph.ts): the current
-  // item's own info text stays masked instead of instantly visible, since
-  // the incoming clone is still covering that exact spot for the next
-  // ~0.8s - showing it now just means it gets covered, then "reappears"
-  // once the clone clears, which reads as a glitch rather than a reveal.
   function hideCurrentInfoInstant(): void {
     if (view === 'carousel') {
       const item = carouselItems[carouselIndex];
@@ -1086,14 +907,9 @@ export function initProjetsPage(root: ParentNode = document) {
     }
   }
 
-  // The animated counterpart, played once project-morph.ts's clone actually
-  // settles (see the MORPH_SETTLED_EVENT listener below) rather than on
-  // page load. For dezoom this also covers the visible siblings deferred by
-  // applyRestoredView below - grow-open from the bottom, the same
-  // clip-path/timing as entering dezoom from carousel normally uses
-  // (morphBetweenCarouselAndDezoom's othersDone), not a reverse of the
-  // leaving crop.
   function revealAfterMorphSettle(): void {
+    listeMorphSettled = true;
+
     if (view === 'carousel') {
       showCarouselInfo(carouselIndex);
       return;
@@ -1102,12 +918,6 @@ export function initProjetsPage(root: ParentNode = document) {
       showDezoomItemInfo(dezoomItems[current]);
       visibleDezoomItems(current).forEach((el, i) => {
         const img = el.querySelector<HTMLElement>('img');
-        // data-deferred-reveal, not a clip-path string match: the browser
-        // normalizes inline style strings on read-back (this constant's
-        // 'inset(100% 0 0 0)' comes back as 'inset(100% 0px 0px)'), so a
-        // direct equality check against the constant silently never
-        // matched - the text half of this reveal ran (no such check there)
-        // while the image half quietly never did.
         if (img && el.dataset.deferredReveal === 'true') {
           delete el.dataset.deferredReveal;
           const delay = i * DEZOOM_OTHERS_IMAGE_DELAY;
@@ -1125,22 +935,25 @@ export function initProjetsPage(root: ParentNode = document) {
       });
       return;
     }
-    // Only the current row's title was deferred (applyRestoredView above
-    // reveals its images right away - see revealListeRowImages there), so
-    // that's the only thing this needs to reveal, same as carousel/dezoom
-    // above.
-    if (view === 'liste') revealListeTitle(listeRows[current]);
+    if (view === 'liste') {
+      revealListeTitle(listeRows[current]);
+      
+      const currentRow = listeRows[current];
+      if (currentRow) {
+        const otherImages = listeRowImages(currentRow).slice(1);
+        otherImages.forEach((wrap, i) => {
+          revealListeImageCurtain(wrap, (i + 1) * LISTE_IMAGE_STAGGER); 
+        });
+      }
+
+      const deferredRows = listeRows.filter(row => row.dataset.deferredReveal === 'true');
+      deferredRows.forEach((row, i) => {
+        delete row.dataset.deferredReveal;
+        showListeRow(row, 150 + (i * LISTE_ROW_STAGGER));
+      });
+    }
   }
 
-  // Fired by project-morph.ts's isForward path before anything else -
-  // even before it captures the clicked image's rect - so a dezoom card
-  // that isn't already centered gets scrolled there first, and the morph
-  // always starts from a centered position. Also corrects `current`: the
-  // astro:before-preparation listener below (handleBeforePreparation) has
-  // already run and saved whatever currentFromDezoom() guessed from the
-  // scroll position *before* this click, which is wrong when the clicked
-  // card wasn't the nearest-to-center one - this is the one place that
-  // actually knows which card was clicked, so it overwrites both.
   function handleMorphCenter(clickedItem: HTMLElement): Promise<void> {
     if (view === 'dezoom' && clickedItem.classList.contains('dezoom-item')) {
       const idx = dezoomItems.indexOf(clickedItem);
@@ -1154,16 +967,11 @@ export function initProjetsPage(root: ParentNode = document) {
       if (idx < 0) return Promise.resolve();
       current = idx;
       saveProjetsState(view, current);
-      return alignListeRowToBottom(clickedItem);
+      return centerListeRow(clickedItem);
     }
     return Promise.resolve();
   }
 
-  // Fired by project-morph.ts's isForward path, before it lets the actual
-  // navigation proceed - the counterpart to revealAfterMorphSettle, for
-  // leaving instead of arriving. Registered as project-morph.ts's
-  // leaveHook rather than that file reaching into these closures directly,
-  // which would need a circular import the other way.
   async function handleMorphLeave(clickedItem: HTMLElement): Promise<void> {
     if (clickedItem.classList.contains('carousel-item')) {
       await hideCarouselInfo(0);
@@ -1196,18 +1004,6 @@ export function initProjetsPage(root: ParentNode = document) {
     }
   }
 
-  // Choreographed leave for a liste-row click, in the order asked for:
-  // 1. the clicked row's own title masks away first, moving down just a
-  //    little (LISTE_TITLE_NUDGE_PX) rather than the usual full slide.
-  // 2. every other visible row's title follows right behind it, not all
-  //    at once.
-  // 3. only *then* do images start closing - every image except the
-  //    clicked row's first, which is the morph clone's own source (see
-  //    hideListeRowImages' comment) and has to stay exactly as it is
-  //    until the clone visually takes over from it; closing it here would
-  //    hide the source photo under its own row's curtain first, so the
-  //    morph would start growing from an already-blank spot instead of
-  //    the photo.
   const LISTE_TITLE_ROW_STAGGER = 80;
 
   async function handleListeRowMorphLeave(clickedRow: HTMLElement): Promise<void> {
@@ -1217,18 +1013,11 @@ export function initProjetsPage(root: ParentNode = document) {
     await Promise.all([
       hideListeTitle(clickedRow, 0),
       ...otherRows.map((row, i) => hideListeTitle(row, LISTE_TITLE_ROW_STAGGER * (i + 1))),
-    ]);
-
-    await Promise.all([
       hideListeRowImages(clickedRow, 0, 1),
       ...otherRows.map((row, i) => hideListeRowImages(row, LISTE_ROW_STAGGER * i)),
     ]);
   }
 
-  // The HTML always bakes in view=carousel, project 0 as .is-current, vue2/3
-  // panels hidden - if a saved state points elsewhere, get there instantly
-  // (no transition, this is page load, not a user-triggered switch) before
-  // anything paints.
   function applyRestoredView(deferCurrentInfo: boolean): void {
     if (view === 'carousel') {
       carouselIndex = current;
@@ -1245,9 +1034,6 @@ export function initProjetsPage(root: ParentNode = document) {
       isDezoomActive = true;
       const dl = ensureDezoomLenis();
       dl?.start();
-      // Scrolled to current *before* reading visibleDezoomItems below - it
-      // measures against the live viewport, so it needs the real scroll
-      // position already in place to identify the right siblings.
       scrollDezoomToCurrent(dl);
       const deferredSiblings = deferCurrentInfo ? new Set(visibleDezoomItems(current)) : null;
       dezoomItems.forEach((el, i) => {
@@ -1258,12 +1044,6 @@ export function initProjetsPage(root: ParentNode = document) {
           if (deferCurrentInfo) hideCurrentInfoInstant();
           else resetDezoomItemInfoInstant(el);
         } else if (deferredSiblings?.has(el)) {
-          // Grow-open once the morph settles (revealAfterMorphSettle)
-          // instead of instantly visible now, same reasoning as the
-          // current item's own text above. Marked via a data attribute,
-          // not inferred later from the clip-path value itself - see
-          // revealAfterMorphSettle's comment on why that read-back doesn't
-          // reliably match.
           el.dataset.deferredReveal = 'true';
           if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
           hideDezoomItemInfoInstant(el);
@@ -1275,27 +1055,22 @@ export function initProjetsPage(root: ParentNode = document) {
       rafId = requestAnimationFrame(dezoomRaf);
     } else if (view === 'liste') {
       panels.liste!.hidden = false;
-      // Only the current row's *first* image is ever the morph clone's
-      // target (project-morph.ts's backward path always resolves to a
-      // row's first <img> - see allCopiesOf's comment) - every other row
-      // is already closed (every row starts closed by default, see the
-      // setup near listeRows above) and left for initListeRevealObserver
-      // to reveal, same as it would for a fresh scroll.
-      //
-      // The current row's own images reveal right away too (not instantly
-      // open, an actual staggered reveal like everything else -
-      // revealListeRowImages), running *while* the clone is still
-      // shrinking back rather than after a blank pause - the clone sits on
-      // top of whatever this does underneath the whole time anyway. Only
-      // its *text* stays masked (hideCurrentInfoInstant) until the clone
-      // actually settles (revealAfterMorphSettle) - it isn't covered by
-      // the clone, so revealing it early would show it sitting in the
-      // wrong place while the image is still mid-flight.
       const currentRow = listeRows[current];
       if (currentRow) {
-        revealListeRowImages(currentRow);
-        if (deferCurrentInfo) hideCurrentInfoInstant();
-        else resetDezoomItemInfoInstant(currentRow);
+        if (deferCurrentInfo) {
+          hideCurrentInfoInstant();
+          listeRowImages(currentRow).forEach((wrap, i) => {
+            const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
+            if (curtain) {
+              if (i === 0) curtain.style.transform = '';
+              else curtain.style.transform = 'scaleY(1)';
+            }
+          });
+          currentRow.dataset.revealed = 'true';
+        } else {
+          revealListeRowImages(currentRow);
+          resetDezoomItemInfoInstant(currentRow);
+        }
       }
       scrollListeToCurrent();
     }
@@ -1320,9 +1095,6 @@ export function initProjetsPage(root: ParentNode = document) {
     pageLenis?.stop();
   }
 
-  // Keeps sessionStorage current right up to the moment a navigation away
-  // actually starts (not just on view switches) - current can also change
-  // from scrolling within dezoom/liste without going through setView.
   const handleBeforePreparation = () => {
     if (view === 'dezoom') current = currentFromDezoom();
     else if (view === 'liste') current = currentFromListe();

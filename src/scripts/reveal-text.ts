@@ -27,26 +27,43 @@ export function initRevealText(root: ParentNode = document): void {
       return;
     }
 
+    let delay = 0;
+    const introParent = el.closest('.project-intro');
+    if (introParent) {
+      const siblings = Array.from(introParent.querySelectorAll('[data-reveal]'));
+      delay = siblings.indexOf(el) * 0.15; 
+    }
+
     SplitText.create(el, {
       type: mode,
-      mask: mode,
       linesClass: 'reveal-line',
       charsClass: 'reveal-char',
       autoSplit: true,
       onSplit(self) {
         el.dataset.revealReady = 'true';
         const items = mode === 'chars' ? self.chars : self.lines;
-        return gsap.from(items, {
-          yPercent: 110,
-          duration: mode === 'chars' ? CHAR_DURATION : LINE_DURATION,
-          ease: EASE,
-          stagger: mode === 'chars' ? CHAR_STAGGER : LINE_STAGGER,
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 85%',
-            once: true,
+        
+        // FIX : Remplacement du gros slide vertical par un masque d'écrêtage (clip-path)
+        // et un micro-mouvement de 10px, sans aucune perte d'opacité.
+        return gsap.fromTo(items, 
+          {
+            clipPath: 'inset(100% 0% 0% 0%)', // Masqué à 100% par le bas
+            y: 10 
           },
-        });
+          {
+            clipPath: 'inset(0% 0% 0% 0%)', // Totalement révélé
+            y: 0,
+            duration: mode === 'chars' ? CHAR_DURATION : LINE_DURATION,
+            ease: EASE,
+            stagger: mode === 'chars' ? CHAR_STAGGER : LINE_STAGGER,
+            delay: delay,
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 85%',
+              once: true,
+            },
+          }
+        );
       },
     });
   });
