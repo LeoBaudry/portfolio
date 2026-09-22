@@ -106,10 +106,11 @@ export function initProjectMorph(): void {
     }
   }
 
-  // FIX PERF : Fusion des deux écouteurs d'événements astro:before-preparation en un seul
-  document.addEventListener('astro:before-preparation', (event: any) => {
+  document.addEventListener('astro:before-preparation', () => {
     if (direction) resetToIdle(true);
+  });
 
+  document.addEventListener('astro:before-preparation', (event: any) => {
     const source = event.sourceElement;
     const isForward = isMorphSourceLink(source);
     const isBackward = !isForward && isMorphBackLink(source);
@@ -154,7 +155,55 @@ export function initProjectMorph(): void {
 
       let leaving: Promise<any> = Promise.resolve();
       if (isForward && clickedItem) {
-        leaving = leaveHook?.(clickedItem) ?? Promise.resolve();
+        if (leaveHook) {
+          leaving = leaveHook(clickedItem);
+        } else if (clickedItem.classList.contains('reel-project')) {
+          
+          // FIX RETOUR HOMEPAGE : On sauvegarde l'index du projet cliqué sur la homepage 
+          // pour que la page Projets (Vue 1) s'ouvre sur le bon au retour.
+          const indexAttr = clickedItem.getAttribute('data-index');
+          if (indexAttr !== null) {
+            try {
+              sessionStorage.setItem('projets-view-state', JSON.stringify({ view: 'carousel', current: parseInt(indexAttr, 10) }));
+            } catch {}
+          }
+
+          const reel = clickedItem.closest('.projects-reel');
+          if (reel) {
+            const uiElements = Array.from(reel.querySelectorAll('.reel-intro-body, .reel-scroll-hint, .reel-info, .reel-counter'));
+            const otherProjects = Array.from(reel.querySelectorAll('.reel-project')).filter(p => p !== clickedItem);
+            const gridLines = Array.from(reel.querySelectorAll('.reel-gridline'));
+            const clickedOverlay = clickedItem.querySelector('.reel-overlay');
+            
+            leaving = new Promise<void>((resolve) => {
+              const tl = gsap.timeline({ onComplete: resolve });
+              
+              tl.to([...uiElements, ...otherProjects], {
+                opacity: 0,
+                y: -15,
+                duration: 0.35,
+                stagger: 0.02,
+                ease: 'power3.inOut'
+              }, 0);
+
+              if (clickedOverlay) {
+                tl.to(clickedOverlay, { opacity: 0, duration: 0.35, ease: 'power3.inOut' }, 0);
+              }
+
+              if (gridLines.length > 0) {
+                // FIX LIGNES : On ancre l'origine en bas (pour qu'elles disparaissent de haut en bas)
+                // et on ralentit légèrement l'animation.
+                gsap.set(gridLines, { transformOrigin: 'bottom' });
+                tl.to(gridLines, {
+                  scaleY: 0,
+                  duration: 0.5, 
+                  stagger: 0.02,
+                  ease: 'power3.inOut'
+                }, 0);
+              }
+            });
+          }
+        }
       } else if (isBackward) {
         const introEls = document.querySelectorAll('.project-intro > *, .project-extra');
         if (introEls.length > 0) {
@@ -253,4 +302,4 @@ export function initProjectMorph(): void {
       revealChromeEl(document.querySelector<HTMLElement>('.view-switcher-mask .view-switcher'));
     });
   });
-}
+} 
