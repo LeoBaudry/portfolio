@@ -106,11 +106,10 @@ export function initProjectMorph(): void {
     }
   }
 
-  document.addEventListener('astro:before-preparation', () => {
-    if (direction) resetToIdle(true);
-  });
-
+  // FIX PERF : Fusion des deux écouteurs d'événements astro:before-preparation en un seul
   document.addEventListener('astro:before-preparation', (event: any) => {
+    if (direction) resetToIdle(true);
+
     const source = event.sourceElement;
     const isForward = isMorphSourceLink(source);
     const isBackward = !isForward && isMorphBackLink(source);
@@ -160,8 +159,6 @@ export function initProjectMorph(): void {
         const introEls = document.querySelectorAll('.project-intro > *, .project-extra');
         if (introEls.length > 0) {
           leaving = new Promise<void>((resolve) => {
-            // FIX : Disparition de la page [slug] via mask stricte de bas en haut
-            // Sans aucun changement d'opacité et avec un micro-mouvement de 10px.
             gsap.to(introEls, {
               clipPath: 'inset(0% 0% 100% 0%)',
               y: -10,

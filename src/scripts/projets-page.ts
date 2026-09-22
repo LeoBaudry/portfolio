@@ -66,6 +66,28 @@ const PANEL_FADE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
 type ViewMode = 'carousel' | 'dezoom' | 'liste';
 
+// FIX PERF : Caches globaux pour éviter la lecture constante du DOM et les Layout Thrashing (Reflows)
+interface RowCache {
+  images: HTMLElement[];
+  curtain: HTMLElement | null;
+  info: HTMLElement | null;
+}
+const rowDOMCache = new WeakMap<HTMLElement, RowCache>();
+let clearDistanceCache = new WeakMap<HTMLElement, number>();
+
+function getRowCache(row: HTMLElement): RowCache {
+  let cached = rowDOMCache.get(row);
+  if (!cached) {
+    cached = {
+      images: Array.from(row.querySelectorAll<HTMLElement>('.liste-image')),
+      curtain: row.querySelector<HTMLElement>('.liste-title-curtain'),
+      info: row.querySelector<HTMLElement>('.item-info')
+    };
+    rowDOMCache.set(row, cached);
+  }
+  return cached;
+}
+
 export function initProjetsPage(root: ParentNode = document) {
   const page = root.querySelector<HTMLElement>('.projects-page');
   if (!page) return;
@@ -138,25 +160,31 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
+  // FIX PERF : Helper universel pour retirer 60 lignes redondantes d'animation
+  function animateAndSettle(el: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions): Promise<void> {
+    const durationMs = (options.duration as number) || 0;
+    const delayMs = (options.delay as number) || 0;
+    return settle(el.animate(keyframes, options), durationMs + delayMs + 200);
+  }
+
   function maskClearDistance(el: HTMLElement): number {
-    const mask = el.closest<HTMLElement>('.item-info');
-    return (mask ?? el).getBoundingClientRect().height;
+    let dist = clearDistanceCache.get(el);
+    if (dist === undefined) {
+      const mask = el.closest<HTMLElement>('.item-info');
+      dist = (mask ?? el).getBoundingClientRect().height;
+      clearDistanceCache.set(el, dist);
+    }
+    return dist;
   }
 
   function hideInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
     const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
     const clears = targets.map((el) => maskClearDistance(el));
     return Promise.all(
-      targets.map((el, i) => {
-        return settle(
-          el.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${clears[i]}px)` }], {
-            duration: INFO_HIDE_DURATION,
-            delay: delay + i * INFO_PART_STAGGER,
-            easing: INFO_HIDE_EASE,
-            fill: 'forwards',
-          })
-        );
-      })
+      targets.map((el, i) => animateAndSettle(el, 
+        [{ transform: 'translateY(0)' }, { transform: `translateY(${clears[i]}px)` }], 
+        { duration: INFO_HIDE_DURATION, delay: delay + i * INFO_PART_STAGGER, easing: INFO_HIDE_EASE, fill: 'forwards' }
+      ))
     ).then(() => {});
   }
 
@@ -165,16 +193,10 @@ export function initProjetsPage(root: ParentNode = document) {
     const clears = targets.map((el) => maskClearDistance(el));
     targets.forEach((el, i) => { el.style.transform = `translateY(${clears[i]}px)`; });
     return Promise.all(
-      targets.map((el, i) => {
-        return settle(
-          el.animate([{ transform: `translateY(${clears[i]}px)` }, { transform: 'translateY(0)' }], {
-            duration: INFO_REVEAL_DURATION,
-            delay: delay + i * INFO_PART_STAGGER,
-            easing: INFO_REVEAL_EASE,
-            fill: 'forwards',
-          })
-        );
-      })
+      targets.map((el, i) => animateAndSettle(el, 
+        [{ transform: `translateY(${clears[i]}px)` }, { transform: 'translateY(0)' }], 
+        { duration: INFO_REVEAL_DURATION, delay: delay + i * INFO_PART_STAGGER, easing: INFO_REVEAL_EASE, fill: 'forwards' }
+      ))
     ).then(() => {});
   }
 
@@ -273,12 +295,11 @@ export function initProjetsPage(root: ParentNode = document) {
           
           const img = el.querySelector('img');
           if (img) {
-            const reveal = img.animate([{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
+            animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
               duration: MORPH_SIBLING_FADE_DURATION,
               easing: MORPH_SIBLING_EASE,
-              fill: 'forwards',
-            });
-            settle(reveal, MORPH_SIBLING_FADE_DURATION + 200).then(() => {
+              fill: 'forwards'
+            }).then(() => {
               img.style.clipPath = '';
             });
           }
@@ -406,12 +427,11 @@ export function initProjetsPage(root: ParentNode = document) {
     return best;
   }
 
-  // FIX RESTAURATION SCROLL : Met à jour la limite Lenis immédiatement et centre exactement le projet ciblé
   function scrollListeToCurrent(): void {
     const target = listeRows[current];
     if (!target) return;
     if (pageLenis) {
-      pageLenis.resize(); // Empêche le clamp du scroll dû à la petite hauteur de la page [slug] précédente
+      pageLenis.resize(); 
       const rect = target.getBoundingClientRect();
       const targetY = window.scrollY + rect.top + (rect.height / 2) - (window.innerHeight / 2);
       const clamped = Math.max(0, Math.min(targetY, pageLenis.limit));
@@ -423,7 +443,7 @@ export function initProjetsPage(root: ParentNode = document) {
 
   function centerListeRow(row: HTMLElement): Promise<void> {
     if (!pageLenis) return Promise.resolve();
-    pageLenis.resize(); // Double sécurité avant de scroller
+    pageLenis.resize(); 
     const rect = row.getBoundingClientRect();
     const target = window.scrollY + rect.top + (rect.height / 2) - (window.innerHeight / 2);
     const clamped = Math.max(0, Math.min(target, pageLenis.limit));
@@ -435,27 +455,17 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  function listeRowImages(row: HTMLElement): HTMLElement[] {
-    return Array.from(row.querySelectorAll<HTMLElement>('.liste-image'));
-  }
-
-  function listeTitleCurtain(row: HTMLElement): HTMLElement | null {
-    return row.querySelector<HTMLElement>('.liste-title-curtain');
-  }
-
+  // Utilise le cache DOM pour éviter les reflows et querySelectors redondants
   function hideListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
     const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
     if (!curtain) return Promise.resolve();
     curtain.style.transformOrigin = 'bottom';
-    return settle(
-      curtain.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
-        duration: MORPH_DURATION,
-        delay,
-        easing: MORPH_EASE,
-        fill: 'forwards',
-      }),
-      MORPH_DURATION + delay + 200
-    ).then(() => {
+    return animateAndSettle(curtain, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
+      duration: MORPH_DURATION,
+      delay,
+      easing: MORPH_EASE,
+      fill: 'forwards',
+    }).then(() => {
       curtain.style.transform = 'scaleY(1)';
     });
   }
@@ -465,120 +475,92 @@ export function initProjetsPage(root: ParentNode = document) {
     if (!curtain) return Promise.resolve();
     curtain.style.transformOrigin = 'top';
     curtain.style.transform = 'scaleY(1)';
-    return settle(
-      curtain.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
-        duration: MORPH_SIBLING_FADE_DURATION,
-        delay,
-        easing: MORPH_SIBLING_EASE,
-        fill: 'forwards',
-      }),
-      MORPH_SIBLING_FADE_DURATION + delay + 200
-    ).then(() => {
+    return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
+      duration: MORPH_SIBLING_FADE_DURATION,
+      delay,
+      easing: MORPH_SIBLING_EASE,
+      fill: 'forwards',
+    }).then(() => {
       curtain.style.transform = '';
     });
   }
 
   function hideListeRowImages(row: HTMLElement, delay = 0, skip = 0): Promise<void> {
     return Promise.all(
-      listeRowImages(row)
+      getRowCache(row).images
         .slice(skip)
         .map((wrap, i) => hideListeImageCurtain(wrap, delay + i * LISTE_IMAGE_STAGGER))
     ).then(() => {});
   }
 
   function revealListeRowImages(row: HTMLElement, delay = 0): Promise<void> {
-    listeRowImages(row).forEach((wrap) => {
+    const images = getRowCache(row).images;
+    images.forEach((wrap) => {
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
       if (curtain) curtain.style.transform = 'scaleY(1)';
     });
     row.dataset.revealed = 'true';
     return Promise.all(
-      listeRowImages(row).map((wrap, i) => revealListeImageCurtain(wrap, delay + i * LISTE_IMAGE_STAGGER))
+      images.map((wrap, i) => revealListeImageCurtain(wrap, delay + i * LISTE_IMAGE_STAGGER))
     ).then(() => {});
   }
 
   function hideListeTitle(row: HTMLElement, delay = 0): Promise<void> {
-    const info = row.querySelector<HTMLElement>('.item-info');
-    const curtain = listeTitleCurtain(row);
-    const infoDone = info
-      ? settle(
-          info.animate([{ transform: 'translateY(0)' }, { transform: `translateY(${LISTE_TITLE_NUDGE_PX}px)` }], {
-            duration: INFO_HIDE_DURATION,
-            delay,
-            easing: INFO_HIDE_EASE,
-            fill: 'forwards',
-          }),
-          INFO_HIDE_DURATION + delay + 200
-        ).then(() => {
-          info.style.transform = `translateY(${LISTE_TITLE_NUDGE_PX}px)`;
-        })
-      : Promise.resolve();
-    const curtainDone = curtain
-      ? (() => {
-          curtain.style.transformOrigin = 'bottom';
-          return settle(
-            curtain.animate([{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
-              duration: MORPH_DURATION,
-              delay,
-              easing: MORPH_EASE,
-              fill: 'forwards',
-            }),
-            MORPH_DURATION + delay + 200
-          ).then(() => {
-            curtain.style.transform = 'scaleY(1)';
-          });
-        })()
-      : Promise.resolve();
+    const { info, curtain } = getRowCache(row);
+    
+    const infoDone = info ? animateAndSettle(info, 
+      [{ transform: 'translateY(0)' }, { transform: `translateY(${LISTE_TITLE_NUDGE_PX}px)` }], 
+      { duration: INFO_HIDE_DURATION, delay, easing: INFO_HIDE_EASE, fill: 'forwards' }
+    ).then(() => {
+      info.style.transform = `translateY(${LISTE_TITLE_NUDGE_PX}px)`;
+    }) : Promise.resolve();
+
+    const curtainDone = curtain ? (() => {
+      curtain.style.transformOrigin = 'bottom';
+      return animateAndSettle(curtain, 
+        [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], 
+        { duration: MORPH_DURATION, delay, easing: MORPH_EASE, fill: 'forwards' }
+      ).then(() => {
+        curtain.style.transform = 'scaleY(1)';
+      });
+    })() : Promise.resolve();
+    
     return Promise.all([infoDone, curtainDone]).then(() => {});
   }
 
   function revealListeTitle(row: HTMLElement, delay = 0): Promise<void> {
     setListeTitleClosedInstant(row);
-    const info = row.querySelector<HTMLElement>('.item-info');
-    const curtain = listeTitleCurtain(row);
-    const infoDone = info
-      ? settle(
-          info.animate([{ transform: `translateY(${LISTE_TITLE_NUDGE_PX}px)` }, { transform: 'translateY(0)' }], {
-            duration: INFO_REVEAL_DURATION,
-            delay,
-            easing: INFO_REVEAL_EASE,
-            fill: 'forwards',
-          }),
-          INFO_REVEAL_DURATION + delay + 200
-        ).then(() => {
-          info.style.transform = '';
-        })
-      : Promise.resolve();
-    const curtainDone = curtain
-      ? (() => {
-          curtain.style.transformOrigin = 'top';
-          return settle(
-            curtain.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
-              duration: MORPH_SIBLING_FADE_DURATION,
-              delay,
-              easing: MORPH_SIBLING_EASE,
-              fill: 'forwards',
-            }),
-            MORPH_SIBLING_FADE_DURATION + delay + 200
-          ).then(() => {
-            curtain.style.transform = '';
-          });
-        })()
-      : Promise.resolve();
+    const { info, curtain } = getRowCache(row);
+    
+    const infoDone = info ? animateAndSettle(info, 
+      [{ transform: `translateY(${LISTE_TITLE_NUDGE_PX}px)` }, { transform: 'translateY(0)' }], 
+      { duration: INFO_REVEAL_DURATION, delay, easing: INFO_REVEAL_EASE, fill: 'forwards' }
+    ).then(() => {
+      info.style.transform = '';
+    }) : Promise.resolve();
+
+    const curtainDone = curtain ? (() => {
+      curtain.style.transformOrigin = 'top';
+      return animateAndSettle(curtain, 
+        [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], 
+        { duration: MORPH_SIBLING_FADE_DURATION, delay, easing: MORPH_SIBLING_EASE, fill: 'forwards' }
+      ).then(() => {
+        curtain.style.transform = '';
+      });
+    })() : Promise.resolve();
+    
     return Promise.all([infoDone, curtainDone]).then(() => {});
   }
 
   function setListeTitleClosedInstant(row: HTMLElement): void {
-    const curtain = listeTitleCurtain(row);
+    const { info, curtain } = getRowCache(row);
     if (curtain) curtain.style.transform = 'scaleY(1)';
-    const info = row.querySelector<HTMLElement>('.item-info');
     if (info) info.style.transform = `translateY(${LISTE_TITLE_NUDGE_PX}px)`;
   }
 
   function setListeTitleOpenInstant(row: HTMLElement): void {
-    const curtain = listeTitleCurtain(row);
+    const { info, curtain } = getRowCache(row);
     if (curtain) curtain.style.transform = '';
-    const info = row.querySelector<HTMLElement>('.item-info');
     if (info) info.style.transform = '';
   }
 
@@ -598,7 +580,7 @@ export function initProjetsPage(root: ParentNode = document) {
   }
 
   function setListeRowClosedInstant(row: HTMLElement): void {
-    listeRowImages(row).forEach((wrap) => {
+    getRowCache(row).images.forEach((wrap) => {
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
       if (curtain) curtain.style.transform = 'scaleY(1)';
     });
@@ -607,7 +589,7 @@ export function initProjetsPage(root: ParentNode = document) {
   }
 
   function setListeRowOpenInstant(row: HTMLElement): void {
-    listeRowImages(row).forEach((wrap) => {
+    getRowCache(row).images.forEach((wrap) => {
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
       if (curtain) curtain.style.transform = '';
     });
@@ -666,9 +648,7 @@ export function initProjetsPage(root: ParentNode = document) {
     const keyframes =
       direction === 'in' ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }];
     if (direction === 'in') panel.style.opacity = '0';
-    return settle(
-      panel.animate(keyframes, { duration: PANEL_FADE_DURATION, easing: PANEL_FADE_EASE, fill: 'forwards' })
-    ).then(() => {
+    return animateAndSettle(panel, keyframes, { duration: PANEL_FADE_DURATION, easing: PANEL_FADE_EASE, fill: 'forwards' }).then(() => {
       panel.style.opacity = '';
     });
   }
@@ -837,12 +817,11 @@ export function initProjetsPage(root: ParentNode = document) {
       visibleSiblings.map((el) => {
         const img = el.querySelector('img');
         if (!img) return Promise.resolve();
-        const crop = img.animate([{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
+        return animateAndSettle(img, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
           duration: MORPH_DURATION,
           easing: MORPH_EASE,
           fill: 'forwards',
-        });
-        return settle(crop, MORPH_DURATION + 200).then(() => {
+        }).then(() => {
           img.style.clipPath = DEZOOM_CROP_CLOSED;
         });
       })
@@ -871,13 +850,12 @@ export function initProjetsPage(root: ParentNode = document) {
         ...visibleSiblings.map((el) => {
           const img = el.querySelector('img');
           if (!img) return Promise.resolve();
-          const reveal = img.animate([{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
+          return animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
             duration: MORPH_SIBLING_FADE_DURATION,
             delay: DEZOOM_OTHERS_IMAGE_DELAY,
             easing: MORPH_SIBLING_EASE,
             fill: 'forwards',
-          });
-          return settle(reveal, MORPH_SIBLING_FADE_DURATION + DEZOOM_OTHERS_IMAGE_DELAY + 200).then(() => {
+          }).then(() => {
             img.style.clipPath = '';
           });
         }),
@@ -921,13 +899,12 @@ export function initProjetsPage(root: ParentNode = document) {
         if (img && el.dataset.deferredReveal === 'true') {
           delete el.dataset.deferredReveal;
           const delay = i * DEZOOM_OTHERS_IMAGE_DELAY;
-          const reveal = img.animate([{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
+          animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
             duration: MORPH_SIBLING_FADE_DURATION,
             delay,
             easing: MORPH_SIBLING_EASE,
             fill: 'forwards',
-          });
-          settle(reveal, MORPH_SIBLING_FADE_DURATION + delay + 200).then(() => {
+          }).then(() => {
             img.style.clipPath = '';
           });
         }
@@ -940,7 +917,7 @@ export function initProjetsPage(root: ParentNode = document) {
       
       const currentRow = listeRows[current];
       if (currentRow) {
-        const otherImages = listeRowImages(currentRow).slice(1);
+        const otherImages = getRowCache(currentRow).images.slice(1);
         otherImages.forEach((wrap, i) => {
           revealListeImageCurtain(wrap, (i + 1) * LISTE_IMAGE_STAGGER); 
         });
@@ -986,12 +963,11 @@ export function initProjetsPage(root: ParentNode = document) {
           const img = el.querySelector<HTMLElement>('img');
           const textDone = hideDezoomItemInfo(el, 0);
           if (!img) return textDone;
-          const crop = img.animate([{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
+          const cropDone = animateAndSettle(img, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
             duration: MORPH_DURATION,
             easing: MORPH_EASE,
             fill: 'forwards',
-          });
-          const cropDone = settle(crop, MORPH_DURATION + 200).then(() => {
+          }).then(() => {
             img.style.clipPath = DEZOOM_CROP_CLOSED;
           });
           return Promise.all([textDone, cropDone]).then(() => {});
@@ -1059,7 +1035,7 @@ export function initProjetsPage(root: ParentNode = document) {
       if (currentRow) {
         if (deferCurrentInfo) {
           hideCurrentInfoInstant();
-          listeRowImages(currentRow).forEach((wrap, i) => {
+          getRowCache(currentRow).images.forEach((wrap, i) => {
             const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
             if (curtain) {
               if (i === 0) curtain.style.transform = '';
@@ -1105,6 +1081,7 @@ export function initProjetsPage(root: ParentNode = document) {
   let resizeTimer: number;
   const handleResize = () => {
     clearTimeout(resizeTimer);
+    clearDistanceCache = new WeakMap(); // On vide le cache des distances au redimensionnement pour éviter des décalages erronés
     resizeTimer = window.setTimeout(() => {
       if (view === 'dezoom') dezoomLenis?.resize();
     }, 150);

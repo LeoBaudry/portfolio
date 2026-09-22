@@ -16,6 +16,9 @@ function prefersReducedMotion(): boolean {
 
 export function initRevealText(root: ParentNode = document): void {
   const targets = root.querySelectorAll<HTMLElement>('[data-reveal]');
+  
+  // FIX PERF : Cache des requêtes DOM pour les groupes de textes
+  const introGroups = new Map<HTMLElement, HTMLElement[]>();
 
   targets.forEach((el) => {
     if (el.dataset.revealReady) return;
@@ -28,9 +31,12 @@ export function initRevealText(root: ParentNode = document): void {
     }
 
     let delay = 0;
-    const introParent = el.closest('.project-intro');
+    const introParent = el.closest('.project-intro') as HTMLElement | null;
     if (introParent) {
-      const siblings = Array.from(introParent.querySelectorAll('[data-reveal]'));
+      if (!introGroups.has(introParent)) {
+        introGroups.set(introParent, Array.from(introParent.querySelectorAll('[data-reveal]')));
+      }
+      const siblings = introGroups.get(introParent)!;
       delay = siblings.indexOf(el) * 0.15; 
     }
 
@@ -43,15 +49,13 @@ export function initRevealText(root: ParentNode = document): void {
         el.dataset.revealReady = 'true';
         const items = mode === 'chars' ? self.chars : self.lines;
         
-        // FIX : Remplacement du gros slide vertical par un masque d'écrêtage (clip-path)
-        // et un micro-mouvement de 10px, sans aucune perte d'opacité.
         return gsap.fromTo(items, 
           {
-            clipPath: 'inset(100% 0% 0% 0%)', // Masqué à 100% par le bas
+            clipPath: 'inset(100% 0% 0% 0%)',
             y: 10 
           },
           {
-            clipPath: 'inset(0% 0% 0% 0%)', // Totalement révélé
+            clipPath: 'inset(0% 0% 0% 0%)',
             y: 0,
             duration: mode === 'chars' ? CHAR_DURATION : LINE_DURATION,
             ease: EASE,
