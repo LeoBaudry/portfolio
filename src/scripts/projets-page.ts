@@ -74,6 +74,13 @@ interface RowCache {
 const rowDOMCache = new WeakMap<HTMLElement, RowCache>();
 let clearDistanceCache = new WeakMap<HTMLElement, number>();
 
+// A height cached before the custom font finishes swapping in would stick
+// (wrong) for the rest of the session otherwise - resize is the only other
+// thing that clears this cache, and a font swap doesn't fire resize.
+document.fonts?.ready.then(() => {
+  clearDistanceCache = new WeakMap();
+});
+
 function getRowCache(row: HTMLElement): RowCache {
   let cached = rowDOMCache.get(row);
   if (!cached) {

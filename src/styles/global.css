@@ -73,3 +73,13 @@ html::-webkit-scrollbar {
 [data-reveal][data-reveal-ready] {
   visibility: visible;
 }
+
+/* Every gesture on this site (wheel-locked vue1, Lenis drag-scroll in vue2,
+   morph clicks) is custom-driven - the browser's native image drag/select
+   halo only ever fights that, never helps it. Doesn't affect a11y (img
+   isn't keyboard-focusable by default) or right-click "save image as". */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}

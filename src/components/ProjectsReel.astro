@@ -161,6 +161,10 @@ const featured = projects.slice(0, 5);
     font-size: clamp(1.25rem, 3vw, 1.75rem);
     line-height: 1.4;
     opacity: 0;
+    /* .reel-intro-text above opts the whole overlay out of pointer events
+       so clicks reach the hero/project links underneath it - this is the
+       one piece of it that's actual selectable text, so it opts back in. */
+    pointer-events: auto;
   }
 
   .reel-grid-lines {
