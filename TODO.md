@@ -1,3 +1,60 @@
+# Roadmap
+
+Ordered so that each step only builds on finished ones. Items marked
+(Figma) wait on a mockup from Leo before any code.
+
+## Phase 1 — Media foundation (no design input needed)
+
+0. [ ] **NEXT: site-entry loader.** Plays on first entry to the site; on a
+   refresh, play it again or a shorter alternative version (to decide).
+   Must hand off cleanly to each page's own entrance (homepage reel, /projets
+   restored view, [slug] reveal) and not collide with the page-wipe / morph
+   transitions, which only run on client-side navigation.
+1. [x] **Main visual + mobile variant.** Each project gets a `main` visual
+   (desktop + optional mobile version) separate from its gallery `images`.
+   The main visual is what shows in the homepage reel, /projets vue 1 and 2,
+   the first image of vue 3 rows, and the [slug] hero. The mobile version is
+   served when the screen is portrait (taller than wide); projects without one
+   keep the desktop file everywhere.
+2. [ ] **Videos in [slug] content.** `ProjectImage` becomes `ProjectMedia`:
+   one component, picks `<img>`/`<picture>` or `<video>` from the file
+   extension. Muted, looping, autoplay, played only while on screen, same mask
+   reveal as images. Outside every morph, so zero risk to transitions.
+3. [ ] **Video as main visual (optional, decide once 1-2 are done).** Morph
+   uses the video's poster frame, video starts once the clone lands. Vue 3
+   shows the poster only (too many small videos at once otherwise). Known
+   catch: going back, the video is mid-loop but the clone shows the poster.
+
+## Phase 2 — Site-wide structure
+
+4. [ ] **Light/dark mode** from the OS preference (`prefers-color-scheme`),
+   via colour tokens. Early because every later piece (menu glass, transition
+   screen, curtains that must match the background) depends on the tokens.
+5. [ ] **Menu.** Always-hamburger pill, centred, glass effect (dark/light,
+   slight transparency). Top-centre on the homepage, animates to bottom-centre
+   on other pages. On /projets the vue 1/2/3 buttons rise out of it (mask)
+   and slide right. On [slug] it splits: `← PROJETS` bottom-left, menu icon
+   bottom-right. Replaces today's temp-nav / view-switcher / project-back, so
+   the morph code's chrome hide/reveal hooks must move to it.
+6. [ ] **Page transition redesign.** Brand colour + logo centred instead of
+   the plain black wipe.
+7. [ ] **FR/EN.** Astro i18n routing, language picked from the browser
+   language (not region) on first visit, plus a manual switch. Texts written
+   by Leo in both languages rather than machine-translated.
+
+## Phase 3 — Content layouts (Figma)
+
+8. [ ] Homepage: layout of the two text sections. (Figma)
+9. [ ] [slug] page: title, description, alignment, how images/videos are
+   laid out. (Figma)
+10. [ ] About page. (Figma)
+
+## Phase 4 — Polish
+
+11. [ ] Interactive footer (ASCII / dithered idea). Not a priority.
+
+---
+
 # TODO / Known issues — /projets page
 
 `src/pages/projets.astro` and `src/scripts/projets-page.ts` hold the current

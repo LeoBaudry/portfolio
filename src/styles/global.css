@@ -78,6 +78,17 @@ html::-webkit-scrollbar {
    morph clicks) is custom-driven - the browser's native image drag/select
    halo only ever fights that, never helps it. Doesn't affect a11y (img
    isn't keyboard-focusable by default) or right-click "save image as". */
+/* Art-direction wrapper only - layout CSS targets the <img> as if it were the
+   direct child, so the <picture> must not generate a box of its own. */
+picture {
+  display: contents;
+}
+
+/* Otherwise an empty <source> becomes a flex item and adds a gap. */
+picture > source {
+  display: none;
+}
+
 img {
   -webkit-user-drag: none;
   user-select: none;

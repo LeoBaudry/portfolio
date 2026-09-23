@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import projects from '../data/projets.json';
+import ProjectImage from '../components/ProjectImage.astro';
 ---
 
 <Layout title="Projets — Portfolio">
@@ -16,7 +17,7 @@ import projects from '../data/projets.json';
             data-meta={`${project.categorie} ${project.secteur} (${String(i + 1).padStart(2, '0')})`}
           >
             <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-              <img src={project.images[0]} alt="" />
+              <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
             </a>
           </div>
         ))}
@@ -48,7 +49,7 @@ import projects from '../data/projets.json';
               </div>
             </div>
             <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-              <img src={project.images[0]} alt="" />
+              <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
             </a>
           </div>
         ))}
@@ -71,9 +72,13 @@ import projects from '../data/projets.json';
             <div class="liste-title-curtain" aria-hidden="true"></div>
           </div>
           <a href={`/projets/${project.slug}`} data-morph-source class="liste-images">
-            {project.images.slice(0, 4).map((src) => (
+            {[project.main.desktop, ...project.images.slice(0, 3)].map((src, j) => (
               <div class="liste-image">
-                <img src={src} alt="" />
+                {j === 0 ? (
+                  <ProjectImage src={src} mobile={project.main.mobile} role="morph" />
+                ) : (
+                  <ProjectImage src={src} role="thumb" />
+                )}
                 <!-- Solid ink curtain, not a clip-path crop, for perf (see
                      hideListeRow/showListeRow in projets-page.ts) - transform
                      is the only thing animated, so this stays on the
@@ -254,9 +259,13 @@ import projects from '../data/projets.json';
     gap: 0.75rem;
   }
 
+  /* Box shape fixed at 16:10 rather than taken from the file, so a portrait
+     mobile image is cropped into the same card as its desktop version. */
   .dezoom-item img {
-    flex: 1;
+    flex: none;
     width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
     object-fit: cover;
   }
 

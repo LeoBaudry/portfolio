@@ -1,0 +1,58 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image, getImage } from 'astro:assets';
+
+type Role = 'morph' | 'thumb' | 'content';
+
+interface Props {
+  src: string;
+  mobile?: string;
+  role: Role;
+  class?: string;
+  [key: `data-${string}`]: unknown;
+}
+
+const images = import.meta.glob<{ default: ImageMetadata }>('/src/assets/images/**/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+});
+
+function resolve(path: string): ImageMetadata {
+  const image = images[`/src/assets${path}`]?.default;
+  if (!image) throw new Error(`ProjectImage: no file at src/assets${path}`);
+  return image;
+}
+
+const { src, mobile, role, ...attrs } = Astro.props;
+
+// Every morph participant (clone source and destination alike) must resolve to
+// the same srcset candidate, or the destination can still be loading when the
+// clone lands on it - so they all share one srcset/sizes regardless of box size.
+const config: Record<Role, { widths: number[]; sizes: string; loading: 'eager' | 'lazy' }> = {
+  morph: { widths: [800, 1200, 1600, 1920], sizes: '100vw', loading: 'eager' },
+  thumb: { widths: [400, 800], sizes: '(max-width: 768px) 50vw, 25vw', loading: 'eager' },
+  content: { widths: [800, 1200, 1600], sizes: '(max-width: 768px) 100vw, 40rem', loading: 'lazy' },
+};
+const { widths, sizes, loading } = config[role];
+
+const image = resolve(src);
+const mobileMeta = mobile ? resolve(mobile) : undefined;
+const mobileImage = mobileMeta ? await getImage({ src: mobileMeta, widths, sizes }) : undefined;
+---
+
+{
+  mobileImage && mobileMeta ? (
+    <picture>
+      <source
+        media="(max-aspect-ratio: 1/1)"
+        srcset={mobileImage.srcSet.attribute}
+        sizes={sizes}
+        width={mobileMeta.width}
+        height={mobileMeta.height}
+        type="image/webp"
+      />
+      <Image src={image} alt="" widths={widths} sizes={sizes} loading={loading} {...attrs} />
+    </picture>
+  ) : (
+    <Image src={image} alt="" widths={widths} sizes={sizes} loading={loading} {...attrs} />
+  )
+}

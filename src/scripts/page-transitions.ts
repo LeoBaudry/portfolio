@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { resetPageScroll } from './smooth-scroll';
+import { lenis, resetPageScroll } from './smooth-scroll';
 
 gsap.registerPlugin(CustomEase, ScrollTrigger);
 
@@ -47,6 +47,17 @@ export function toggleScrollLock(locked: boolean) {
   }
 }
 // ------------------------------------
+
+// A hidden/minimised window can report a bogus viewport size; if scroll
+// lengths (e.g. the homepage reel's pin) get measured then, the page ends up
+// too short to scroll. Re-measure on return - but not mid-transition.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || isScrollLocked) return;
+  requestAnimationFrame(() => {
+    lenis?.resize();
+    ScrollTrigger.refresh();
+  });
+});
 
 // A project card's <a> is marked data-morph-source (see projets.astro), and
 // a project page's own back link is marked data-morph-back (see

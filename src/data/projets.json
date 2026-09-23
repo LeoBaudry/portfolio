@@ -6,8 +6,11 @@
     "secteur": "Culture",
     "annee": 2024,
     "description": "Identité visuelle pour un festival pluridisciplinaire.",
+    "main": {
+      "desktop": "/images/projects/aurore/1.jpg",
+      "mobile": "/images/projects/aurore/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/aurore/1.jpg",
       "/images/projects/aurore/2.jpg",
       "/images/projects/aurore/3.jpg",
       "/images/projects/aurore/4.jpg",
@@ -22,8 +25,11 @@
     "secteur": "Retail",
     "annee": 2023,
     "description": "Site vitrine pour une marque de mobilier.",
+    "main": {
+      "desktop": "/images/projects/solstice/1.jpg",
+      "mobile": "/images/projects/solstice/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/solstice/1.jpg",
       "/images/projects/solstice/2.jpg",
       "/images/projects/solstice/3.jpg",
       "/images/projects/solstice/4.jpg",
@@ -37,8 +43,11 @@
     "secteur": "Mode",
     "annee": 2022,
     "description": "Habillage animé pour une campagne saisonnière.",
+    "main": {
+      "desktop": "/images/projects/mirage/1.jpg",
+      "mobile": "/images/projects/mirage/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/mirage/1.jpg",
       "/images/projects/mirage/2.jpg",
       "/images/projects/mirage/3.jpg",
       "/images/projects/mirage/4.jpg"
@@ -51,8 +60,11 @@
     "secteur": "Institution",
     "annee": 2024,
     "description": "Refonte éditoriale d'un rapport annuel.",
+    "main": {
+      "desktop": "/images/projects/faille/1.jpg",
+      "mobile": "/images/projects/faille/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/faille/1.jpg",
       "/images/projects/faille/2.jpg",
       "/images/projects/faille/3.jpg",
       "/images/projects/faille/4.jpg",
@@ -67,8 +79,11 @@
     "secteur": "Architecture",
     "annee": 2023,
     "description": "Site portfolio pour une agence d'architecture.",
+    "main": {
+      "desktop": "/images/projects/lisiere/1.jpg",
+      "mobile": "/images/projects/lisiere/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/lisiere/1.jpg",
       "/images/projects/lisiere/2.jpg",
       "/images/projects/lisiere/3.jpg",
       "/images/projects/lisiere/4.jpg",
@@ -82,8 +97,11 @@
     "secteur": "Musique",
     "annee": 2021,
     "description": "Identité visuelle pour un label indépendant.",
+    "main": {
+      "desktop": "/images/projects/verso/1.jpg",
+      "mobile": "/images/projects/verso/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/verso/1.jpg",
       "/images/projects/verso/2.jpg",
       "/images/projects/verso/3.jpg",
       "/images/projects/verso/4.jpg"
@@ -96,8 +114,11 @@
     "secteur": "Culture",
     "annee": 2022,
     "description": "Générique animé pour une série documentaire.",
+    "main": {
+      "desktop": "/images/projects/echos/1.jpg",
+      "mobile": "/images/projects/echos/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/echos/1.jpg",
       "/images/projects/echos/2.jpg",
       "/images/projects/echos/3.jpg",
       "/images/projects/echos/4.jpg",
@@ -112,8 +133,11 @@
     "secteur": "Tech",
     "annee": 2024,
     "description": "Site produit pour une startup B2B.",
+    "main": {
+      "desktop": "/images/projects/traverse/1.jpg",
+      "mobile": "/images/projects/traverse/1-mobile.jpg"
+    },
     "images": [
-      "/images/projects/traverse/1.jpg",
       "/images/projects/traverse/2.jpg",
       "/images/projects/traverse/3.jpg",
       "/images/projects/traverse/4.jpg",

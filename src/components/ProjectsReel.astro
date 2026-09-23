@@ -1,5 +1,6 @@
 ---
 import projects from '../data/projets.json';
+import ProjectImage from './ProjectImage.astro';
 
 const featured = projects.slice(0, 5);
 ---
@@ -7,7 +8,7 @@ const featured = projects.slice(0, 5);
 <section class="projects-reel">
   <div class="reel-sticky">
     <div class="reel-hero" aria-hidden="true">
-      <img src="/images/hero.jpg" alt="" class="reel-hero-image" />
+      <ProjectImage src="/images/hero.jpg" role="morph" class="reel-hero-image" />
     </div>
 
     <div class="reel-hero-fade" aria-hidden="true"></div>
@@ -27,7 +28,7 @@ const featured = projects.slice(0, 5);
     {featured.map((project, i) => (
       <div class="reel-project" data-index={i}>
         <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-          <img src={project.images[0]} alt="" class="reel-image" />
+          <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" class="reel-image" />
         </a>
         <div class="reel-overlay" aria-hidden="true"></div>
         <div class="reel-bars" aria-hidden="true"></div>

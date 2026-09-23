@@ -94,7 +94,19 @@ function getRowCache(row: HTMLElement): RowCache {
   return cached;
 }
 
+// The navigation entry describes the whole document, not each client-side
+// navigation, so "reload" is only meaningful for the very first init.
+let isFirstInit = true;
+
+function consumeIsReload(): boolean {
+  const wasFirst = isFirstInit;
+  isFirstInit = false;
+  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+  return wasFirst && nav?.type === 'reload';
+}
+
 export function initProjetsPage(root: ParentNode = document) {
+  const isReload = consumeIsReload();
   const page = root.querySelector<HTMLElement>('.projects-page');
   if (!page) return;
 
@@ -106,9 +118,10 @@ export function initProjetsPage(root: ParentNode = document) {
   const switcherButtons = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-set-view]'));
   const morphHero = page.querySelector<HTMLImageElement>('.morph-hero');
 
-  const restored = isBackwardMorphPending() ? readProjetsState() : null;
+  const restored = isBackwardMorphPending() || isReload ? readProjetsState() : null;
+  const projectCount = page.querySelectorAll('.carousel-item').length;
   let view: ViewMode = restored?.view ?? 'carousel';
-  let current = restored?.current ?? 0;
+  let current = Math.max(0, Math.min(restored?.current ?? 0, projectCount - 1));
   let switching = false;
   
   let rafId: number;
@@ -361,7 +374,9 @@ export function initProjetsPage(root: ParentNode = document) {
       });
     }, {
       root: panels.dezoom,
-      threshold: 0.15
+      // 0, not a fraction: on mobile the neighbours only peek in by a sliver,
+      // and visibleDezoomItems() already counts any sliver as visible.
+      threshold: 0
     });
     dezoomItems.forEach(el => dezoomObserver!.observe(el));
   }
@@ -778,7 +793,9 @@ export function initProjetsPage(root: ParentNode = document) {
     if (view === 'dezoom') current = currentFromDezoom();
     const heroIndex = current;
 
-    const visibleSiblings = visibleDezoomItems(heroIndex);
+    // Only ever-revealed cards get a leave animation - a still-masked one
+    // would otherwise be animated out from a visible starting position.
+    const visibleSiblings = visibleDezoomItems(heroIndex).filter((el) => el.dataset.revealed);
 
     const heroSrc = heroImage(view, heroIndex)?.currentSrc;
     if (morphHero && heroSrc) {
@@ -1008,7 +1025,7 @@ export function initProjetsPage(root: ParentNode = document) {
     }
     if (clickedItem.classList.contains('dezoom-item')) {
       const idx = dezoomItems.indexOf(clickedItem);
-      const siblings = idx >= 0 ? visibleDezoomItems(idx) : [];
+      const siblings = idx >= 0 ? visibleDezoomItems(idx).filter((el) => el.dataset.revealed) : [];
       await Promise.all([
         hideDezoomItemInfo(clickedItem, 0),
         ...siblings.map((el) => {
@@ -1129,6 +1146,7 @@ export function initProjetsPage(root: ParentNode = document) {
     saveProjetsState(view, current);
   };
   document.addEventListener('astro:before-preparation', handleBeforePreparation);
+  window.addEventListener('pagehide', handleBeforePreparation);
 
   let resizeTimer: number;
   const handleResize = () => {
@@ -1146,6 +1164,7 @@ export function initProjetsPage(root: ParentNode = document) {
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('astro:before-preparation', handleBeforePreparation);
+      window.removeEventListener('pagehide', handleBeforePreparation);
       morphEvents.removeEventListener(MORPH_SETTLED_EVENT, revealAfterMorphSettle);
       registerMorphLeaveHook(null);
       registerMorphCenterHook(null);
