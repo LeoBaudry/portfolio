@@ -7,6 +7,7 @@ import { initProjectsReel } from './projects-reel';
 import { initFooterParallax } from './footer';
 import { initProjetsPage } from './projets-page';
 import { initProjectPage } from './project-page';
+import { runSiteLoader } from './site-loader';
 
 // The browser applies its own scroll restoration on back/forward navigation
 // immediately on popstate - before Astro's router has swapped in the new
@@ -49,7 +50,21 @@ function teardownPage(): void {
 
 // Runs right before the outgoing page's DOM is torn down.
 document.addEventListener('astro:before-swap', teardownPage);
-document.addEventListener('astro:page-load', initPage);
+// The very first page-load of a hard load is held back until the site-entry
+// loader starts lifting (see site-loader.ts) - the same moment a client-side
+// navigation inits its page under the lifting #page-wipe - so no entrance
+// animation plays unseen under the loader.
+let isHardLoad = true;
+document.addEventListener('astro:page-load', () => {
+  if (!isHardLoad) return initPage();
+  isHardLoad = false;
+  // Astro's router restores the scroll position saved in history.state on
+  // a reload (router.js init), regardless of scrollRestoration. The
+  // homepage always starts from the top instead - its reel is a scroll-
+  // driven sequence meant to be played from the start.
+  if (document.querySelector('.projects-reel')) resetPageScroll();
+  void runSiteLoader(initPage);
+});
 
 // The browser's bfcache can restore a page straight from a frozen snapshot
 // (most commonly hit via the back/forward button) without Astro's router

@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
+import { lenis } from './smooth-scroll';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
@@ -466,12 +467,32 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     onLeaveBack: () => cursor?.classList.remove('is-active'),
   });
 
+  // The pin's scroll length is innerHeight * totalVH px, so any viewport
+  // height change (browser zoom above all) changes it - while the scroll
+  // position, in px, stays put. Left alone, zooming out from project 3/5
+  // lands back in the intro. Keep the *progress* instead: note it before
+  // ScrollTrigger re-measures (still against the old layout at that
+  // point), put the scroll back at the same progress once it has.
+  let progressBeforeRefresh: number | null = null;
+  const handleRefreshInit = () => {
+    progressBeforeRefresh = pinTrigger?.isActive ? pinTrigger.progress : null;
+  };
+  const handleRefresh = () => {
+    if (progressBeforeRefresh === null || !pinTrigger) return;
+    const y = pinTrigger.start + progressBeforeRefresh * (pinTrigger.end - pinTrigger.start);
+    progressBeforeRefresh = null;
+    if (lenis) lenis.scrollTo(y, { immediate: true, force: true });
+    else window.scrollTo(0, y);
+  };
+  ScrollTrigger.addEventListener('refreshInit', handleRefreshInit);
+  ScrollTrigger.addEventListener('refresh', handleRefresh);
+
   // Pointer-following progress indicator, with a slight lag; fixed placement
   // when there is no fine pointer (touch/mobile).
   const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
 
   let handleMouseMove: ((event: MouseEvent) => void) | undefined;
-  let updateCursor: (() => void) | undefined;
+  let updateCursor: ((time?: number, deltaMs?: number) => void) | undefined;
 
   if (cursor && hasFinePointer) {
     let mouseX = 0;
@@ -485,9 +506,12 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     };
     window.addEventListener('mousemove', handleMouseMove);
 
-    updateCursor = () => {
-      curX += (mouseX - curX) * CURSOR_LAG;
-      curY += (mouseY - curY) * CURSOR_LAG;
+    // CURSOR_LAG is the share of the gap closed per 60Hz frame; scaled by
+    // the real frame time so the lag feels the same at 120Hz (or 30).
+    updateCursor = (_time?: number, deltaMs = 1000 / 60) => {
+      const k = 1 - Math.pow(1 - CURSOR_LAG, deltaMs / (1000 / 60));
+      curX += (mouseX - curX) * k;
+      curY += (mouseY - curY) * k;
       cursor.style.transform = `translate(${curX}px, ${curY}px)`;
     };
     gsap.ticker.add(updateCursor);
@@ -498,6 +522,8 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   return {
     destroy: () => {
       window.removeEventListener('resize', handleResize);
+      ScrollTrigger.removeEventListener('refreshInit', handleRefreshInit);
+      ScrollTrigger.removeEventListener('refresh', handleRefresh);
       if (handleMouseMove) window.removeEventListener('mousemove', handleMouseMove);
       if (updateCursor) gsap.ticker.remove(updateCursor);
       pinTrigger?.kill();

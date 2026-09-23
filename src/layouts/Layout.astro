@@ -1,12 +1,48 @@
 ---
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
+import logoSvg from '../assets/logo.svg?raw';
+import loaderScript from '../scripts/site-loader-inline.js?raw';
 
 interface Props {
   title?: string;
 }
 
 const { title = 'Portfolio' } = Astro.props;
+
+// Site-entry loader geometry, computed here at build time so the logo's
+// masks exist in the HTML and its strokes can animate (pure CSS) from the
+// first paint, long before any JS has downloaded. See
+// site-loader-inline.js for what drives the count, line, grid and exit.
+//
+// The logo's two angles (measured from logo.svg's first stroke): AXIS is
+// the strokes' long diagonal - each slides along it, in and out of a mask
+// cut to its own shape. Assumes logo.svg's paths use absolute coordinates
+// only (as Figma exports them).
+const unit = (x: number, y: number) => {
+  const len = Math.hypot(x, y);
+  return { x: x / len, y: y / len };
+};
+const AXIS = unit(37, -55);
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+const logoViewBox = logoSvg.match(/viewBox="([^"]+)"/)?.[1] ?? '0 0 70 71';
+const logoStrokes = [...logoSvg.matchAll(/\sd="([^"]+)"/g)].map(([, d]) => {
+  const nums = (d.match(/-?\d*\.?\d+(?:e-?\d+)?/gi) ?? []).map(Number);
+  let min = Infinity, max = -Infinity;
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    const along = nums[i] * AXIS.x + nums[i + 1] * AXIS.y;
+    min = Math.min(min, along);
+    max = Math.max(max, along);
+  }
+  // +2: 1-unit margin each end so antialiased edges are never clipped.
+  const travel = max - min + 2;
+  return { d, travel: { x: r2(AXIS.x * travel), y: r2(AXIS.y * travel) } };
+});
+
+// The homepage reel's column count (5 / 3 / 2, see ProjectsReel.astro) -
+// all 5 columns/lines are rendered, CSS hides the extra ones per breakpoint.
+const LOADER_COLS = 5;
 ---
 
 <html lang="en">
@@ -17,6 +53,7 @@ const { title = 'Portfolio' } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <ClientRouter />
+    <noscript><style>.site-loader { display: none; }</style></noscript>
   </head>
   <!--
     transition:animate="none" on body: Astro's ClientRouter otherwise plays
@@ -57,6 +94,63 @@ const { title = 'Portfolio' } = Astro.props;
       get a CSS transform of its own, GSAP's yPercent stacks on top of
       rather than replacing one.
     -->
+    <!--
+      Site-entry loader. The markup (logo masks included) is complete in the
+      HTML and the strokes slide in with a CSS animation, so it's alive from
+      the first paint; the inline script right below it runs everything else
+      (count, line, grid, orange, column exit) while the page's JS bundle is
+      still downloading; site-loader.ts only inits the page as the columns
+      start clearing. Stacking, back to front: columns (the background, each
+      with its orange fill) -> bottom line -> grid lines -> logo + count. Persisted and only ever
+      hidden after it plays, never removed - see site-loader.ts.
+    -->
+    <div
+      id="site-loader"
+      class="site-loader"
+      role="progressbar"
+      aria-label="Loading"
+      aria-busy="true"
+      data-sim={import.meta.env.DEV ? '' : undefined}
+      transition:persist="site-loader"
+      transition:animate="none"
+    >
+      <div class="site-loader-cols" aria-hidden="true">
+        {Array.from({ length: LOADER_COLS }, () => (
+          <span class="site-loader-col"><span class="site-loader-col-fill" /></span>
+        ))}
+      </div>
+      <div class="site-loader-logo">
+        <svg viewBox={logoViewBox} aria-hidden="true">
+          <defs>
+            {logoStrokes.map((stroke, i) => (
+              <clipPath id={`site-loader-mask-${i}`}><path d={stroke.d} /></clipPath>
+            ))}
+          </defs>
+          {logoStrokes.map((stroke, i) => (
+            <g clip-path={`url(#site-loader-mask-${i})`}>
+              <g
+                class="site-loader-stroke"
+                style={`--i: ${i}; --from-x: ${-stroke.travel.x}px; --from-y: ${-stroke.travel.y}px`}
+                data-out={`${stroke.travel.x} ${stroke.travel.y}`}
+              >
+                <path d={stroke.d} />
+              </g>
+            </g>
+          ))}
+        </svg>
+      </div>
+      <div class="site-loader-bar" aria-hidden="true"></div>
+      <div class="site-loader-grid" aria-hidden="true">
+        {Array.from({ length: LOADER_COLS }, () => <span class="site-loader-gridline" />)}
+      </div>
+      <div class="site-loader-count" aria-hidden="true">
+        {['0', '0', '1'].map((d, i) => (
+          <span class:list={['site-loader-digit', { 'is-leading': i < 2 }]}><span>{d}</span></span>
+        ))}
+      </div>
+    </div>
+    <script is:inline set:html={loaderScript} />
+
     <div id="page-wipe" class="page-wipe" aria-hidden="true" transition:persist transition:animate="none"></div>
 
     <!--

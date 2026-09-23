@@ -27,9 +27,12 @@ const { src, mobile, role, ...attrs } = Astro.props;
 // Every morph participant (clone source and destination alike) must resolve to
 // the same srcset candidate, or the destination can still be loading when the
 // clone lands on it - so they all share one srcset/sizes regardless of box size.
+// Thumbs (vue 3's extra images, never morphed) are lazy: browsers fetch eager
+// images even inside hidden panels, so /projets used to download every
+// thumb of a view nobody was looking at.
 const config: Record<Role, { widths: number[]; sizes: string; loading: 'eager' | 'lazy' }> = {
   morph: { widths: [800, 1200, 1600, 1920], sizes: '100vw', loading: 'eager' },
-  thumb: { widths: [400, 800], sizes: '(max-width: 768px) 50vw, 25vw', loading: 'eager' },
+  thumb: { widths: [400, 800], sizes: '(max-width: 768px) 50vw, 25vw', loading: 'lazy' },
   content: { widths: [800, 1200, 1600], sizes: '(max-width: 768px) 100vw, 40rem', loading: 'lazy' },
 };
 const { widths, sizes, loading } = config[role];

@@ -5,11 +5,35 @@ Ordered so that each step only builds on finished ones. Items marked
 
 ## Phase 1 — Media foundation (no design input needed)
 
-0. [ ] **NEXT: site-entry loader.** Plays on first entry to the site; on a
-   refresh, play it again or a shorter alternative version (to decide).
-   Must hand off cleanly to each page's own entrance (homepage reel, /projets
-   restored view, [slug] reveal) and not collide with the page-wipe / morph
-   transitions, which only run on client-side navigation.
+0. [x] **Site-entry loader.** Done 2026-09-23: logo strokes slide into
+   their masks (CSS), count + bottom line + grid lines follow real progress
+   (site-loader-inline.js), background turns orange at 100, exits column by
+   column along the reel grid. Plays on every hard load; a cached refresh is
+   naturally fast. Dev preview: `?loader-sim=6`.
+0b. [ ] **NEXT: favicon set.** Leo regenerates, Claude wires up. Files in
+   `public/`:
+   - `favicon.svg` - Claude writes it from `src/assets/logo.svg` with an
+     inline `@media (prefers-color-scheme: dark)` (dark logo in light mode,
+     white in dark mode). Leo to decide: bare adaptive logo, or logo on a
+     small solid tile (readable on any tab colour).
+   - `favicon.ico` (32x32, with 16 inside) - DARK version (Safari/old
+     browsers ignore the SVG and it can't adapt).
+   - `apple-touch-icon.png` (180), `android-chrome-192x192.png`,
+     `android-chrome-512x512.png` - SOLID background (ink or orange) + white
+     logo, with margin; never transparent (iOS fills black, Android may put
+     it on white). No light/dark variant possible for these.
+   - `site.webmanifest` - fill name + colours.
+   - Drop `favicon-16x16.png` / `favicon-32x32.png` (redundant).
+   - `<head>`: ico with `sizes="32x32"`, svg `type="image/svg+xml"`,
+     apple-touch-icon, manifest.
+0c. [ ] **/projets: no opacity transitions between views.** Today
+   (transitionListe in projets-page.ts): vue 1 -> vue 3 and vue 2 -> vue 3
+   fade the leaving panel out (opacity); vue 3 -> vue 1 (and -> vue 2)
+   hides vue 3 with its mask animation but fades the arriving view in.
+   Leo doesn't like opacity: every leave/arrive in these switches should
+   use mask animations (vue 1 carousel image/info, vue 2 items' clip mask +
+   info, vue 3 rows' curtains + titles). Vue 1 <-> vue 2 already morphs
+   (morphBetweenCarouselAndDezoom) - out of scope.
 1. [x] **Main visual + mobile variant.** Each project gets a `main` visual
    (desktop + optional mobile version) separate from its gallery `images`.
    The main visual is what shows in the homepage reel, /projets vue 1 and 2,

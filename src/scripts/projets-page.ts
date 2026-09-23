@@ -1,5 +1,6 @@
 import Lenis from 'lenis';
 import { lenis as pageLenis } from './smooth-scroll';
+import { afterSiteLoader } from './site-loader';
 import {
   isBackwardMorphPending,
   morphEvents,
@@ -61,6 +62,20 @@ const DEZOOM_MASK_HIDDEN = 'inset(100% 0 0 0)';
 const DEZOOM_MASK_VISIBLE = 'inset(0 0 0 0)';
 
 const LISTE_ROW_STAGGER = 60;
+// Share of a vue 3 row that must be on screen before it reveals.
+const LISTE_REVEAL_THRESHOLD = 0.4;
+// A vue 3 title comes in last, as its row's caption: this long after all
+// the row's images have loaded (they're still opening by then).
+const LISTE_TITLE_AFTER_IMAGES = 120;
+// Vue 3 title parts (name, then meta) rise out of the .item-info mask -
+// same idea as vue 2's, a touch slower and softer so it reads.
+const LISTE_TITLE_REVEAL_DURATION = 750;
+const LISTE_TITLE_PART_STAGGER = 90;
+// Fully below the mask: the part's own height plus more than the mask's
+// bottom padding (1rem, see .liste-row .item-info in projets.astro). In CSS
+// terms on purpose, not measured - rows are set closed while vue 3 is
+// display:none, where every measured height is 0.
+const LISTE_TITLE_HIDDEN = 'translateY(calc(100% + 1.5rem))';
 const PANEL_FADE_DURATION = 320;
 const PANEL_FADE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 
@@ -68,8 +83,6 @@ type ViewMode = 'carousel' | 'dezoom' | 'liste';
 
 interface RowCache {
   images: HTMLElement[];
-  curtain: HTMLElement | null;
-  info: HTMLElement | null;
 }
 const rowDOMCache = new WeakMap<HTMLElement, RowCache>();
 let clearDistanceCache = new WeakMap<HTMLElement, number>();
@@ -86,8 +99,6 @@ function getRowCache(row: HTMLElement): RowCache {
   if (!cached) {
     cached = {
       images: Array.from(row.querySelectorAll<HTMLElement>('.liste-image')),
-      curtain: row.querySelector<HTMLElement>('.liste-title-curtain'),
-      info: row.querySelector<HTMLElement>('.item-info')
     };
     rowDOMCache.set(row, cached);
   }
@@ -340,6 +351,9 @@ export function initProjetsPage(root: ParentNode = document) {
   }
 
   const handleWheel = (e: WheelEvent) => {
+    // Ctrl+wheel (and trackpad pinch, which browsers report the same way)
+    // is the browser's own zoom - never swallow it.
+    if (e.ctrlKey) return;
     e.preventDefault();
     if (switching || carouselLocked || Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
     stepCarousel(e.deltaY > 0 ? 1 : -1);
@@ -473,7 +487,6 @@ export function initProjetsPage(root: ParentNode = document) {
 
   const listeRows = Array.from(panels.liste?.querySelectorAll<HTMLElement>('.liste-row') ?? []);
   const LISTE_IMAGE_STAGGER = 100;
-  const LISTE_TITLE_NUDGE_PX = 10;
   let listeRevealObserver: IntersectionObserver | null = null;
 
   listeRows.forEach((row) => setListeRowClosedInstant(row));
@@ -523,9 +536,42 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
+  // Every hide/reveal/instant-set of an image's curtain bumps this, so a
+  // reveal still waiting on its image (see revealListeImageCurtain) can tell
+  // it's been superseded - e.g. leaving vue 3 before a slow image arrived -
+  // and not open a curtain on a row that's since been closed again.
+  function bumpCurtainGen(wrap: HTMLElement): string {
+    const gen = String(Number(wrap.dataset.curtainGen ?? 0) + 1);
+    wrap.dataset.curtainGen = gen;
+    return gen;
+  }
+
+  // Resolves once the image has pixels to show: loaded (or failed - never
+  // hold a curtain forever), then decoded, with decode() raced against a
+  // short timeout since it can hang. Thumbs are loading="lazy" (see
+  // ProjectImage.astro), so one that hasn't started yet is kicked off here.
+  // An image CSS hides at this breakpoint (vue 3 shows fewer per row on
+  // smaller screens, see .liste-image:nth-child in projets.astro) counts as
+  // ready right away: nobody will see it, and forcing it to load would make
+  // its row's title wait on a download that has no reason to happen.
+  function whenImageReady(img: HTMLImageElement | null): Promise<void> {
+    if (!img || img.getClientRects().length === 0) return Promise.resolve();
+    const loaded = img.complete
+      ? Promise.resolve()
+      : new Promise<void>((resolve) => {
+          img.loading = 'eager';
+          img.addEventListener('load', () => resolve(), { once: true });
+          img.addEventListener('error', () => resolve(), { once: true });
+        });
+    return loaded.then(() =>
+      Promise.race([img.decode().catch(() => {}), new Promise<void>((resolve) => setTimeout(resolve, 150))])
+    );
+  }
+
   function hideListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
     const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
     if (!curtain) return Promise.resolve();
+    bumpCurtainGen(wrap);
     curtain.style.transformOrigin = 'bottom';
     return animateAndSettle(curtain, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
       duration: MORPH_DURATION,
@@ -537,18 +583,28 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
+  // The curtain stays closed until its image is actually ready, so a slow
+  // image never gets revealed as an empty box that the photo pops into
+  // afterwards. `delay` still counts from the call, so images that are
+  // already there keep their place in the stagger; a late one simply opens
+  // as soon as it lands.
   function revealListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
     const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
     if (!curtain) return Promise.resolve();
+    const gen = bumpCurtainGen(wrap);
     curtain.style.transformOrigin = 'top';
     curtain.style.transform = 'scaleY(1)';
-    return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
-      duration: MORPH_SIBLING_FADE_DURATION,
-      delay,
-      easing: MORPH_SIBLING_EASE,
-      fill: 'forwards',
-    }).then(() => {
-      curtain.style.transform = '';
+    const calledAt = performance.now();
+    return whenImageReady(wrap.querySelector('img')).then(() => {
+      if (wrap.dataset.curtainGen !== gen) return;
+      return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
+        duration: MORPH_SIBLING_FADE_DURATION,
+        delay: Math.max(0, delay - (performance.now() - calledAt)),
+        easing: MORPH_SIBLING_EASE,
+        fill: 'forwards',
+      }).then(() => {
+        curtain.style.transform = '';
+      });
     });
   }
 
@@ -572,63 +628,56 @@ export function initProjetsPage(root: ParentNode = document) {
     ).then(() => {});
   }
 
-  function hideListeTitle(row: HTMLElement, delay = 0): Promise<void> {
-    const { info, curtain } = getRowCache(row);
-    
-    const infoDone = info ? animateAndSettle(info, 
-      [{ transform: 'translateY(0)' }, { transform: `translateY(${LISTE_TITLE_NUDGE_PX}px)` }], 
-      { duration: INFO_HIDE_DURATION, delay, easing: INFO_HIDE_EASE, fill: 'forwards' }
-    ).then(() => {
-      info.style.transform = `translateY(${LISTE_TITLE_NUDGE_PX}px)`;
-    }) : Promise.resolve();
+  // Vue 3's title mask reveal: the name then the meta each rise out of the
+  // row's .item-info mask (overflow:hidden) and sink back into it.
+  function listeTitleParts(row: HTMLElement): HTMLElement[] {
+    return [row.querySelector<HTMLElement>('.info-name'), row.querySelector<HTMLElement>('.info-meta')].filter(
+      (el): el is HTMLElement => Boolean(el)
+    );
+  }
 
-    const curtainDone = curtain ? (() => {
-      curtain.style.transformOrigin = 'bottom';
-      return animateAndSettle(curtain, 
-        [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], 
-        { duration: MORPH_DURATION, delay, easing: MORPH_EASE, fill: 'forwards' }
-      ).then(() => {
-        curtain.style.transform = 'scaleY(1)';
-      });
-    })() : Promise.resolve();
-    
-    return Promise.all([infoDone, curtainDone]).then(() => {});
+  function hideListeTitle(row: HTMLElement, delay = 0): Promise<void> {
+    bumpCurtainGen(row);
+    return Promise.all(
+      listeTitleParts(row).map((el, i) =>
+        animateAndSettle(el, [{ transform: 'translateY(0)' }, { transform: LISTE_TITLE_HIDDEN }], {
+          duration: INFO_HIDE_DURATION,
+          delay: delay + i * INFO_PART_STAGGER,
+          easing: INFO_HIDE_EASE,
+          fill: 'forwards',
+        }).then(() => {
+          el.style.transform = LISTE_TITLE_HIDDEN;
+        })
+      )
+    ).then(() => {});
   }
 
   function revealListeTitle(row: HTMLElement, delay = 0): Promise<void> {
     setListeTitleClosedInstant(row);
-    const { info, curtain } = getRowCache(row);
-    
-    const infoDone = info ? animateAndSettle(info, 
-      [{ transform: `translateY(${LISTE_TITLE_NUDGE_PX}px)` }, { transform: 'translateY(0)' }], 
-      { duration: INFO_REVEAL_DURATION, delay, easing: INFO_REVEAL_EASE, fill: 'forwards' }
-    ).then(() => {
-      info.style.transform = '';
-    }) : Promise.resolve();
-
-    const curtainDone = curtain ? (() => {
-      curtain.style.transformOrigin = 'top';
-      return animateAndSettle(curtain, 
-        [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], 
-        { duration: MORPH_SIBLING_FADE_DURATION, delay, easing: MORPH_SIBLING_EASE, fill: 'forwards' }
-      ).then(() => {
-        curtain.style.transform = '';
-      });
-    })() : Promise.resolve();
-    
-    return Promise.all([infoDone, curtainDone]).then(() => {});
+    return Promise.all(
+      listeTitleParts(row).map((el, i) =>
+        animateAndSettle(el, [{ transform: LISTE_TITLE_HIDDEN }, { transform: 'translateY(0)' }], {
+          duration: LISTE_TITLE_REVEAL_DURATION,
+          delay: delay + i * LISTE_TITLE_PART_STAGGER,
+          easing: MORPH_SIBLING_EASE,
+          fill: 'forwards',
+        }).then(() => {
+          el.style.transform = '';
+        })
+      )
+    ).then(() => {});
   }
 
   function setListeTitleClosedInstant(row: HTMLElement): void {
-    const { info, curtain } = getRowCache(row);
-    if (curtain) curtain.style.transform = 'scaleY(1)';
-    if (info) info.style.transform = `translateY(${LISTE_TITLE_NUDGE_PX}px)`;
+    listeTitleParts(row).forEach((el) => {
+      el.style.transform = LISTE_TITLE_HIDDEN;
+    });
   }
 
   function setListeTitleOpenInstant(row: HTMLElement): void {
-    const { info, curtain } = getRowCache(row);
-    if (curtain) curtain.style.transform = '';
-    if (info) info.style.transform = '';
+    listeTitleParts(row).forEach((el) => {
+      el.style.transform = '';
+    });
   }
 
   function hideListeRow(row: HTMLElement, delay = 0): Promise<void> {
@@ -639,24 +688,40 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
+  // Images first (each opening as soon as it's loaded, see
+  // revealListeImageCurtain), then the title once they've all loaded - kept
+  // closed until then. A hide in the meantime bumps the row's generation
+  // (bumpCurtainGen, same guard as the image curtains) and cancels it.
   function showListeRow(row: HTMLElement, delay = 0): Promise<void> {
     row.dataset.revealed = 'true';
-    const titleDone = revealListeTitle(row, delay);
+    setListeTitleClosedInstant(row);
+    const gen = bumpCurtainGen(row);
+    const calledAt = performance.now();
     const imagesDone = revealListeRowImages(row, delay);
+    const titleDone = Promise.all(
+      getRowCache(row).images.map((wrap) => whenImageReady(wrap.querySelector('img')))
+    ).then(() => {
+      if (row.dataset.curtainGen !== gen) return;
+      const rowDelayLeft = Math.max(0, delay - (performance.now() - calledAt));
+      return revealListeTitle(row, rowDelayLeft + LISTE_TITLE_AFTER_IMAGES);
+    });
     return Promise.all([titleDone, imagesDone]).then(() => {});
   }
 
   function setListeRowClosedInstant(row: HTMLElement): void {
     getRowCache(row).images.forEach((wrap) => {
+      bumpCurtainGen(wrap);
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
       if (curtain) curtain.style.transform = 'scaleY(1)';
     });
     setListeTitleClosedInstant(row);
+    bumpCurtainGen(row);
     delete row.dataset.revealed;
   }
 
   function setListeRowOpenInstant(row: HTMLElement): void {
     getRowCache(row).images.forEach((wrap) => {
+      bumpCurtainGen(wrap);
       const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
       if (curtain) curtain.style.transform = '';
     });
@@ -683,10 +748,20 @@ export function initProjetsPage(root: ParentNode = document) {
     return Promise.all(toHide.map((row, i) => hideListeRow(row, i * LISTE_ROW_STAGGER))).then(() => {});
   }
 
+  // Only rows actually on screen - same 40% rule as the scroll-reveal
+  // observer (initListeRevealObserver). visibleListeRows' half-screen margin
+  // is right for hiding, but here it revealed the rows just below the fold
+  // out of sight, so they were already open by the time you scrolled to
+  // them. Everything else is left to the observer.
   function showListeRows(): Promise<void> {
     if (listeRows.length === 0) return Promise.resolve();
-    const { visible } = visibleListeRows();
-    const toShow = visible.filter((row) => !row.dataset.revealed);
+    const vh = window.innerHeight;
+    const toShow = listeRows.filter((row) => {
+      if (row.dataset.revealed) return false;
+      const r = row.getBoundingClientRect();
+      const onScreen = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      return r.height > 0 && onScreen / r.height >= LISTE_REVEAL_THRESHOLD;
+    });
     return Promise.all(toShow.map((row, i) => showListeRow(row, i * LISTE_ROW_STAGGER))).then(() => {});
   }
 
@@ -702,11 +777,15 @@ export function initProjetsPage(root: ParentNode = document) {
           if (isBackwardMorphPending() && !listeMorphSettled) {
             row.dataset.deferredReveal = 'true';
           } else {
-            showListeRow(row, i * LISTE_ROW_STAGGER);
+            // Claimed now so the observer never reveals it twice; played
+            // once the site-entry loader is out of the way (immediately on
+            // every other visit - see afterSiteLoader).
+            row.dataset.revealed = 'true';
+            afterSiteLoader().then(() => showListeRow(row, i * LISTE_ROW_STAGGER));
           }
         });
       },
-      { threshold: 0.4 }
+      { threshold: LISTE_REVEAL_THRESHOLD }
     );
     listeRows.forEach((row) => listeRevealObserver!.observe(row));
   }
@@ -731,6 +810,10 @@ export function initProjetsPage(root: ParentNode = document) {
       leavingPanel!.hidden = true;
     } else {
       if (view === 'dezoom') {
+        // Read where vue 2 actually is before stopping it - otherwise vue 3
+        // centres on whatever `current` was last set to elsewhere (vue 3 ->
+        // vue 2 already did this via currentFromListe above).
+        current = currentFromDezoom();
         isDezoomActive = false;
         cancelAnimationFrame(rafId);
         dezoomLenis?.stop();
@@ -1063,18 +1146,59 @@ export function initProjetsPage(root: ParentNode = document) {
     ]);
   }
 
+  // Two ways in: coming back from a project page (deferCurrentInfo - the
+  // morph clone covers the current image, the rest waits for it to settle,
+  // see revealAfterMorphSettle), or a reload. A reload runs behind the
+  // site-entry loader, so it plays each view's normal entrance rather than
+  // snapping to its end state: hidden starting state now, animation once
+  // the loader has cleared enough to see it (afterSiteLoader).
   function applyRestoredView(deferCurrentInfo: boolean): void {
     if (view === 'carousel') {
       carouselIndex = current;
       setCarouselCurrentImage(carouselIndex);
-      if (deferCurrentInfo) hideCurrentInfoInstant();
-      else setCarouselInfoInstant(carouselIndex);
+      hideCurrentInfoInstant();
+      if (!deferCurrentInfo) afterSiteLoader().then(() => showCarouselInfo(carouselIndex));
       return;
     }
 
     panels.carousel!.hidden = true;
 
-    if (view === 'dezoom') {
+    if (view === 'dezoom' && !deferCurrentInfo) {
+      panels.dezoom!.hidden = false;
+      isDezoomActive = true;
+      const dl = ensureDezoomLenis();
+      dl?.start();
+      scrollDezoomToCurrent(dl);
+      // Same as entering vue 2 from the switcher: everything starts masked;
+      // the current item and its on-screen neighbours reveal now,
+      // staggered, and the rest are left to the observer for when they
+      // scroll into view.
+      const onScreen = [dezoomItems[current], ...visibleDezoomItems(current)].filter(Boolean);
+      dezoomItems.forEach((el) => {
+        if (onScreen.includes(el)) el.dataset.revealed = 'true';
+        else delete el.dataset.revealed;
+        const img = el.querySelector<HTMLElement>('img');
+        if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
+        hideDezoomItemInfoInstant(el);
+      });
+      afterSiteLoader().then(() => {
+        onScreen.forEach((el, i) => {
+          const img = el.querySelector<HTMLElement>('img');
+          if (img) {
+            animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
+              duration: MORPH_SIBLING_FADE_DURATION,
+              delay: i * DEZOOM_OTHERS_IMAGE_DELAY,
+              easing: MORPH_SIBLING_EASE,
+              fill: 'forwards',
+            }).then(() => {
+              img.style.clipPath = '';
+            });
+          }
+          showDezoomItemInfo(el, i === 0 ? 0 : DEZOOM_OTHERS_TEXT_DELAY);
+        });
+      });
+      rafId = requestAnimationFrame(dezoomRaf);
+    } else if (view === 'dezoom') {
       panels.dezoom!.hidden = false;
       isDezoomActive = true;
       const dl = ensureDezoomLenis();
@@ -1113,8 +1237,10 @@ export function initProjetsPage(root: ParentNode = document) {
           });
           currentRow.dataset.revealed = 'true';
         } else {
-          revealListeRowImages(currentRow);
-          resetDezoomItemInfoInstant(currentRow);
+          // Title + images, exactly as a row reveals on scroll.
+          // Claimed now so the scroll-reveal observer leaves it alone.
+          currentRow.dataset.revealed = 'true';
+          afterSiteLoader().then(() => showListeRow(currentRow));
         }
       }
       scrollListeToCurrent();

@@ -15,6 +15,8 @@ const CONTENT_PARALLAX_VH = '10vh';
 let isScrollLocked = false;
 
 function preventScroll(e: Event) {
+  // Ctrl+wheel / pinch is the browser's zoom, not a scroll - leave it alone.
+  if (e instanceof WheelEvent && e.ctrlKey) return;
   if (isScrollLocked) {
     e.preventDefault();
     e.stopPropagation();

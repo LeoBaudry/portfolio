@@ -45,6 +45,7 @@
   --font-mono: 'DM Mono', ui-monospace, monospace;
   --color-ink: #111214;
   --color-paper: #f5f4f1;
+  --color-brand: #e18314;
 }
 
 body {
@@ -93,4 +94,197 @@ img {
   -webkit-user-drag: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+/* Site-entry loader (Layout.astro + site-loader-inline.js). Covers the
+   viewport from first paint. No background of its own: its columns are
+   the background, so it can exit column by column. */
+.site-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  color: var(--color-paper);
+}
+
+.site-loader[hidden] {
+  display: none;
+}
+
+/* No scrolling while the loader is up - from the very first paint, before
+   any JS has run (site-loader.ts's toggleScrollLock only takes over once
+   the module executes, and a slow first load leaves a real gap). */
+html:has(#site-loader:not([hidden])) {
+  overflow: hidden;
+}
+
+.site-loader-logo {
+  position: relative;
+  z-index: 3;
+  width: clamp(56px, 6.5vw, 96px);
+}
+
+/* The background, split along the homepage reel's columns (5 / 3 / 2).
+   Each column holds an orange fill that rises at 100%, then the column
+   itself clears bottom to top on exit (scaleY, origin top). The -1px
+   overlap keeps sub-pixel seams between columns from showing the page. */
+.site-loader-cols {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.site-loader-col {
+  position: relative;
+  flex: 1;
+  margin-right: -1px;
+  background: var(--color-ink);
+  overflow: hidden;
+  transform-origin: top;
+}
+
+.site-loader-col:last-child {
+  margin-right: 0;
+}
+
+.site-loader-col-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-brand);
+  transform: scaleY(0);
+  transform-origin: bottom;
+}
+
+.site-loader-logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* logo.svg's own fill is white; the loader's colour comes from here. */
+.site-loader-logo path {
+  fill: currentColor;
+}
+
+/* Progress line along the panel's bottom edge, scaled by
+   site-loader-inline.js. Above the columns, below the grid lines. */
+.site-loader-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 6px;
+  background: var(--color-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+/* Same columns as the homepage reel's grid (.reel-grid-lines in
+   ProjectsReel.astro), drawn up from the bottom with the progress - but a
+   much fainter hairline than the reel's, so the grid stays in the
+   background of the loader. */
+.site-loader-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  pointer-events: none;
+}
+
+.site-loader-gridline {
+  flex: 1;
+  border-right: 1px solid rgba(245, 244, 241, 0.12);
+  transform: scaleY(0);
+  transform-origin: bottom;
+}
+
+.site-loader-gridline:last-child {
+  border-right: none;
+}
+
+@media (max-width: 900px) {
+  .site-loader-col:nth-child(n + 4),
+  .site-loader-gridline:nth-child(n + 4) {
+    display: none;
+  }
+
+  .site-loader-col:nth-child(3) {
+    margin-right: 0;
+  }
+
+  .site-loader-gridline:nth-child(3) {
+    border-right: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .site-loader-col:nth-child(n + 3),
+  .site-loader-gridline:nth-child(n + 3) {
+    display: none;
+  }
+
+  .site-loader-col:nth-child(2) {
+    margin-right: 0;
+  }
+
+  .site-loader-gridline:nth-child(2) {
+    border-right: none;
+  }
+}
+
+/* Each stroke slides along the logo's diagonal into its own mask (the
+   clipped <g> around it, see Layout.astro), one after another. Pure CSS so
+   it plays from the first paint, before any JS has loaded. Duration and
+   stagger are mirrored in site-loader-inline.js (STROKE_IN /
+   STROKE_STAGGER) - keep them in sync. In SVG, px here = the logo's own
+   viewBox units. */
+.site-loader-stroke {
+  animation: site-loader-stroke-in 1s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 0.18s) both;
+}
+
+@keyframes site-loader-stroke-in {
+  from {
+    transform: translate(var(--from-x), var(--from-y));
+  }
+  to {
+    transform: translate(0px, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-loader-stroke {
+    animation: none;
+  }
+}
+
+.site-loader-count {
+  position: absolute;
+  z-index: 3;
+  right: 1.5rem;
+  bottom: 1.25rem;
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: clamp(1.25rem, 2.4vw, 2rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Each digit slot is its own mask; outgoing and incoming digits share one
+   grid cell and pass vertically through it (see setDigits). */
+.site-loader-digit {
+  display: grid;
+  width: 1ch;
+  height: 1em;
+  overflow: hidden;
+}
+
+.site-loader-digit > span {
+  grid-area: 1 / 1;
+  transition: opacity 0.4s;
+}
+
+.site-loader-digit.is-leading > span {
+  opacity: 0.3;
 }

@@ -67,9 +67,17 @@ const featured = projects.slice(0, 5);
     position: relative;
   }
 
+  /* !important on the size: while pinned, ScrollTrigger inlines a px
+     width/height measured at its last refresh - after a zoom-out the
+     viewport grows instantly but that refresh waits for the resize to
+     settle, showing the page background around a too-small reel until it
+     does. The viewport units track the new size immediately. */
   .reel-sticky {
     position: relative;
-    height: 100dvh;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
     overflow: hidden;
     background: var(--color-ink);
     /* Single source of truth for column count - inherited by both the

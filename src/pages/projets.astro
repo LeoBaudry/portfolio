@@ -65,11 +65,6 @@ import ProjectImage from '../components/ProjectImage.astro';
             <span class="info-meta font-mono">
               {project.categorie} {project.secteur} ({String(i + 1).padStart(2, '0')})
             </span>
-            <!-- Ink curtain over the whole title block - see
-                 hideListeTitle/revealListeTitle in projets-page.ts. Same
-                 single-curtain, JS-flipped-transform-origin technique as
-                 the image curtains below. -->
-            <div class="liste-title-curtain" aria-hidden="true"></div>
           </div>
           <a href={`/projets/${project.slug}`} data-morph-source class="liste-images">
             {[project.main.desktop, ...project.images.slice(0, 3)].map((src, j) => (
@@ -309,20 +304,6 @@ import ProjectImage from '../components/ProjectImage.astro';
        hidden - every other masked text on the site (.carousel-info,
        .dezoom-item .item-info) already has this, this one was missed. */
     overflow: hidden;
-  }
-
-  /* Covers the whole title block - see hideListeTitle/revealListeTitle in
-     projets-page.ts. transform-origin is set from JS right before each
-     animation (bottom to hide, top to reveal) rather than keeping two
-     separate curtains around. */
-  .liste-title-curtain {
-    position: absolute;
-    inset: 0;
-    background: var(--color-ink);
-    pointer-events: none;
-    transform: scaleY(0);
-    transform-origin: bottom;
-    z-index: 1;
   }
 
   .liste-row .info-name {
