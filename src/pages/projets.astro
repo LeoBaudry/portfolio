@@ -19,6 +19,9 @@ import ProjectImage from '../components/ProjectImage.astro';
             <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
               <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
             </a>
+            <!-- Same ink curtain as vue 3's .liste-image-curtain, used when
+                 switching to/from vue 3 (transform, not clip-path: perf). -->
+            <div class="view-curtain" aria-hidden="true"></div>
           </div>
         ))}
       </div>
@@ -49,7 +52,12 @@ import ProjectImage from '../components/ProjectImage.astro';
               </div>
             </div>
             <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-              <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
+              <!-- Image + its curtain in one box, so the curtain matches the
+                   image exactly (the card itself is shorter than its content). -->
+              <div class="dezoom-image">
+                <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
+                <div class="view-curtain" aria-hidden="true"></div>
+              </div>
             </a>
           </div>
         ))}
@@ -254,6 +262,45 @@ import ProjectImage from '../components/ProjectImage.astro';
     gap: 0.75rem;
   }
 
+  /* Vue 1/2's version of .liste-image-curtain (same look, same
+     transform-origin flip in JS) for switching to/from vue 3. Vue 1: the
+     whole item. Vue 2: only the image (.dezoom-image), text left uncovered. */
+  .view-curtain {
+    position: absolute;
+    background: var(--color-ink);
+    pointer-events: none;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    z-index: 1;
+  }
+
+  .carousel-item .view-curtain {
+    inset: 0;
+  }
+
+  .dezoom-image {
+    position: relative;
+    flex: none;
+  }
+
+  /* <picture> (projects with a mobile visual) would otherwise sit inline
+     and leave a baseline gap under the image, inside the curtain's box. */
+  .dezoom-image picture {
+    display: contents;
+  }
+
+  .dezoom-image img {
+    display: block;
+  }
+
+  /* Past the image on every side, same reason as .liste-image-curtain's
+     2px: cards sit at fractional x (centred scroll, 56dvh x 1.6 widths), and
+     the scaled curtain and the image round to pixels separately - flush,
+     one edge could leave a 1px sliver of photo. Ink on ink, never visible. */
+  .dezoom-image .view-curtain {
+    inset: -2px;
+  }
+
   /* Box shape fixed at 16:10 rather than taken from the file, so a portrait
      mobile image is cropped into the same card as its desktop version. */
   .dezoom-item img {
@@ -289,6 +336,14 @@ import ProjectImage from '../components/ProjectImage.astro';
 
   .liste-row {
     border-bottom: 1px solid rgba(245, 244, 241, 0.15);
+  }
+
+  /* Back from a project page: the row's other images are still under their
+     curtains (which cover this border, see .liste-image-curtain), so the
+     border would show under the landing first image alone, as a stray line.
+     Set in applyRestoredView, cleared as the other curtains open. */
+  .liste-row[data-morph-landing] {
+    border-bottom-color: transparent;
   }
 
   .liste-row .item-info {

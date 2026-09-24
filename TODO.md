@@ -10,37 +10,28 @@ Ordered so that each step only builds on finished ones. Items marked
    (site-loader-inline.js), background turns orange at 100, exits column by
    column along the reel grid. Plays on every hard load; a cached refresh is
    naturally fast. Dev preview: `?loader-sim=6`.
-0b. [ ] **NEXT: favicon set.** Leo regenerates, Claude wires up. Files in
-   `public/`:
-   - `favicon.svg` - Claude writes it from `src/assets/logo.svg` with an
-     inline `@media (prefers-color-scheme: dark)` (dark logo in light mode,
-     white in dark mode). Leo to decide: bare adaptive logo, or logo on a
-     small solid tile (readable on any tab colour).
-   - `favicon.ico` (32x32, with 16 inside) - DARK version (Safari/old
-     browsers ignore the SVG and it can't adapt).
-   - `apple-touch-icon.png` (180), `android-chrome-192x192.png`,
-     `android-chrome-512x512.png` - SOLID background (ink or orange) + white
-     logo, with margin; never transparent (iOS fills black, Android may put
-     it on white). No light/dark variant possible for these.
-   - `site.webmanifest` - fill name + colours.
-   - Drop `favicon-16x16.png` / `favicon-32x32.png` (redundant).
-   - `<head>`: ico with `sizes="32x32"`, svg `type="image/svg+xml"`,
-     apple-touch-icon, manifest.
-0c. [ ] **/projets: no opacity transitions between views.** Today
-   (transitionListe in projets-page.ts): vue 1 -> vue 3 and vue 2 -> vue 3
-   fade the leaving panel out (opacity); vue 3 -> vue 1 (and -> vue 2)
-   hides vue 3 with its mask animation but fades the arriving view in.
-   Leo doesn't like opacity: every leave/arrive in these switches should
-   use mask animations (vue 1 carousel image/info, vue 2 items' clip mask +
-   info, vue 3 rows' curtains + titles). Vue 1 <-> vue 2 already morphs
-   (morphBetweenCarouselAndDezoom) - out of scope.
+0b. [x] **Favicon set.** Done 2026-09-24, generated from `src/assets/logo.svg`
+   with sharp: adaptive transparent `favicon.svg` (ink / paper in dark mode),
+   ink transparent `favicon.ico` (16+32), ink-tile + paper-logo
+   apple-touch-icon + android-chrome 192/512, `site.webmanifest`, head links.
+0c. [x] **/projets: no opacity transitions between views.** Done 2026-09-24
+   (Leo to confirm in browser): fadePanel removed. Vue 1/2 <-> vue 3 now use
+   vue 3's own technique: an ink `.view-curtain` per item animated with
+   transform scaleY (origin flipped bottom/top), NOT clip-path (first try
+   used clip-path on the images - laggy, repaints every frame). Leaving:
+   text sinks, then curtains close upward (vue 2 left to right). Arriving:
+   curtains open upward, text rises last. See hide/showCarouselView,
+   hide/showDezoomView in projets-page.ts. View switch ignored mid
+   carousel step. Entering vue 3 (switch, reload, back from a project)
+   reveals every row with any part on screen (onScreenListeRows), not just
+   those >= 40% - the 40% rule is only for rows scrolled into view.
 1. [x] **Main visual + mobile variant.** Each project gets a `main` visual
    (desktop + optional mobile version) separate from its gallery `images`.
    The main visual is what shows in the homepage reel, /projets vue 1 and 2,
    the first image of vue 3 rows, and the [slug] hero. The mobile version is
    served when the screen is portrait (taller than wide); projects without one
    keep the desktop file everywhere.
-2. [ ] **Videos in [slug] content.** `ProjectImage` becomes `ProjectMedia`:
+2. [ ] **NEXT: Videos in [slug] content.** `ProjectImage` becomes `ProjectMedia`:
    one component, picks `<img>`/`<picture>` or `<video>` from the file
    extension. Muted, looping, autoplay, played only while on screen, same mask
    reveal as images. Outside every morph, so zero risk to transitions.
@@ -76,6 +67,21 @@ Ordered so that each step only builds on finished ones. Items marked
 ## Phase 4 — Polish
 
 11. [ ] Interactive footer (ASCII / dithered idea). Not a priority.
+
+## Before launch — test once the site is finished and online
+
+- [ ] **Favicons / icons.** Only testable for real on the deployed site
+  (browsers cache icons hard - use a private window):
+  - `favicon.svg` in Chrome/Firefox/Edge tabs, with the OS in light AND dark
+    mode (ink logo / paper logo).
+  - `favicon.ico` (ink) in Safari and any older browser that ignores the SVG.
+  - iPhone: Share > Add to Home Screen -> `apple-touch-icon.png` looks sharp,
+    margins OK.
+  - Android: Chrome > Add to Home screen / Install -> icon (192), splash
+    screen (512 + ink background), label from `site.webmanifest` (check the
+    name "Léo Baudry"), ink status bar.
+  - Regenerate script: logo -> all icons with sharp (ask Claude to redo it if
+    `src/assets/logo.svg` changes).
 
 ---
 

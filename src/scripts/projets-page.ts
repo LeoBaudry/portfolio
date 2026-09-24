@@ -76,8 +76,20 @@ const LISTE_TITLE_PART_STAGGER = 90;
 // terms on purpose, not measured - rows are set closed while vue 3 is
 // display:none, where every measured height is 0.
 const LISTE_TITLE_HIDDEN = 'translateY(calc(100% + 1.5rem))';
-const PANEL_FADE_DURATION = 320;
-const PANEL_FADE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+// Vue 1/2 leaving for vue 3, or arriving from it: the same ink curtains
+// (.view-curtain, transform only - clip-path repaints every frame and lags)
+// and the same text masks as vue 3's rows. Leaving: text sinks first, then
+// the curtains close upward. Arriving: curtains open upward, text rises last.
+const VIEW_IMAGE_AFTER_INFO = 120;
+const VIEW_IMAGE_STAGGER = 100;
+// Arriving is slower and eased both ways (the carousel step's curtain ease),
+// not the quick ease-out the post-morph siblings use - that one read as
+// fast and flat for a whole view coming in.
+const VIEW_REVEAL_DURATION = 1000;
+const VIEW_REVEAL_EASE = STEP_EASE;
+const VIEW_REVEAL_STAGGER = 180;
+const VIEW_TEXT_AFTER_REVEAL = VIEW_REVEAL_DURATION * 0.6;
 
 type ViewMode = 'carousel' | 'dezoom' | 'liste';
 
@@ -151,7 +163,8 @@ export function initProjetsPage(root: ParentNode = document) {
   }
 
   function setView(next: ViewMode): void {
-    if (next === view || switching) return;
+    // Not mid carousel step either: both would animate the same item's clip-path.
+    if (next === view || switching || carouselLocked) return;
 
     const isCarouselDezoomMorph =
       (view === 'carousel' && next === 'dezoom') || (view === 'dezoom' && next === 'carousel');
@@ -272,18 +285,6 @@ export function initProjetsPage(root: ParentNode = document) {
       el.style.zIndex = '';
       el.style.clipPath = '';
     });
-  }
-
-  function setCarouselInfoInstant(index: number): void {
-    const item = carouselItems[index];
-    if (carouselInfoName) {
-      carouselInfoName.textContent = item?.dataset.name ?? '';
-      carouselInfoName.style.transform = 'translateY(0)';
-    }
-    if (carouselInfoMeta) {
-      carouselInfoMeta.textContent = item?.dataset.meta ?? '';
-      carouselInfoMeta.style.transform = 'translateY(0)';
-    }
   }
 
   function hideCarouselInfo(delay = 0): Promise<void> {
@@ -748,20 +749,22 @@ export function initProjetsPage(root: ParentNode = document) {
     return Promise.all(toHide.map((row, i) => hideListeRow(row, i * LISTE_ROW_STAGGER))).then(() => {});
   }
 
-  // Only rows actually on screen - same 40% rule as the scroll-reveal
-  // observer (initListeRevealObserver). visibleListeRows' half-screen margin
-  // is right for hiding, but here it revealed the rows just below the fold
-  // out of sight, so they were already open by the time you scrolled to
-  // them. Everything else is left to the observer.
-  function showListeRows(): Promise<void> {
-    if (listeRows.length === 0) return Promise.resolve();
+  // Every row with any part on screen, top to bottom. Entering vue 3 reveals
+  // all of these at once: the 40% rule (LISTE_REVEAL_THRESHOLD) is for rows
+  // arriving while scrolling - applied here, a centred row's neighbours
+  // (only peeking in by a strip) stayed closed until the first scroll popped
+  // them, while the first/last project, which can't be centred, showed its
+  // neighbour in time. Rows below the fold are still left to the observer.
+  function onScreenListeRows(): HTMLElement[] {
     const vh = window.innerHeight;
-    const toShow = listeRows.filter((row) => {
-      if (row.dataset.revealed) return false;
+    return listeRows.filter((row) => {
       const r = row.getBoundingClientRect();
-      const onScreen = Math.min(r.bottom, vh) - Math.max(r.top, 0);
-      return r.height > 0 && onScreen / r.height >= LISTE_REVEAL_THRESHOLD;
+      return r.height > 0 && r.bottom > 0 && r.top < vh;
     });
+  }
+
+  function showListeRows(): Promise<void> {
+    const toShow = onScreenListeRows().filter((row) => !row.dataset.revealed);
     return Promise.all(toShow.map((row, i) => showListeRow(row, i * LISTE_ROW_STAGGER))).then(() => {});
   }
 
@@ -790,13 +793,94 @@ export function initProjetsPage(root: ParentNode = document) {
     listeRows.forEach((row) => listeRevealObserver!.observe(row));
   }
 
-  function fadePanel(panel: HTMLElement, direction: 'in' | 'out'): Promise<void> {
-    const keyframes =
-      direction === 'in' ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }];
-    if (direction === 'in') panel.style.opacity = '0';
-    return animateAndSettle(panel, keyframes, { duration: PANEL_FADE_DURATION, easing: PANEL_FADE_EASE, fill: 'forwards' }).then(() => {
-      panel.style.opacity = '';
+  function viewCurtain(item: HTMLElement | undefined): HTMLElement | null {
+    return item?.querySelector<HTMLElement>('.view-curtain') ?? null;
+  }
+
+  // Same motion as hideListeImageCurtain / revealListeImageCurtain.
+  function closeViewCurtain(item: HTMLElement | undefined, delay: number): Promise<void> {
+    const curtain = viewCurtain(item);
+    if (!curtain) return Promise.resolve();
+    curtain.style.transformOrigin = 'bottom';
+    return animateAndSettle(curtain, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
+      duration: MORPH_DURATION,
+      delay,
+      easing: MORPH_EASE,
+      fill: 'forwards',
+    }).then(() => {
+      curtain.style.transform = 'scaleY(1)';
     });
+  }
+
+  function openViewCurtain(item: HTMLElement | undefined, delay: number): Promise<void> {
+    const curtain = viewCurtain(item);
+    if (!curtain) return Promise.resolve();
+    curtain.style.transformOrigin = 'top';
+    curtain.style.transform = 'scaleY(1)';
+    return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
+      duration: VIEW_REVEAL_DURATION,
+      delay,
+      easing: VIEW_REVEAL_EASE,
+      fill: 'forwards',
+    }).then(() => {
+      curtain.style.transform = '';
+    });
+  }
+
+  // Once the leaving panel is display:none - nobody sees the curtains
+  // reopen, and nothing else (the vue 1 <-> 2 morph) finds them closed.
+  function resetViewCurtains(panel: HTMLElement): void {
+    panel.querySelectorAll<HTMLElement>('.view-curtain').forEach((curtain) => {
+      curtain.getAnimations().forEach((anim) => anim.cancel());
+      curtain.style.transform = '';
+    });
+  }
+
+  function hideCarouselView(): Promise<void> {
+    return Promise.all([
+      hideCarouselInfo(0),
+      closeViewCurtain(carouselItems[carouselIndex], VIEW_IMAGE_AFTER_INFO),
+    ]).then(() => {});
+  }
+
+  function showCarouselView(): Promise<void> {
+    return Promise.all([
+      openViewCurtain(carouselItems[carouselIndex], 0),
+      showCarouselInfo(carouselIndex, VIEW_TEXT_AFTER_REVEAL),
+    ]).then(() => {});
+  }
+
+  function hideDezoomView(): Promise<void> {
+    const items = visibleDezoomItems(-1).filter((el) => el.dataset.revealed);
+    return Promise.all(
+      items.map((el, i) =>
+        Promise.all([
+          hideDezoomItemInfo(el, i * INFO_PART_STAGGER),
+          closeViewCurtain(el, VIEW_IMAGE_AFTER_INFO + i * VIEW_IMAGE_STAGGER),
+        ])
+      )
+    ).then(() => {});
+  }
+
+  // What's on screen opens left to right under its curtain; everything else
+  // starts masked for the observer (initDezoomObserver), as before. The
+  // on-screen ones are claimed first so the observer leaves them alone.
+  function showDezoomView(): Promise<void> {
+    const onScreen = visibleDezoomItems(-1);
+    dezoomItems.forEach((el) => {
+      const img = el.querySelector<HTMLElement>('img');
+      const isOnScreen = onScreen.includes(el);
+      if (isOnScreen) el.dataset.revealed = 'true';
+      else delete el.dataset.revealed;
+      if (img) img.style.clipPath = isOnScreen ? '' : DEZOOM_MASK_HIDDEN;
+      hideDezoomItemInfoInstant(el);
+    });
+    return Promise.all(
+      onScreen.map((el, i) => {
+        const delay = i * VIEW_REVEAL_STAGGER;
+        return Promise.all([openViewCurtain(el, delay), showDezoomItemInfo(el, delay + VIEW_TEXT_AFTER_REVEAL)]);
+      })
+    ).then(() => {});
   }
 
   async function transitionListe(next: ViewMode): Promise<void> {
@@ -819,8 +903,9 @@ export function initProjetsPage(root: ParentNode = document) {
         dezoomLenis?.stop();
       }
       if (leavingPanel) {
-        await fadePanel(leavingPanel, 'out');
+        await (view === 'carousel' ? hideCarouselView() : hideDezoomView());
         leavingPanel.hidden = true;
+        resetViewCurtains(leavingPanel);
       }
     }
 
@@ -839,21 +924,15 @@ export function initProjetsPage(root: ParentNode = document) {
       if (next === 'carousel') {
         carouselIndex = current;
         setCarouselCurrentImage(carouselIndex);
-        setCarouselInfoInstant(carouselIndex);
+        await showCarouselView();
       } else if (next === 'dezoom') {
         isDezoomActive = true;
         const dl = ensureDezoomLenis();
         dl?.start();
         scrollDezoomToCurrent(dl);
         rafId = requestAnimationFrame(dezoomRaf);
-        dezoomItems.forEach((el) => {
-          delete el.dataset.revealed;
-          const img = el.querySelector('img');
-          if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
-          hideDezoomItemInfoInstant(el);
-        });
+        await showDezoomView();
       }
-      await fadePanel(enteringPanel, 'in');
     }
   }
 
@@ -1069,13 +1148,19 @@ export function initProjetsPage(root: ParentNode = document) {
       
       const currentRow = listeRows[current];
       if (currentRow) {
+        delete currentRow.dataset.morphLanding;
         const otherImages = getRowCache(currentRow).images.slice(1);
         otherImages.forEach((wrap, i) => {
           revealListeImageCurtain(wrap, (i + 1) * LISTE_IMAGE_STAGGER); 
         });
       }
 
-      const deferredRows = listeRows.filter(row => row.dataset.deferredReveal === 'true');
+      // Plus any row only peeking in (under the observer's 40%) - same as
+      // entering vue 3, see onScreenListeRows.
+      const onScreen = onScreenListeRows();
+      const deferredRows = listeRows.filter(
+        (row) => row.dataset.deferredReveal === 'true' || (onScreen.includes(row) && !row.dataset.revealed)
+      );
       deferredRows.forEach((row, i) => {
         delete row.dataset.deferredReveal;
         showListeRow(row, 150 + (i * LISTE_ROW_STAGGER));
@@ -1236,14 +1321,22 @@ export function initProjetsPage(root: ParentNode = document) {
             }
           });
           currentRow.dataset.revealed = 'true';
-        } else {
-          // Title + images, exactly as a row reveals on scroll.
-          // Claimed now so the scroll-reveal observer leaves it alone.
-          currentRow.dataset.revealed = 'true';
-          afterSiteLoader().then(() => showListeRow(currentRow));
+          currentRow.dataset.morphLanding = 'true';
         }
       }
       scrollListeToCurrent();
+      if (!deferCurrentInfo) {
+        // Title + images of every row on screen, as when switching to vue 3
+        // (showListeRows). Claimed now so the scroll-reveal observer leaves
+        // them alone.
+        const onScreen = onScreenListeRows();
+        onScreen.forEach((row) => {
+          row.dataset.revealed = 'true';
+        });
+        afterSiteLoader().then(() => {
+          onScreen.forEach((row, i) => showListeRow(row, i * LISTE_ROW_STAGGER));
+        });
+      }
     }
   }
 
