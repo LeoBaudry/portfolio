@@ -63,8 +63,10 @@ Ordered so that each step only builds on finished ones. Items marked
      (re)started): warmUpVideos() STARTS every shown video ~1.2s after a
      page/view settles (one per idle period), and a warm video keeps
      playing off screen while shown; paused only when hidden. Reverses
-     "pause when out of view" - pending Leo's verdict; revert = drop the
-     `warm` flag. Approach preloader (rootMargin 100%) kept as fallback.
+     "pause when out of view" - pending the stress test; revert = drop the
+     `warm` flag. Applies to [slug] content videos too: every muted loop
+     carries `data-loop-video` (playback), main visuals also
+     `data-main-video` (morphs). Refreshes batched to one per frame.
    - Reveals wait for the video's first frame (whenVideoReady, 1s cap):
      vue 2 cards (openDezoomMask / revealDezoomCard), view curtains, vue 3
      curtains. Not vue 1's wheel step.
@@ -111,7 +113,9 @@ Ordered so that each step only builds on finished ones. Items marked
   are fine), rebuild (`npm run build` + `npm run preview`, not dev), check
   scroll freezes, CPU/battery with many warm videos playing off screen
   (main-video.ts warm-up), mobile. Decide then whether to keep "play off
-  screen once warm" or cap it.
+  screen once warm" or cap it. Also watch vue 2's clip-path masks (reveal /
+  morph-sibling crop on `.dezoom-image`), which now clip playing videos -
+  clip-path repaints every frame; move them to curtains if they stutter.
 
 - [ ] **Delete placeholder videos** `public/placeholder-video-1.mp4` /
   `-2.mp4` and remove/replace Aurore's `main.video` in projets.json.

@@ -7,6 +7,9 @@ const REVEAL_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const MASK_HIDDEN = 'inset(100% 0 0 0)';
 const MASK_VISIBLE = 'inset(0 0 0 0)';
 
+// Videos only load and reveal here - playing them is main-video.ts's job
+// (data-loop-video), shared with the main visuals.
+//
 // Chrome's native lazy-load never starts on an image fully hidden by its own
 // clip-path, so loading is triggered by hand (loading='eager') ahead of view.
 // Videos (ProjectMedia) are preload="none" for the same reason. Revealing
@@ -39,12 +42,6 @@ function prefersReducedMotion(): boolean {
 export function initProjectPage(root: ParentNode = document): { destroy: () => void } | undefined {
   const images = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal-image]'));
   if (images.length === 0) return undefined;
-  const videos = images.filter((el): el is HTMLVideoElement => el instanceof HTMLVideoElement);
-  // Muted via the property (see startLoading in main-video.ts) - the
-  // attribute alone plays WITH sound after a client-side navigation.
-  videos.forEach((video) => {
-    video.muted = true;
-  });
 
   // Reduced motion: no mask reveal and no autoplay - videos just show their
   // first frame.
@@ -55,17 +52,6 @@ export function initProjectPage(root: ParentNode = document): { destroy: () => v
     });
     return undefined;
   }
-
-  // Muted loops play only while on screen (and the tab is visible - browsers
-  // already pause hidden tabs' video decoding).
-  const player = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const video = entry.target as HTMLVideoElement;
-      if (entry.isIntersecting) video.play().catch(() => {});
-      else video.pause();
-    });
-  });
-  videos.forEach((video) => player.observe(video));
 
   images.forEach((img) => {
     img.style.clipPath = MASK_HIDDEN;
@@ -118,8 +104,6 @@ export function initProjectPage(root: ParentNode = document): { destroy: () => v
     destroy: () => {
       preloader.disconnect();
       observer.disconnect();
-      player.disconnect();
-      videos.forEach((video) => video.pause());
     },
   };
 }

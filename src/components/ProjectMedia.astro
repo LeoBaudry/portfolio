@@ -5,9 +5,10 @@ import ProjectImage from './ProjectImage.astro';
 import { isVideo, mediaSources, videoType, type MediaEntry } from '../utils/media';
 
 // [slug] content media: an image (ProjectImage, unchanged) or a muted,
-// looping video. The video has no autoplay attribute and preload="none" -
-// project-page.ts loads it just ahead of view, reveals it with the same mask
-// as the images once it has a frame, and plays it only while on screen.
+// looping video. The video has no autoplay attribute and preload="none":
+// project-page.ts loads it just ahead of view and reveals it with the same
+// mask as the images once it has a frame; main-video.ts plays it (same
+// warm-up / keep-playing rules as the main visuals - data-loop-video).
 
 interface Props {
   entry: MediaEntry;
@@ -19,18 +20,47 @@ const { desktop, mobile } = mediaSources(entry);
 
 // Video files live in public/ as-is (Astro doesn't process video). Their size
 // is read from the MP4 header at build time so the box is reserved before
-// anything loads - no jump when the video arrives.
+// anything loads - no jump when the video arrives. Walks the box tree
+// (moov > trak > tkhd) rather than searching the bytes for "tkhd", which
+// could also turn up inside the video data itself. The first track with a
+// size is the video (audio tracks are 0 x 0).
+const MP4_CONTAINERS = new Set(['moov', 'trak']);
+
 function videoRatio(src: string): string | undefined {
+  let buf: Buffer;
   try {
-    const buf = fs.readFileSync(path.join(process.cwd(), 'public', src));
-    for (let i = buf.indexOf('tkhd'); i > 0; i = buf.indexOf('tkhd', i + 1)) {
-      const off = i + 4 + (buf[i + 4] === 1 ? 88 : 76);
-      const w = buf.readUInt32BE(off) / 65536;
-      const h = buf.readUInt32BE(off + 4) / 65536;
-      if (w > 0 && h > 0) return `${w} / ${h}`;
+    buf = fs.readFileSync(path.join(process.cwd(), 'public', src));
+  } catch {
+    return undefined;
+  }
+  const walk = (start: number, end: number): string | undefined => {
+    for (let pos = start; pos + 8 <= end; ) {
+      let size = buf.readUInt32BE(pos);
+      const type = buf.toString('latin1', pos + 4, pos + 8);
+      let header = 8;
+      if (size === 1) {
+        size = Number(buf.readBigUInt64BE(pos + 8));
+        header = 16;
+      } else if (size === 0) {
+        size = end - pos;
+      }
+      if (size < header || pos + size > end) return undefined;
+      if (type === 'tkhd') {
+        // Width/height (16.16 fixed point) sit 76 bytes after the version
+        // byte in a v0 box, 88 in a v1 (64-bit times).
+        const off = pos + header + (buf[pos + header] === 1 ? 88 : 76);
+        const w = buf.readUInt32BE(off) / 65536;
+        const h = buf.readUInt32BE(off + 4) / 65536;
+        if (w > 0 && h > 0) return `${w} / ${h}`;
+      } else if (MP4_CONTAINERS.has(type)) {
+        const found = walk(pos + header, pos + size);
+        if (found) return found;
+      }
+      pos += size;
     }
-  } catch {}
-  return undefined;
+    return undefined;
+  };
+  return walk(0, buf.length);
 }
 
 const video = isVideo(entry);
@@ -43,7 +73,7 @@ const style = [ratio && `--media-ratio: ${ratio}`, mobileRatio && `--media-ratio
 
 {
   video ? (
-    <video class="project-video" muted loop playsinline preload="none" aria-hidden="true" style={style} {...attrs}>
+    <video class="project-video" data-loop-video muted loop playsinline preload="none" aria-hidden="true" style={style} {...attrs}>
       {mobile && <source src={mobile} media="(max-aspect-ratio: 1/1)" type={videoType(mobile)} />}
       <source src={desktop} type={videoType(desktop)} />
     </video>

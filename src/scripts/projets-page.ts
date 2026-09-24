@@ -935,11 +935,11 @@ export function initProjetsPage(root: ParentNode = document) {
   function showDezoomView(): Promise<void> {
     const onScreen = visibleDezoomItems(-1);
     dezoomItems.forEach((el) => {
-      const img = dezoomMask(el);
+      const mask = dezoomMask(el);
       const isOnScreen = onScreen.includes(el);
       if (isOnScreen) el.dataset.revealed = 'true';
       else delete el.dataset.revealed;
-      if (img) img.style.clipPath = isOnScreen ? '' : DEZOOM_MASK_HIDDEN;
+      if (mask) mask.style.clipPath = isOnScreen ? '' : DEZOOM_MASK_HIDDEN;
       hideDezoomItemInfoInstant(el);
     });
     return Promise.all(
@@ -1082,13 +1082,13 @@ export function initProjetsPage(root: ParentNode = document) {
         if (i === heroIndex) {
           el.dataset.revealed = 'true';
           hideDezoomItemInfoInstant(el);
-          const img = dezoomMask(el);
-          if (img) img.style.clipPath = '';
+          const mask = dezoomMask(el);
+          if (mask) mask.style.clipPath = '';
           return;
         }
         delete el.dataset.revealed;
-        const img = dezoomMask(el);
-        if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
+        const mask = dezoomMask(el);
+        if (mask) mask.style.clipPath = DEZOOM_MASK_HIDDEN;
         hideDezoomItemInfoInstant(el);
       });
 
@@ -1128,14 +1128,14 @@ export function initProjetsPage(root: ParentNode = document) {
 
     const leavingOthersDone = leavingView === 'dezoom' ? Promise.all(
       visibleSiblings.map((el) => {
-        const img = dezoomMask(el);
-        if (!img) return Promise.resolve();
-        return animateAndSettle(img, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
+        const mask = dezoomMask(el);
+        if (!mask) return Promise.resolve();
+        return animateAndSettle(mask, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
           duration: MORPH_DURATION,
           easing: MORPH_EASE,
           fill: 'forwards',
         }).then(() => {
-          img.style.clipPath = DEZOOM_CROP_CLOSED;
+          mask.style.clipPath = DEZOOM_CROP_CLOSED;
         });
       })
     ).then(() => {}) : Promise.resolve();
@@ -1153,8 +1153,8 @@ export function initProjetsPage(root: ParentNode = document) {
     if (leavingView === 'dezoom') {
       panels.dezoom!.hidden = true;
       visibleSiblings.forEach((el) => {
-        const img = dezoomMask(el);
-        if (img) img.style.clipPath = '';
+        const mask = dezoomMask(el);
+        if (mask) mask.style.clipPath = '';
       });
     }
 
@@ -1258,15 +1258,15 @@ export function initProjetsPage(root: ParentNode = document) {
       await Promise.all([
         hideDezoomItemInfo(clickedItem, 0),
         ...siblings.map((el) => {
-          const img = dezoomMask(el);
+          const mask = dezoomMask(el);
           const textDone = hideDezoomItemInfo(el, 0);
-          if (!img) return textDone;
-          const cropDone = animateAndSettle(img, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
+          if (!mask) return textDone;
+          const cropDone = animateAndSettle(mask, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
             duration: MORPH_DURATION,
             easing: MORPH_EASE,
             fill: 'forwards',
           }).then(() => {
-            img.style.clipPath = DEZOOM_CROP_CLOSED;
+            mask.style.clipPath = DEZOOM_CROP_CLOSED;
           });
           return Promise.all([textDone, cropDone]).then(() => {});
         }),
@@ -1323,8 +1323,8 @@ export function initProjetsPage(root: ParentNode = document) {
       dezoomItems.forEach((el) => {
         if (onScreen.includes(el)) el.dataset.revealed = 'true';
         else delete el.dataset.revealed;
-        const img = dezoomMask(el);
-        if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
+        const mask = dezoomMask(el);
+        if (mask) mask.style.clipPath = DEZOOM_MASK_HIDDEN;
         hideDezoomItemInfoInstant(el);
       });
       afterSiteLoader().then(() => {
@@ -1342,17 +1342,17 @@ export function initProjetsPage(root: ParentNode = document) {
       const deferredSiblings = deferCurrentInfo ? new Set(visibleDezoomItems(current)) : null;
       dezoomItems.forEach((el, i) => {
         el.dataset.revealed = 'true';
-        const img = dezoomMask(el);
+        const mask = dezoomMask(el);
         if (i === current) {
-          if (img) img.style.clipPath = '';
+          if (mask) mask.style.clipPath = '';
           if (deferCurrentInfo) hideCurrentInfoInstant();
           else resetDezoomItemInfoInstant(el);
         } else if (deferredSiblings?.has(el)) {
           el.dataset.deferredReveal = 'true';
-          if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
+          if (mask) mask.style.clipPath = DEZOOM_MASK_HIDDEN;
           hideDezoomItemInfoInstant(el);
         } else {
-          if (img) img.style.clipPath = '';
+          if (mask) mask.style.clipPath = '';
           resetDezoomItemInfoInstant(el);
         }
       });
