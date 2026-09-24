@@ -1,10 +1,20 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
+import { CustomEase } from 'gsap/CustomEase';
 import { lenis } from './smooth-scroll';
 import { refreshMainVideos } from './main-video';
+import { registerMorphLeaveHook } from './project-morph';
+import { saveProjetsState } from './projets/state';
+import {
+  INFO_HIDE_DURATION,
+  INFO_HIDE_EASE,
+  INFO_PART_STAGGER,
+  INFO_REVEAL_DURATION,
+  INFO_REVEAL_EASE,
+} from './projets/timing';
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
 
 /**
  * A/B comparison flag from content.md §5. Flip this to compare the two
@@ -16,6 +26,18 @@ export const MODE_RIDEAU: 'A' | 'B' = 'A';
 
 const BAR_DURATION = 0.4;
 const BAR_STAGGER = 0.04;
+// Project text (category / title / year) and the counter: each line sinks
+// under its own mask and rises out of it in quick succession, left to
+// right - the same timing and curves as the /projets info text
+// (projets/timing.ts), so both read as one motion language.
+const INFO_LINE_HIDDEN = 110; // yPercent - fully below its mask
+const INFO_OUT_DURATION = INFO_HIDE_DURATION / 1000;
+const INFO_IN_DURATION = INFO_REVEAL_DURATION / 1000;
+const INFO_STAGGER = INFO_PART_STAGGER / 1000;
+// The CSS cubic-bezier() strings as GSAP eases.
+const bezier = (css: string) => css.replace(/^cubic-bezier\(|\)$/g, '');
+const INFO_OUT_EASE = CustomEase.create('reelInfoOut', bezier(INFO_HIDE_EASE));
+const INFO_IN_EASE = CustomEase.create('reelInfoIn', bezier(INFO_REVEAL_EASE));
 const VH_PER_INTERVAL = 1;
 const CURSOR_LAG = 0.15;
 const CURSOR_RADIUS = 18;
@@ -182,6 +204,11 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   // is not enough to let the hero show through underneath - the panel
   // itself must not render at all until the curtain actually opens.
   gsap.set(projectEls, { autoAlpha: 0 });
+  // Every project's text starts under its mask: it only ever arrives
+  // through revealInfoLines (curtain open / next project). Left in place,
+  // the first project's text showed instantly as the curtain opened, then
+  // dropped and rose again when the reveal started.
+  gsap.set(section.querySelectorAll('.reel-line'), { yPercent: INFO_LINE_HIDDEN });
   gsap.set(barsByProject[0], { scaleX: 1 });
   gsap.set(gridlines, { scaleY: 0 });
   if (counterCurrent) counterCurrent.textContent = '1';
@@ -245,11 +272,76 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     cursorProgressCircle.style.strokeDashoffset = String(circumference * (1 - clamp(p, 0, 1)));
   }
 
+  function infoLines(index: number): HTMLElement[] {
+    return Array.from(projectEls[index]?.querySelectorAll<HTMLElement>('.reel-line') ?? []);
+  }
+  const counterLine = counterEl?.querySelector<HTMLElement>('.reel-line') ?? null;
+
+  // Each call kills whatever its lines were doing, so a fast scroll that
+  // chains transitions never leaves a line stuck halfway.
+  function maskOut(lines: HTMLElement[]): Promise<void> {
+    gsap.killTweensOf(lines);
+    return new Promise((resolve) => {
+      gsap.to(lines, {
+        yPercent: INFO_LINE_HIDDEN,
+        duration: INFO_OUT_DURATION,
+        stagger: INFO_STAGGER,
+        ease: INFO_OUT_EASE,
+        onComplete: resolve,
+        onInterrupt: resolve,
+      });
+    });
+  }
+
+  function maskIn(lines: HTMLElement[], delay = 0): void {
+    gsap.killTweensOf(lines);
+    gsap.fromTo(
+      lines,
+      { yPercent: INFO_LINE_HIDDEN },
+      { yPercent: 0, duration: INFO_IN_DURATION, stagger: INFO_STAGGER, ease: INFO_IN_EASE, delay }
+    );
+  }
+
+  function hideInfoLines(index: number): void {
+    void maskOut(infoLines(index));
+  }
+
+  function revealInfoLines(index: number, delay = 0): void {
+    maskIn(infoLines(index), delay);
+  }
+
   function setChromeVisible(visible: boolean): void {
     const info = projectEls[displayedIndex]?.querySelector<HTMLElement>('.reel-info');
-    if (info) gsap.to(info, { autoAlpha: visible ? 1 : 0, duration: 0.3 });
-    if (counterEl) gsap.to(counterEl, { autoAlpha: visible ? 1 : 0, duration: 0.3 });
+    if (info && visible) {
+      gsap.set(info, { autoAlpha: 1 });
+      revealInfoLines(displayedIndex);
+    } else if (info) {
+      hideInfoLines(displayedIndex);
+    }
+    if (counterEl && counterLine && visible) {
+      gsap.set(counterEl, { autoAlpha: 1 });
+      maskIn([counterLine]);
+    } else if (counterLine) {
+      void maskOut([counterLine]);
+    }
   }
+
+  // Clicking a project (-> its page, project-morph.ts): its text and the
+  // counter sink into their masks and the grid lines retract, while the
+  // clicked image stays for the morph. Also remembers the project so
+  // /projets opens on it (vue 1) when coming back.
+  registerMorphLeaveHook(async (clickedItem) => {
+    const index = projectEls.indexOf(clickedItem);
+    if (index < 0) return;
+    saveProjetsState('carousel', index);
+    gsap.set(gridlines, { transformOrigin: 'bottom' });
+    await Promise.all([
+      maskOut([...infoLines(index), ...(counterLine ? [counterLine] : [])]),
+      new Promise<void>((resolve) => {
+        gsap.to(gridlines, { scaleY: 0, duration: 0.5, stagger: 0.02, ease: 'power3.inOut', onComplete: resolve });
+      }),
+    ]);
+  });
 
   // Uses .play()/.reverse() (resume from wherever the timeline currently
   // sits) rather than .play(0), and no "is it already animating" guard: if
@@ -306,6 +398,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
 
     transitioning = true;
     const fromBars = barsByProject[displayedIndex];
+    hideInfoLines(displayedIndex);
 
     const closeTween = gsap.to(fromBars, {
       scaleX: 1,
@@ -315,6 +408,9 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
       onComplete: () => {
         const { targetIndex: toIndex } = readProgress(remainingProgress(pinTrigger!.progress));
         showProject(toIndex);
+        // Hidden before its project shows, then rising as the bars open.
+        gsap.set(infoLines(toIndex), { yPercent: INFO_LINE_HIDDEN });
+        revealInfoLines(toIndex, BAR_DURATION * 0.5);
         const toBars = barsByProject[toIndex];
         gsap.set(toBars, { scaleX: 1 });
         const openTween = gsap.to(toBars, {
@@ -432,6 +528,9 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
           curtainOpenTl.pause(0);
           curtainTarget = 'closed';
           gsap.set(projectEls, { autoAlpha: 0 });
+          const allLines = section.querySelectorAll('.reel-line');
+          gsap.killTweensOf(allLines);
+          gsap.set(allLines, { yPercent: INFO_LINE_HIDDEN });
           barsByProject.forEach((bars) => gsap.set(bars, { scaleX: 1 }));
           if (counterEl) gsap.set(counterEl, { autoAlpha: 0 });
           projectEls.forEach((el) => {
@@ -529,6 +628,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
 
   return {
     destroy: () => {
+      registerMorphLeaveHook(null);
       videoVisibilityWatch.disconnect();
       window.removeEventListener('resize', handleResize);
       ScrollTrigger.removeEventListener('refreshInit', handleRefreshInit);

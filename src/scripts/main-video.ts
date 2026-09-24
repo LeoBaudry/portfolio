@@ -29,6 +29,12 @@ const WARM_UP_DELAY = 1200;
 const VIDEO_READY_TIMEOUT = 1000;
 
 let observer: IntersectionObserver | null = null;
+// Starts a video's download about one screen before it's reached - for the
+// window before warmUpVideos gets to it (it waits for the view to settle,
+// then goes one video per idle period), typically a first visit. Removing
+// it as "redundant" brought the first-load freeze back.
+let preloader: IntersectionObserver | null = null;
+const PRELOAD_MARGIN = '100%';
 const onScreen = new Set<HTMLVideoElement>();
 let warmUpTimer = 0;
 let refreshQueued = false;
@@ -126,6 +132,7 @@ export function initMainVideos(root: ParentNode = document): { destroy: () => vo
   if (videos.length === 0) return undefined;
 
   observer?.disconnect();
+  preloader?.disconnect();
   onScreen.clear();
   videos.forEach((video) => {
     video.muted = true;
@@ -144,6 +151,21 @@ export function initMainVideos(root: ParentNode = document): { destroy: () => vo
     refreshMainVideos();
   });
   videos.forEach((video) => observer!.observe(video));
+
+  // Only a video that would actually show (not a hidden view's, not a
+  // non-current vue 1 / reel project's) - otherwise every copy downloads.
+  preloader = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const video = entry.target as HTMLVideoElement;
+        if (!entry.isIntersecting || reducedMotionQuery.matches || !isShown(video)) return;
+        preloader?.unobserve(video);
+        startLoading(video);
+      });
+    },
+    { rootMargin: PRELOAD_MARGIN }
+  );
+  videos.forEach((video) => preloader!.observe(video));
   warmUpVideos();
 
   return {
@@ -151,6 +173,8 @@ export function initMainVideos(root: ParentNode = document): { destroy: () => vo
       window.clearTimeout(warmUpTimer);
       observer?.disconnect();
       observer = null;
+      preloader?.disconnect();
+      preloader = null;
       onScreen.clear();
       // Not one mid-flight to the next page: it has to keep playing.
       videos.forEach((video) => {

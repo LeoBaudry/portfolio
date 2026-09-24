@@ -34,17 +34,20 @@ const featured = projects.slice(0, 5);
         <div class="reel-overlay" aria-hidden="true"></div>
         <div class="reel-bars" aria-hidden="true"></div>
         <div class="reel-info">
-          <p class="reel-category font-mono">{project.categorie}</p>
-          <h3 class="reel-title">{project.titre}</h3>
-          <p class="reel-year font-mono">{project.annee}</p>
+          <!-- Each line is its own mask: .reel-line slides inside it
+               (projects-reel.ts hide/revealInfoLines). -->
+          <p class="reel-category font-mono"><span class="reel-line">{project.categorie}</span></p>
+          <h3 class="reel-title"><span class="reel-line">{project.titre}</span></h3>
+          <p class="reel-year font-mono"><span class="reel-line">{project.annee}</span></p>
         </div>
       </div>
     ))}
 
     <div class="reel-grid-lines" aria-hidden="true"></div>
 
+    <!-- Its own mask, like the project text: .reel-line slides inside. -->
     <div class="reel-counter font-mono" aria-hidden="true">
-      <span class="reel-counter-current">1</span> / <span>{featured.length}</span>
+      <span class="reel-line"><span class="reel-counter-current">1</span> / <span>{featured.length}</span></span>
     </div>
   </div>
 
@@ -277,6 +280,18 @@ const featured = projects.slice(0, 5);
     margin: 0;
   }
 
+  /* The masks: fixed boundaries the .reel-line inside sinks under / rises
+     out of - same technique as the /projets info masks. */
+  .reel-category,
+  .reel-title,
+  .reel-year {
+    overflow: hidden;
+  }
+
+  .reel-line {
+    display: block;
+  }
+
   .reel-category,
   .reel-year {
     font-size: 0.8rem;
@@ -290,6 +305,7 @@ const featured = projects.slice(0, 5);
     right: 1.5rem;
     bottom: 1.5rem;
     z-index: 6;
+    overflow: hidden;
     color: var(--color-paper);
     font-size: 0.8rem;
     letter-spacing: 0.06em;

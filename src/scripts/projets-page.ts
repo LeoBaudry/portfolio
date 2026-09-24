@@ -16,129 +16,64 @@ import {
   refreshMainVideos,
   setMainVisualHidden,
   warmUpVideos,
-  whenVideoReady,
 } from './main-video';
-
-const PROJETS_STATE_KEY = 'projets-view-state';
-
-function saveProjetsState(view: string, current: number): void {
-  try {
-    sessionStorage.setItem(PROJETS_STATE_KEY, JSON.stringify({ view, current }));
-  } catch {}
-}
-
-function readProjetsState(): { view: 'carousel' | 'dezoom' | 'liste'; current: number } | null {
-  try {
-    const raw = sessionStorage.getItem(PROJETS_STATE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed.current === 'number' &&
-      ['carousel', 'dezoom', 'liste'].includes(parsed.view)
-    ) {
-      return parsed;
-    }
-  } catch {}
-  return null;
-}
-
-const WHEEL_THRESHOLD = 18;
-const STEP_DURATION = 850;
-const STEP_EASE = 'cubic-bezier(0.77, 0, 0.175, 1)';
-
-const INFO_HIDE_DURATION = 320;
-const INFO_HIDE_EASE = 'cubic-bezier(0.4, 0, 1, 1)';
-const INFO_REVEAL_DURATION = 380;
-const INFO_REVEAL_EASE = 'cubic-bezier(0, 0, 0.2, 1)';
-const INFO_PART_STAGGER = 70;
-const INFO_HIDE_TOTAL = INFO_HIDE_DURATION + INFO_PART_STAGGER;
-const STEP_INFO_HIDE_DELAY = 150;
-const STEP_INFO_REVEAL_DELAY = STEP_DURATION * 0.85;
-
-const DEZOOM_INFO_HIDE_DELAY = 450;
-const CAROUSEL_INFO_HIDE_DELAY = 350;
-
-const MORPH_DURATION = 700;
-const MORPH_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-const MORPH_SIBLING_FADE_DURATION = 650;
-const MORPH_SIBLING_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
-// A main-visual video flying with .morph-hero sits just above it (15).
-const MORPH_VIDEO_Z = 16;
-
-const DEZOOM_OTHERS_IMAGE_DELAY = 150;
-const DEZOOM_OTHERS_TEXT_DELAY = MORPH_SIBLING_FADE_DURATION * 0.85;
-
-const DEZOOM_CROP_CLOSED = 'inset(50% 0 50% 0)';
-const DEZOOM_MASK_HIDDEN = 'inset(100% 0 0 0)';
-const DEZOOM_MASK_VISIBLE = 'inset(0 0 0 0)';
-
-const LISTE_ROW_STAGGER = 60;
-// Share of a vue 3 row that must be on screen before it reveals.
-const LISTE_REVEAL_THRESHOLD = 0.4;
-// A vue 3 title comes in last, as its row's caption: this long after all
-// the row's images have loaded (they're still opening by then).
-const LISTE_TITLE_AFTER_IMAGES = 120;
-// Vue 3 title parts (name, then meta) rise out of the .item-info mask -
-// same idea as vue 2's, a touch slower and softer so it reads.
-const LISTE_TITLE_REVEAL_DURATION = 750;
-const LISTE_TITLE_PART_STAGGER = 90;
-// Fully below the mask: the part's own height plus more than the mask's
-// bottom padding (1rem, see .liste-row .item-info in projets.astro). In CSS
-// terms on purpose, not measured - rows are set closed while vue 3 is
-// display:none, where every measured height is 0.
-const LISTE_TITLE_HIDDEN = 'translateY(calc(100% + 1.5rem))';
-
-// Vue 1/2 leaving for vue 3, or arriving from it: the same ink curtains
-// (.view-curtain, transform only - clip-path repaints every frame and lags)
-// and the same text masks as vue 3's rows. Leaving: text sinks first, then
-// the curtains close upward. Arriving: curtains open upward, text rises last.
-const VIEW_IMAGE_AFTER_INFO = 120;
-const VIEW_IMAGE_STAGGER = 100;
-// Arriving is slower and eased both ways (the carousel step's curtain ease),
-// not the quick ease-out the post-morph siblings use - that one read as
-// fast and flat for a whole view coming in.
-const VIEW_REVEAL_DURATION = 1000;
-const VIEW_REVEAL_EASE = STEP_EASE;
-const VIEW_REVEAL_STAGGER = 180;
-const VIEW_TEXT_AFTER_REVEAL = VIEW_REVEAL_DURATION * 0.6;
-
-type ViewMode = 'carousel' | 'dezoom' | 'liste';
-
-interface RowCache {
-  images: HTMLElement[];
-}
-const rowDOMCache = new WeakMap<HTMLElement, RowCache>();
-let clearDistanceCache = new WeakMap<HTMLElement, number>();
-
-// A height cached before the custom font finishes swapping in would stick
-// (wrong) for the rest of the session otherwise - resize is the only other
-// thing that clears this cache, and a font swap doesn't fire resize.
-document.fonts?.ready.then(() => {
-  clearDistanceCache = new WeakMap();
-});
-
-function getRowCache(row: HTMLElement): RowCache {
-  let cached = rowDOMCache.get(row);
-  if (!cached) {
-    cached = {
-      images: Array.from(row.querySelectorAll<HTMLElement>('.liste-image')),
-    };
-    rowDOMCache.set(row, cached);
-  }
-  return cached;
-}
-
-// The navigation entry describes the whole document, not each client-side
-// navigation, so "reload" is only meaningful for the very first init.
-let isFirstInit = true;
-
-function consumeIsReload(): boolean {
-  const wasFirst = isFirstInit;
-  isFirstInit = false;
-  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-  return wasFirst && nav?.type === 'reload';
-}
+import { type ViewMode, consumeIsReload, readProjetsState, saveProjetsState } from './projets/state';
+import {
+  CAROUSEL_INFO_HIDE_DELAY,
+  DEZOOM_CROP_CLOSED,
+  DEZOOM_INFO_HIDE_DELAY,
+  DEZOOM_MASK_HIDDEN,
+  DEZOOM_MASK_VISIBLE,
+  DEZOOM_OTHERS_IMAGE_DELAY,
+  DEZOOM_OTHERS_TEXT_DELAY,
+  INFO_HIDE_TOTAL,
+  INFO_PART_STAGGER,
+  LISTE_IMAGE_STAGGER,
+  LISTE_REVEAL_THRESHOLD,
+  LISTE_ROW_STAGGER,
+  LISTE_TITLE_ROW_STAGGER,
+  MORPH_DURATION,
+  MORPH_EASE,
+  MORPH_VIDEO_Z,
+  STEP_DURATION,
+  STEP_EASE,
+  STEP_INFO_HIDE_DELAY,
+  STEP_INFO_REVEAL_DELAY,
+  VIEW_IMAGE_AFTER_INFO,
+  VIEW_IMAGE_STAGGER,
+  VIEW_REVEAL_STAGGER,
+  VIEW_TEXT_AFTER_REVEAL,
+  WHEEL_THRESHOLD,
+} from './projets/timing';
+import {
+  animateAndSettle,
+  hideInfoParts,
+  maskClearDistance,
+  resetClearDistanceCache,
+  revealInfoParts,
+  settle,
+} from './projets/anim';
+import {
+  getRowCache,
+  hideListeRow,
+  hideListeRowImages,
+  hideListeTitle,
+  revealListeImageCurtain,
+  revealListeTitle,
+  setListeRowClosedInstant,
+  setListeTitleClosedInstant,
+  showListeRow,
+} from './projets/liste-rows';
+import {
+  dezoomMask,
+  hideDezoomItemInfo,
+  hideDezoomItemInfoInstant,
+  openDezoomMask,
+  resetDezoomItemInfoInstant,
+  revealDezoomCard,
+  showDezoomItemInfo,
+} from './projets/dezoom-cards';
+import { closeViewCurtain, openViewCurtain, resetViewCurtains } from './projets/view-curtains';
 
 export function initProjetsPage(root: ParentNode = document) {
   const isReload = consumeIsReload();
@@ -201,72 +136,6 @@ export function initProjetsPage(root: ParentNode = document) {
     btn.addEventListener('click', handler);
     clickHandlers.push({ btn, handler });
   });
-
-  function settle(animation: Animation, timeoutMs = 2000): Promise<void> {
-    return new Promise((resolve) => {
-      let isDone = false;
-      const timer = window.setTimeout(() => finish(), timeoutMs);
-
-      const finish = () => {
-        if (isDone) return;
-        isDone = true;
-        clearTimeout(timer);
-        try {
-          if (animation.playState !== 'finished') animation.finish();
-          animation.commitStyles();
-        } catch {}
-        animation.cancel();
-        resolve();
-      };
-
-      animation.finished.then(finish).catch(finish);
-    });
-  }
-
-  function animateAndSettle(el: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions): Promise<void> {
-    // A second animate() call while a previous one from here is still
-    // playing on the same element (e.g. dezoom's entrance reveal still
-    // in-flight when a fast first click's leave-hide starts) doesn't cancel
-    // it - WAAPI just runs both, so the element flickers through whichever
-    // resolves last. The newest call always wins.
-    el.getAnimations().forEach((anim) => anim.cancel());
-    const durationMs = (options.duration as number) || 0;
-    const delayMs = (options.delay as number) || 0;
-    return settle(el.animate(keyframes, options), durationMs + delayMs + 200);
-  }
-
-  function maskClearDistance(el: HTMLElement): number {
-    let dist = clearDistanceCache.get(el);
-    if (dist === undefined) {
-      const mask = el.closest<HTMLElement>('.item-info');
-      dist = (mask ?? el).getBoundingClientRect().height;
-      clearDistanceCache.set(el, dist);
-    }
-    return dist;
-  }
-
-  function hideInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
-    const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
-    const clears = targets.map((el) => maskClearDistance(el));
-    return Promise.all(
-      targets.map((el, i) => animateAndSettle(el,
-        [{ transform: 'translateY(0)' }, { transform: `translateY(${clears[i]}px)` }],
-        { duration: INFO_HIDE_DURATION, delay: delay + i * INFO_PART_STAGGER, easing: INFO_HIDE_EASE, fill: 'forwards' }
-      ))
-    ).then(() => {});
-  }
-
-  function revealInfoParts(name: HTMLElement | null, meta: HTMLElement | null, delay = 0): Promise<void> {
-    const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
-    const clears = targets.map((el) => maskClearDistance(el));
-    targets.forEach((el, i) => { el.style.transform = `translateY(${clears[i]}px)`; });
-    return Promise.all(
-      targets.map((el, i) => animateAndSettle(el,
-        [{ transform: `translateY(${clears[i]}px)` }, { transform: 'translateY(0)' }],
-        { duration: INFO_REVEAL_DURATION, delay: delay + i * INFO_PART_STAGGER, easing: INFO_REVEAL_EASE, fill: 'forwards' }
-      ))
-    ).then(() => {});
-  }
 
   const carouselItems = Array.from(panels.carousel?.querySelectorAll<HTMLElement>('.carousel-item') ?? []);
   const carouselInfoMask = panels.carousel?.querySelector<HTMLElement>('.carousel-info') ?? null;
@@ -389,44 +258,6 @@ export function initProjetsPage(root: ParentNode = document) {
   const dezoomTrack = panels.dezoom?.querySelector<HTMLElement>('.dezoom-track') ?? null;
   const dezoomItems = Array.from(panels.dezoom?.querySelectorAll<HTMLElement>('.dezoom-item') ?? []);
 
-  // What vue 2's clip-path masks (reveal, crop, morph siblings) apply to:
-  // the image's wrapper, not the <img> - so a main-visual video layered over
-  // the image (MainVisual.astro) is masked with it.
-  function dezoomMask(item: HTMLElement): HTMLElement | null {
-    return item.querySelector<HTMLElement>('.dezoom-image');
-  }
-
-  // Opens a card's mask once its image (and video, if any) can show -
-  // `delay` still counts from the call, same as revealListeImageCurtain. A
-  // newer open on the same card supersedes one still waiting.
-  function openDezoomMask(item: HTMLElement, delay = 0): Promise<void> {
-    const mask = dezoomMask(item);
-    if (!mask) return Promise.resolve();
-    const gen = bumpCurtainGen(mask);
-    const calledAt = performance.now();
-    return whenMainVisualReady(item.querySelector('img')).then(() => {
-      if (mask.dataset.curtainGen !== gen) return;
-      return animateAndSettle(mask, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
-        duration: MORPH_SIBLING_FADE_DURATION,
-        delay: Math.max(0, delay - (performance.now() - calledAt)),
-        easing: MORPH_SIBLING_EASE,
-        fill: 'forwards',
-      }).then(() => {
-        mask.style.clipPath = '';
-      });
-    });
-  }
-
-  // Mask, then the card's text - the text waits for the same readiness so
-  // it never arrives before its picture.
-  function revealDezoomCard(item: HTMLElement, imageDelay: number, textDelay: number): Promise<void> {
-    const calledAt = performance.now();
-    const imageDone = openDezoomMask(item, imageDelay);
-    const textDone = whenMainVisualReady(item.querySelector('img')).then(() =>
-      showDezoomItemInfo(item, Math.max(0, textDelay - (performance.now() - calledAt)))
-    );
-    return Promise.all([imageDone, textDone]).then(() => {});
-  }
   let dezoomLenis: Lenis | null = null;
 
   function initDezoomObserver() {
@@ -513,34 +344,7 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
-  function hideDezoomItemInfo(item: HTMLElement | undefined, delay = 0): Promise<void> {
-    const name = item?.querySelector<HTMLElement>('.info-name') ?? null;
-    const meta = item?.querySelector<HTMLElement>('.info-meta') ?? null;
-    return hideInfoParts(name, meta, delay);
-  }
-
-  function hideDezoomItemInfoInstant(item: HTMLElement | undefined): void {
-    const name = item?.querySelector<HTMLElement>('.info-name') ?? null;
-    const meta = item?.querySelector<HTMLElement>('.info-meta') ?? null;
-    if (name) name.style.transform = `translateY(${maskClearDistance(name)}px)`;
-    if (meta) meta.style.transform = `translateY(${maskClearDistance(meta)}px)`;
-  }
-
-  function showDezoomItemInfo(item: HTMLElement | undefined, delay = 0): Promise<void> {
-    const name = item?.querySelector<HTMLElement>('.info-name') ?? null;
-    const meta = item?.querySelector<HTMLElement>('.info-meta') ?? null;
-    return revealInfoParts(name, meta, delay);
-  }
-
-  function resetDezoomItemInfoInstant(item: HTMLElement | undefined): void {
-    const name = item?.querySelector<HTMLElement>('.info-name') ?? null;
-    const meta = item?.querySelector<HTMLElement>('.info-meta') ?? null;
-    if (name) name.style.transform = '';
-    if (meta) meta.style.transform = '';
-  }
-
   const listeRows = Array.from(panels.liste?.querySelectorAll<HTMLElement>('.liste-row') ?? []);
-  const LISTE_IMAGE_STAGGER = 100;
   let listeRevealObserver: IntersectionObserver | null = null;
 
   listeRows.forEach((row) => setListeRowClosedInstant(row));
@@ -588,205 +392,6 @@ export function initProjetsPage(root: ParentNode = document) {
     return new Promise((resolve) => {
       pageLenis!.scrollTo(clamped, { duration: 0.5, force: true, onComplete: () => resolve() });
     });
-  }
-
-  // Every hide/reveal/instant-set of an image's curtain bumps this, so a
-  // reveal still waiting on its image (see revealListeImageCurtain) can tell
-  // it's been superseded - e.g. leaving vue 3 before a slow image arrived -
-  // and not open a curtain on a row that's since been closed again.
-  function bumpCurtainGen(wrap: HTMLElement): string {
-    const gen = String(Number(wrap.dataset.curtainGen ?? 0) + 1);
-    wrap.dataset.curtainGen = gen;
-    return gen;
-  }
-
-  // Resolves once the image has pixels to show: loaded (or failed - never
-  // hold a curtain forever), then decoded, with decode() raced against a
-  // short timeout since it can hang. Thumbs are loading="lazy" (see
-  // ProjectImage.astro), so one that hasn't started yet is kicked off here.
-  // An image CSS hides at this breakpoint (vue 3 shows fewer per row on
-  // smaller screens, see .liste-image:nth-child in projets.astro) counts as
-  // ready right away: nobody will see it, and forcing it to load would make
-  // its row's title wait on a download that has no reason to happen.
-  function whenImageReady(img: HTMLImageElement | null): Promise<void> {
-    if (!img || img.getClientRects().length === 0) return Promise.resolve();
-    const loaded = img.complete
-      ? Promise.resolve()
-      : new Promise<void>((resolve) => {
-          img.loading = 'eager';
-          img.addEventListener('load', () => resolve(), { once: true });
-          img.addEventListener('error', () => resolve(), { once: true });
-        });
-    return loaded.then(() =>
-      Promise.race([img.decode().catch(() => {}), new Promise<void>((resolve) => setTimeout(resolve, 150))])
-    );
-  }
-
-  // A main image's own readiness plus its video's (main-video.ts) - plain
-  // images/thumbs have no video, so that half is immediate.
-  function whenMainVisualReady(img: HTMLImageElement | null): Promise<void> {
-    return Promise.all([whenImageReady(img), whenVideoReady(img)]).then(() => {});
-  }
-
-  function hideListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
-    const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
-    if (!curtain) return Promise.resolve();
-    bumpCurtainGen(wrap);
-    curtain.style.transformOrigin = 'bottom';
-    return animateAndSettle(curtain, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
-      duration: MORPH_DURATION,
-      delay,
-      easing: MORPH_EASE,
-      fill: 'forwards',
-    }).then(() => {
-      curtain.style.transform = 'scaleY(1)';
-    });
-  }
-
-  // The curtain stays closed until its image is actually ready, so a slow
-  // image never gets revealed as an empty box that the photo pops into
-  // afterwards. `delay` still counts from the call, so images that are
-  // already there keep their place in the stagger; a late one simply opens
-  // as soon as it lands.
-  function revealListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
-    const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
-    if (!curtain) return Promise.resolve();
-    const gen = bumpCurtainGen(wrap);
-    curtain.style.transformOrigin = 'top';
-    curtain.style.transform = 'scaleY(1)';
-    const calledAt = performance.now();
-    return whenMainVisualReady(wrap.querySelector('img')).then(() => {
-      if (wrap.dataset.curtainGen !== gen) return;
-      return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
-        duration: MORPH_SIBLING_FADE_DURATION,
-        delay: Math.max(0, delay - (performance.now() - calledAt)),
-        easing: MORPH_SIBLING_EASE,
-        fill: 'forwards',
-      }).then(() => {
-        curtain.style.transform = '';
-      });
-    });
-  }
-
-  function hideListeRowImages(row: HTMLElement, delay = 0, skip = 0): Promise<void> {
-    return Promise.all(
-      getRowCache(row).images
-        .slice(skip)
-        .map((wrap, i) => hideListeImageCurtain(wrap, delay + i * LISTE_IMAGE_STAGGER))
-    ).then(() => {});
-  }
-
-  function revealListeRowImages(row: HTMLElement, delay = 0): Promise<void> {
-    const images = getRowCache(row).images;
-    images.forEach((wrap) => {
-      const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
-      if (curtain) curtain.style.transform = 'scaleY(1)';
-    });
-    row.dataset.revealed = 'true';
-    return Promise.all(
-      images.map((wrap, i) => revealListeImageCurtain(wrap, delay + i * LISTE_IMAGE_STAGGER))
-    ).then(() => {});
-  }
-
-  // Vue 3's title mask reveal: the name then the meta each rise out of the
-  // row's .item-info mask (overflow:hidden) and sink back into it.
-  function listeTitleParts(row: HTMLElement): HTMLElement[] {
-    return [row.querySelector<HTMLElement>('.info-name'), row.querySelector<HTMLElement>('.info-meta')].filter(
-      (el): el is HTMLElement => Boolean(el)
-    );
-  }
-
-  function hideListeTitle(row: HTMLElement, delay = 0): Promise<void> {
-    bumpCurtainGen(row);
-    return Promise.all(
-      listeTitleParts(row).map((el, i) =>
-        animateAndSettle(el, [{ transform: 'translateY(0)' }, { transform: LISTE_TITLE_HIDDEN }], {
-          duration: INFO_HIDE_DURATION,
-          delay: delay + i * INFO_PART_STAGGER,
-          easing: INFO_HIDE_EASE,
-          fill: 'forwards',
-        }).then(() => {
-          el.style.transform = LISTE_TITLE_HIDDEN;
-        })
-      )
-    ).then(() => {});
-  }
-
-  function revealListeTitle(row: HTMLElement, delay = 0): Promise<void> {
-    setListeTitleClosedInstant(row);
-    return Promise.all(
-      listeTitleParts(row).map((el, i) =>
-        animateAndSettle(el, [{ transform: LISTE_TITLE_HIDDEN }, { transform: 'translateY(0)' }], {
-          duration: LISTE_TITLE_REVEAL_DURATION,
-          delay: delay + i * LISTE_TITLE_PART_STAGGER,
-          easing: MORPH_SIBLING_EASE,
-          fill: 'forwards',
-        }).then(() => {
-          el.style.transform = '';
-        })
-      )
-    ).then(() => {});
-  }
-
-  function setListeTitleClosedInstant(row: HTMLElement): void {
-    listeTitleParts(row).forEach((el) => {
-      el.style.transform = LISTE_TITLE_HIDDEN;
-    });
-  }
-
-  function setListeTitleOpenInstant(row: HTMLElement): void {
-    listeTitleParts(row).forEach((el) => {
-      el.style.transform = '';
-    });
-  }
-
-  function hideListeRow(row: HTMLElement, delay = 0): Promise<void> {
-    const titleDone = hideListeTitle(row, delay);
-    const imagesDone = hideListeRowImages(row, delay);
-    return Promise.all([titleDone, imagesDone]).then(() => {
-      setListeRowClosedInstant(row);
-    });
-  }
-
-  // Images first (each opening as soon as it's loaded, see
-  // revealListeImageCurtain), then the title once they've all loaded - kept
-  // closed until then. A hide in the meantime bumps the row's generation
-  // (bumpCurtainGen, same guard as the image curtains) and cancels it.
-  function showListeRow(row: HTMLElement, delay = 0): Promise<void> {
-    row.dataset.revealed = 'true';
-    setListeTitleClosedInstant(row);
-    const gen = bumpCurtainGen(row);
-    const calledAt = performance.now();
-    const imagesDone = revealListeRowImages(row, delay);
-    const titleDone = Promise.all(
-      getRowCache(row).images.map((wrap) => whenMainVisualReady(wrap.querySelector('img')))
-    ).then(() => {
-      if (row.dataset.curtainGen !== gen) return;
-      const rowDelayLeft = Math.max(0, delay - (performance.now() - calledAt));
-      return revealListeTitle(row, rowDelayLeft + LISTE_TITLE_AFTER_IMAGES);
-    });
-    return Promise.all([titleDone, imagesDone]).then(() => {});
-  }
-
-  function setListeRowClosedInstant(row: HTMLElement): void {
-    getRowCache(row).images.forEach((wrap) => {
-      bumpCurtainGen(wrap);
-      const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
-      if (curtain) curtain.style.transform = 'scaleY(1)';
-    });
-    setListeTitleClosedInstant(row);
-    bumpCurtainGen(row);
-    delete row.dataset.revealed;
-  }
-
-  function setListeRowOpenInstant(row: HTMLElement): void {
-    getRowCache(row).images.forEach((wrap) => {
-      bumpCurtainGen(wrap);
-      const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
-      if (curtain) curtain.style.transform = '';
-    });
-    setListeTitleOpenInstant(row);
-    row.dataset.revealed = 'true';
   }
 
   function visibleListeRows(): { visible: HTMLElement[]; offscreen: HTMLElement[] } {
@@ -850,57 +455,6 @@ export function initProjetsPage(root: ParentNode = document) {
       { threshold: LISTE_REVEAL_THRESHOLD }
     );
     listeRows.forEach((row) => listeRevealObserver!.observe(row));
-  }
-
-  function viewCurtain(item: HTMLElement | undefined): HTMLElement | null {
-    return item?.querySelector<HTMLElement>('.view-curtain') ?? null;
-  }
-
-  // Same motion as hideListeImageCurtain / revealListeImageCurtain.
-  function closeViewCurtain(item: HTMLElement | undefined, delay: number): Promise<void> {
-    const curtain = viewCurtain(item);
-    if (!curtain) return Promise.resolve();
-    bumpCurtainGen(curtain);
-    curtain.style.transformOrigin = 'bottom';
-    return animateAndSettle(curtain, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
-      duration: MORPH_DURATION,
-      delay,
-      easing: MORPH_EASE,
-      fill: 'forwards',
-    }).then(() => {
-      curtain.style.transform = 'scaleY(1)';
-    });
-  }
-
-  // Waits for the picture (image + video) like vue 3's curtains; a close in
-  // the meantime supersedes it (bumpCurtainGen).
-  function openViewCurtain(item: HTMLElement | undefined, delay: number): Promise<void> {
-    const curtain = viewCurtain(item);
-    if (!curtain || !item) return Promise.resolve();
-    curtain.style.transformOrigin = 'top';
-    curtain.style.transform = 'scaleY(1)';
-    const gen = bumpCurtainGen(curtain);
-    const calledAt = performance.now();
-    return whenMainVisualReady(item.querySelector('img')).then(() => {
-      if (curtain.dataset.curtainGen !== gen) return;
-      return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
-        duration: VIEW_REVEAL_DURATION,
-        delay: Math.max(0, delay - (performance.now() - calledAt)),
-        easing: VIEW_REVEAL_EASE,
-        fill: 'forwards',
-      }).then(() => {
-        curtain.style.transform = '';
-      });
-    });
-  }
-
-  // Once the leaving panel is display:none - nobody sees the curtains
-  // reopen, and nothing else (the vue 1 <-> 2 morph) finds them closed.
-  function resetViewCurtains(panel: HTMLElement): void {
-    panel.querySelectorAll<HTMLElement>('.view-curtain').forEach((curtain) => {
-      curtain.getAnimations().forEach((anim) => anim.cancel());
-      curtain.style.transform = '';
-    });
   }
 
   function hideCarouselView(): Promise<void> {
@@ -1278,8 +832,6 @@ export function initProjetsPage(root: ParentNode = document) {
     }
   }
 
-  const LISTE_TITLE_ROW_STAGGER = 80;
-
   async function handleListeRowMorphLeave(clickedRow: HTMLElement): Promise<void> {
     const { visible } = visibleListeRows();
     const otherRows = visible.filter((row) => row !== clickedRow && row.dataset.revealed);
@@ -1420,7 +972,7 @@ export function initProjetsPage(root: ParentNode = document) {
   let resizeTimer: number;
   const handleResize = () => {
     clearTimeout(resizeTimer);
-    clearDistanceCache = new WeakMap();
+    resetClearDistanceCache();
     resizeTimer = window.setTimeout(() => {
       if (view === 'dezoom') dezoomLenis?.resize();
     }, 150);

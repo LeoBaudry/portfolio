@@ -3,6 +3,41 @@
 Ordered so that each step only builds on finished ones. Items marked
 (Figma) wait on a mockup from Leo before any code.
 
+## Next session (written 2026-09-24, for 2026-09-25)
+
+A. **Hide the link preview on hover.** Hovering a project image/video shows
+   the browser's own URL bubble bottom-left ("localhost:4321/projets/mirage")
+   - Leo wants it gone. It's the browser's status bar for any `<a href>`; no
+   CSS/JS setting hides it while the href is there. Options to decide:
+   (1) drop the `href` from the image links and navigate in JS (Astro's
+   `navigate()`), keeping `role="link"` + `tabindex="0"` + Enter handling -
+   loses middle-click / "open in new tab" / right-click link menu, and the
+   morph code finds sources by `[href="/projets/<slug>"]` (project-morph.ts
+   allCopiesOf, targetLink) so it must switch to a `data-href`/`data-slug`;
+   (2) keep the href on the text/title only and make the image a JS target;
+   (3) keep it. Check SEO: crawlers still need real links somewhere (e.g. the
+   titles, or a hidden list).
+B. **Reel cursor ring animates out on click.** The ring following the
+   cursor on the homepage reel (`.reel-cursor`, progress to next project =
+   `strokeDashoffset`, projects-reel.ts setRingProgress) just stays when a
+   project is clicked. Make it "unravel" (stroke unwinds back to 0, maybe
+   shrinks) as part of the reel leave hook (registerMorphLeaveHook in
+   projects-reel.ts). Its show/hide is also a CSS opacity fade
+   (`.reel-cursor.is-active`) - move that to the same unravel/wind-up so no
+   opacity is left in the reel.
+C. **Reel cursor on mobile.** No cursor there, so it's pinned bottom-right
+   (`.is-fixed-position`) right on top of the "1 / 5" counter. Make it read
+   clearly on touch: e.g. merge it with the counter (ring around it, or a
+   progress line under "1 / 5"), or move it (bottom-centre / top-right). Plus
+   the same animate-out on click as B.
+D. **Remove reel mode B** (Leo, 2026-09-24: "we'll remove B later on").
+   `MODE_RIDEAU` in projects-reel.ts: A = triggered bar transitions (used,
+   and everything recent - text masks, click exit, videos - is built on it),
+   B = scroll-scrubbed bars (unused). Delete the flag, `buildTransition`,
+   the `transitions` array and the B branches in the scroll handler/reset
+   (~50 lines). Leave the separate hero-recede A/B flag (~line 47) alone
+   unless Leo decides on it too.
+
 ## Phase 1 — Media foundation (no design input needed)
 
 0. [x] **Site-entry loader.** Done 2026-09-23: logo strokes slide into
@@ -45,7 +80,8 @@ Ordered so that each step only builds on finished ones. Items marked
    Later, if needed: playable/focusable videos with controls (Leo: "we'll
    see").
 3. [~] **Video as main visual.** Built 2026-09-24, Leo testing. Test data:
-   Aurore's `main.video` (placeholder videos).
+   Aurore's `main.video` (placeholder videos). How to export real videos
+   (format, sizes, ffmpeg, first-frame posters): `docs/video-export.md`.
    - Data: `main` gets an optional `video: { desktop, mobile? }`; its images
      stay and are the poster (real posters = the video's FIRST FRAME, or the
      poster -> video swap shows).
@@ -66,7 +102,10 @@ Ordered so that each step only builds on finished ones. Items marked
      "pause when out of view" - pending the stress test; revert = drop the
      `warm` flag. Applies to [slug] content videos too: every muted loop
      carries `data-loop-video` (playback), main visuals also
-     `data-main-video` (morphs). Refreshes batched to one per frame.
+     `data-main-video` (morphs). Refreshes batched to one per frame. The
+     approach preloader (starts downloads ~1 screen ahead) must stay: it
+     covers the window before the warm-up reaches a video - removing it
+     brought the first-load freeze back.
    - Reveals wait for the video's first frame (whenVideoReady, 1s cap):
      vue 2 cards (openDezoomMask / revealDezoomCard), view curtains, vue 3
      curtains. Not vue 1's wheel step.
@@ -81,9 +120,11 @@ Ordered so that each step only builds on finished ones. Items marked
 
 ## Phase 2 — Site-wide structure
 
-4. [ ] **Light/dark mode** from the OS preference (`prefers-color-scheme`),
-   via colour tokens. Early because every later piece (menu glass, transition
-   screen, curtains that must match the background) depends on the tokens.
+4. [moved] Light/dark mode -> end of Phase 4 (Leo, 2026-09-24: "the kind
+   of thing to do in the very end"). Its prerequisite, role-named colour
+   tokens (background / text / line / curtain instead of ink / paper), can
+   still be done any time as a quick session so the menu and transition
+   screen are built on them.
 5. [ ] **Menu.** Always-hamburger pill, centred, glass effect (dark/light,
    slight transparency). Top-centre on the homepage, animates to bottom-centre
    on other pages. On /projets the vue 1/2/3 buttons rise out of it (mask)
@@ -106,6 +147,10 @@ Ordered so that each step only builds on finished ones. Items marked
 ## Phase 4 — Polish
 
 11. [ ] Interactive footer (ASCII / dithered idea). Not a priority.
+12. [ ] **Light/dark mode** (moved from item 4). Open questions, asked
+   2026-09-24, unanswered: OS setting only or + manual switch (in the
+   menu)? Loader stays dark or follows the theme? Light palette = straight
+   paper/ink swap or Leo's own values?
 
 ## Before launch — test once the site is finished and online
 
