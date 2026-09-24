@@ -8,6 +8,16 @@ import {
   registerMorphLeaveHook,
   registerMorphCenterHook,
 } from './project-morph';
+import {
+  abortFlight,
+  flightHost,
+  landVideo,
+  liftVideo,
+  refreshMainVideos,
+  setMainVisualHidden,
+  warmUpVideos,
+  whenVideoReady,
+} from './main-video';
 
 const PROJETS_STATE_KEY = 'projets-view-state';
 
@@ -52,9 +62,11 @@ const CAROUSEL_INFO_HIDE_DELAY = 350;
 const MORPH_DURATION = 700;
 const MORPH_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
 const MORPH_SIBLING_FADE_DURATION = 650;
-const MORPH_SIBLING_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)'; 
+const MORPH_SIBLING_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+// A main-visual video flying with .morph-hero sits just above it (15).
+const MORPH_VIDEO_Z = 16;
 
-const DEZOOM_OTHERS_IMAGE_DELAY = 150; 
+const DEZOOM_OTHERS_IMAGE_DELAY = 150;
 const DEZOOM_OTHERS_TEXT_DELAY = MORPH_SIBLING_FADE_DURATION * 0.85;
 
 const DEZOOM_CROP_CLOSED = 'inset(50% 0 50% 0)';
@@ -146,7 +158,7 @@ export function initProjetsPage(root: ParentNode = document) {
   let view: ViewMode = restored?.view ?? 'carousel';
   let current = Math.max(0, Math.min(restored?.current ?? 0, projectCount - 1));
   let switching = false;
-  
+
   let rafId: number;
   let isDezoomActive = false;
   let dezoomObserver: IntersectionObserver | null = null;
@@ -162,6 +174,12 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
+  // Each transition resolves as soon as the new view is in place (morph
+  // landed / entering reveal started) - its reveal tail (text, other cards'
+  // stagger) plays on in the background, so the switcher unlocks without
+  // waiting ~2s. Safe to switch mid-reveal: every hide goes through
+  // animateAndSettle, which cancels a reveal still running on that element
+  // (vue 3's delayed reveals are also guarded by bumpCurtainGen).
   function setView(next: ViewMode): void {
     // Not mid carousel step either: both would animate the same item's clip-path.
     if (next === view || switching || carouselLocked) return;
@@ -173,6 +191,8 @@ export function initProjetsPage(root: ParentNode = document) {
     const transition = isCarouselDezoomMorph ? morphBetweenCarouselAndDezoom(next) : transitionListe(next);
     transition.finally(() => {
       switching = false;
+      // The new view's videos, started while it's still (main-video.ts).
+      warmUpVideos();
     });
   }
 
@@ -229,8 +249,8 @@ export function initProjetsPage(root: ParentNode = document) {
     const targets = [name, meta].filter((el): el is HTMLElement => Boolean(el));
     const clears = targets.map((el) => maskClearDistance(el));
     return Promise.all(
-      targets.map((el, i) => animateAndSettle(el, 
-        [{ transform: 'translateY(0)' }, { transform: `translateY(${clears[i]}px)` }], 
+      targets.map((el, i) => animateAndSettle(el,
+        [{ transform: 'translateY(0)' }, { transform: `translateY(${clears[i]}px)` }],
         { duration: INFO_HIDE_DURATION, delay: delay + i * INFO_PART_STAGGER, easing: INFO_HIDE_EASE, fill: 'forwards' }
       ))
     ).then(() => {});
@@ -241,8 +261,8 @@ export function initProjetsPage(root: ParentNode = document) {
     const clears = targets.map((el) => maskClearDistance(el));
     targets.forEach((el, i) => { el.style.transform = `translateY(${clears[i]}px)`; });
     return Promise.all(
-      targets.map((el, i) => animateAndSettle(el, 
-        [{ transform: `translateY(${clears[i]}px)` }, { transform: 'translateY(0)' }], 
+      targets.map((el, i) => animateAndSettle(el,
+        [{ transform: `translateY(${clears[i]}px)` }, { transform: 'translateY(0)' }],
         { duration: INFO_REVEAL_DURATION, delay: delay + i * INFO_PART_STAGGER, easing: INFO_REVEAL_EASE, fill: 'forwards' }
       ))
     ).then(() => {});
@@ -257,11 +277,11 @@ export function initProjetsPage(root: ParentNode = document) {
   let carouselIndex = 0;
   let carouselLocked = false;
   let carouselAnimation: Animation | null = null;
-  
+
   // FIX QUEUEING : On stocke l'intention de clic pour l'appliquer au projet entrant
   let queuedCarouselMorph = false;
   const carouselLinks = Array.from(panels.carousel?.querySelectorAll<HTMLAnchorElement>('.morph-link') ?? []);
-  
+
   carouselLinks.forEach(link => {
     link.addEventListener('click', (e) => {
       if (carouselLocked) {
@@ -285,6 +305,7 @@ export function initProjetsPage(root: ParentNode = document) {
       el.style.zIndex = '';
       el.style.clipPath = '';
     });
+    refreshMainVideos();
   }
 
   function hideCarouselInfo(delay = 0): Promise<void> {
@@ -314,12 +335,15 @@ export function initProjetsPage(root: ParentNode = document) {
     toEl.style.zIndex = '2';
     fromEl.style.zIndex = '1';
     toEl.classList.add('is-current');
+    // Vue 1 hides non-current items with visibility, which the videos'
+    // IntersectionObserver can't see - tell them (here and once settled).
+    refreshMainVideos();
 
-    // FIX FLASH : Le vieux projet ne subit AUCUN mouvement et AUCUN scale. 
+    // FIX FLASH : Le vieux projet ne subit AUCUN mouvement et AUCUN scale.
     // Il attend juste que le nouveau rideau le recouvre.
     fromEl.style.transform = '';
 
-    // On crée un rideau pur via clip-path. 
+    // On crée un rideau pur via clip-path.
     // Vers l'avant (1) = le rideau se tire de droite à gauche.
     const clipStart = dir === 1 ? 'inset(0% 0% 0% 100%)' : 'inset(0% 100% 0% 0%)';
 
@@ -337,10 +361,11 @@ export function initProjetsPage(root: ParentNode = document) {
       toEl.style.clipPath = '';
       fromEl.style.zIndex = '';
       fromEl.classList.remove('is-current');
+      refreshMainVideos();
       carouselIndex = toIndex;
       current = carouselIndex;
       carouselLocked = false;
-      
+
       // FIX QUEUEING : Si on a cliqué pendant l'animation, on lance l'ouverture
       // du projet fraîchement arrivé (toIndex) !
       if (queuedCarouselMorph) {
@@ -363,6 +388,45 @@ export function initProjetsPage(root: ParentNode = document) {
 
   const dezoomTrack = panels.dezoom?.querySelector<HTMLElement>('.dezoom-track') ?? null;
   const dezoomItems = Array.from(panels.dezoom?.querySelectorAll<HTMLElement>('.dezoom-item') ?? []);
+
+  // What vue 2's clip-path masks (reveal, crop, morph siblings) apply to:
+  // the image's wrapper, not the <img> - so a main-visual video layered over
+  // the image (MainVisual.astro) is masked with it.
+  function dezoomMask(item: HTMLElement): HTMLElement | null {
+    return item.querySelector<HTMLElement>('.dezoom-image');
+  }
+
+  // Opens a card's mask once its image (and video, if any) can show -
+  // `delay` still counts from the call, same as revealListeImageCurtain. A
+  // newer open on the same card supersedes one still waiting.
+  function openDezoomMask(item: HTMLElement, delay = 0): Promise<void> {
+    const mask = dezoomMask(item);
+    if (!mask) return Promise.resolve();
+    const gen = bumpCurtainGen(mask);
+    const calledAt = performance.now();
+    return whenMainVisualReady(item.querySelector('img')).then(() => {
+      if (mask.dataset.curtainGen !== gen) return;
+      return animateAndSettle(mask, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
+        duration: MORPH_SIBLING_FADE_DURATION,
+        delay: Math.max(0, delay - (performance.now() - calledAt)),
+        easing: MORPH_SIBLING_EASE,
+        fill: 'forwards',
+      }).then(() => {
+        mask.style.clipPath = '';
+      });
+    });
+  }
+
+  // Mask, then the card's text - the text waits for the same readiness so
+  // it never arrives before its picture.
+  function revealDezoomCard(item: HTMLElement, imageDelay: number, textDelay: number): Promise<void> {
+    const calledAt = performance.now();
+    const imageDone = openDezoomMask(item, imageDelay);
+    const textDone = whenMainVisualReady(item.querySelector('img')).then(() =>
+      showDezoomItemInfo(item, Math.max(0, textDelay - (performance.now() - calledAt)))
+    );
+    return Promise.all([imageDone, textDone]).then(() => {});
+  }
   let dezoomLenis: Lenis | null = null;
 
   function initDezoomObserver() {
@@ -373,18 +437,7 @@ export function initProjetsPage(root: ParentNode = document) {
           const el = entry.target as HTMLElement;
           if (el.dataset.revealed) return;
           el.dataset.revealed = 'true';
-          
-          const img = el.querySelector('img');
-          if (img) {
-            animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
-              duration: MORPH_SIBLING_FADE_DURATION,
-              easing: MORPH_SIBLING_EASE,
-              fill: 'forwards'
-            }).then(() => {
-              img.style.clipPath = '';
-            });
-          }
-          showDezoomItemInfo(el, DEZOOM_OTHERS_TEXT_DELAY);
+          revealDezoomCard(el, 0, DEZOOM_OTHERS_TEXT_DELAY);
         }
       });
     }, {
@@ -513,7 +566,7 @@ export function initProjetsPage(root: ParentNode = document) {
     const target = listeRows[current];
     if (!target) return;
     if (pageLenis) {
-      pageLenis.resize(); 
+      pageLenis.resize();
       const rect = target.getBoundingClientRect();
       const targetY = window.scrollY + rect.top + (rect.height / 2) - (window.innerHeight / 2);
       const clamped = Math.max(0, Math.min(targetY, pageLenis.limit));
@@ -525,11 +578,11 @@ export function initProjetsPage(root: ParentNode = document) {
 
   function centerListeRow(row: HTMLElement): Promise<void> {
     if (!pageLenis) return Promise.resolve();
-    pageLenis.resize(); 
+    pageLenis.resize();
     const rect = row.getBoundingClientRect();
     const target = window.scrollY + rect.top + (rect.height / 2) - (window.innerHeight / 2);
     const clamped = Math.max(0, Math.min(target, pageLenis.limit));
-    
+
     if (Math.abs(window.scrollY - clamped) < 1) return Promise.resolve();
 
     return new Promise((resolve) => {
@@ -569,6 +622,12 @@ export function initProjetsPage(root: ParentNode = document) {
     );
   }
 
+  // A main image's own readiness plus its video's (main-video.ts) - plain
+  // images/thumbs have no video, so that half is immediate.
+  function whenMainVisualReady(img: HTMLImageElement | null): Promise<void> {
+    return Promise.all([whenImageReady(img), whenVideoReady(img)]).then(() => {});
+  }
+
   function hideListeImageCurtain(wrap: HTMLElement, delay = 0): Promise<void> {
     const curtain = wrap.querySelector<HTMLElement>('.liste-image-curtain');
     if (!curtain) return Promise.resolve();
@@ -596,7 +655,7 @@ export function initProjetsPage(root: ParentNode = document) {
     curtain.style.transformOrigin = 'top';
     curtain.style.transform = 'scaleY(1)';
     const calledAt = performance.now();
-    return whenImageReady(wrap.querySelector('img')).then(() => {
+    return whenMainVisualReady(wrap.querySelector('img')).then(() => {
       if (wrap.dataset.curtainGen !== gen) return;
       return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
         duration: MORPH_SIBLING_FADE_DURATION,
@@ -700,7 +759,7 @@ export function initProjetsPage(root: ParentNode = document) {
     const calledAt = performance.now();
     const imagesDone = revealListeRowImages(row, delay);
     const titleDone = Promise.all(
-      getRowCache(row).images.map((wrap) => whenImageReady(wrap.querySelector('img')))
+      getRowCache(row).images.map((wrap) => whenMainVisualReady(wrap.querySelector('img')))
     ).then(() => {
       if (row.dataset.curtainGen !== gen) return;
       const rowDelayLeft = Math.max(0, delay - (performance.now() - calledAt));
@@ -801,6 +860,7 @@ export function initProjetsPage(root: ParentNode = document) {
   function closeViewCurtain(item: HTMLElement | undefined, delay: number): Promise<void> {
     const curtain = viewCurtain(item);
     if (!curtain) return Promise.resolve();
+    bumpCurtainGen(curtain);
     curtain.style.transformOrigin = 'bottom';
     return animateAndSettle(curtain, [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }], {
       duration: MORPH_DURATION,
@@ -812,18 +872,25 @@ export function initProjetsPage(root: ParentNode = document) {
     });
   }
 
+  // Waits for the picture (image + video) like vue 3's curtains; a close in
+  // the meantime supersedes it (bumpCurtainGen).
   function openViewCurtain(item: HTMLElement | undefined, delay: number): Promise<void> {
     const curtain = viewCurtain(item);
-    if (!curtain) return Promise.resolve();
+    if (!curtain || !item) return Promise.resolve();
     curtain.style.transformOrigin = 'top';
     curtain.style.transform = 'scaleY(1)';
-    return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
-      duration: VIEW_REVEAL_DURATION,
-      delay,
-      easing: VIEW_REVEAL_EASE,
-      fill: 'forwards',
-    }).then(() => {
-      curtain.style.transform = '';
+    const gen = bumpCurtainGen(curtain);
+    const calledAt = performance.now();
+    return whenMainVisualReady(item.querySelector('img')).then(() => {
+      if (curtain.dataset.curtainGen !== gen) return;
+      return animateAndSettle(curtain, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(0)' }], {
+        duration: VIEW_REVEAL_DURATION,
+        delay: Math.max(0, delay - (performance.now() - calledAt)),
+        easing: VIEW_REVEAL_EASE,
+        fill: 'forwards',
+      }).then(() => {
+        curtain.style.transform = '';
+      });
     });
   }
 
@@ -868,7 +935,7 @@ export function initProjetsPage(root: ParentNode = document) {
   function showDezoomView(): Promise<void> {
     const onScreen = visibleDezoomItems(-1);
     dezoomItems.forEach((el) => {
-      const img = el.querySelector<HTMLElement>('img');
+      const img = dezoomMask(el);
       const isOnScreen = onScreen.includes(el);
       if (isOnScreen) el.dataset.revealed = 'true';
       else delete el.dataset.revealed;
@@ -918,20 +985,20 @@ export function initProjetsPage(root: ParentNode = document) {
       pageLenis?.start();
       pageLenis?.resize();
       scrollListeToCurrent();
-      await showListeRows();
+      void showListeRows();
     } else {
       pageLenis?.stop();
       if (next === 'carousel') {
         carouselIndex = current;
         setCarouselCurrentImage(carouselIndex);
-        await showCarouselView();
+        void showCarouselView();
       } else if (next === 'dezoom') {
         isDezoomActive = true;
         const dl = ensureDezoomLenis();
         dl?.start();
         scrollDezoomToCurrent(dl);
         rafId = requestAnimationFrame(dezoomRaf);
-        await showDezoomView();
+        void showDezoomView();
       }
     }
   }
@@ -978,11 +1045,25 @@ export function initProjetsPage(root: ParentNode = document) {
     const leavingImg = heroImage(leavingView, heroIndex);
     const fromRect = leavingImg?.getBoundingClientRect() ?? null;
 
+    // A playing main-visual video flies with .morph-hero and keeps playing
+    // (main-video.ts). The entering view's copy takes its place in the view
+    // being left, so that view still has one next time.
+    const videoHost = flightHost();
+    if (videoHost && fromRect) {
+      Object.assign(videoHost.style, {
+        top: `${fromRect.top}px`,
+        left: `${fromRect.left}px`,
+        width: `${fromRect.width}px`,
+        height: `${fromRect.height}px`,
+      });
+    }
+    const flyingVideo = leavingImg ? liftVideo(leavingImg, MORPH_VIDEO_Z, heroImage(next, heroIndex)) : null;
+
     panels[next]!.hidden = false;
     view = next;
     page!.dataset.view = view;
     updateSwitcherUI();
-    
+
     if (leavingView === 'carousel') {
       panels.carousel!.hidden = true;
     }
@@ -996,17 +1077,17 @@ export function initProjetsPage(root: ParentNode = document) {
       dl?.start();
       scrollDezoomToCurrent(dl);
       rafId = requestAnimationFrame(dezoomRaf);
-      
+
       dezoomItems.forEach((el, i) => {
         if (i === heroIndex) {
           el.dataset.revealed = 'true';
           hideDezoomItemInfoInstant(el);
-          const img = el.querySelector('img');
+          const img = dezoomMask(el);
           if (img) img.style.clipPath = '';
           return;
         }
         delete el.dataset.revealed;
-        const img = el.querySelector('img');
+        const img = dezoomMask(el);
         if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
         hideDezoomItemInfoInstant(el);
       });
@@ -1015,7 +1096,7 @@ export function initProjetsPage(root: ParentNode = document) {
         el.dataset.revealed = 'true';
       });
     }
-    
+
     if (leavingView === 'dezoom') {
       isDezoomActive = false;
       cancelAnimationFrame(rafId);
@@ -1032,21 +1113,22 @@ export function initProjetsPage(root: ParentNode = document) {
       morphHero.style.width = `${fromRect.width}px`;
       morphHero.style.height = `${fromRect.height}px`;
       morphHero.hidden = false;
-      if (enteringImg) enteringImg.style.visibility = 'hidden';
+      if (enteringImg) setMainVisualHidden(enteringImg, true);
 
-      const anim = morphHero.animate(
-        [
-          { top: `${fromRect.top}px`, left: `${fromRect.left}px`, width: `${fromRect.width}px`, height: `${fromRect.height}px` },
-          { top: `${toRect.top}px`, left: `${toRect.left}px`, width: `${toRect.width}px`, height: `${toRect.height}px` },
-        ],
-        { duration: MORPH_DURATION, easing: MORPH_EASE, fill: 'forwards' }
-      );
-      morphDone = settle(anim);
+      const keyframes = [
+        { top: `${fromRect.top}px`, left: `${fromRect.left}px`, width: `${fromRect.width}px`, height: `${fromRect.height}px` },
+        { top: `${toRect.top}px`, left: `${toRect.left}px`, width: `${toRect.width}px`, height: `${toRect.height}px` },
+      ];
+      const options: KeyframeAnimationOptions = { duration: MORPH_DURATION, easing: MORPH_EASE, fill: 'forwards' };
+      morphDone = settle(morphHero.animate(keyframes, options));
+      if (flyingVideo && videoHost) {
+        morphDone = Promise.all([morphDone, settle(videoHost.animate(keyframes, options))]).then(() => {});
+      }
     }
 
     const leavingOthersDone = leavingView === 'dezoom' ? Promise.all(
       visibleSiblings.map((el) => {
-        const img = el.querySelector('img');
+        const img = dezoomMask(el);
         if (!img) return Promise.resolve();
         return animateAndSettle(img, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
           duration: MORPH_DURATION,
@@ -1059,42 +1141,30 @@ export function initProjetsPage(root: ParentNode = document) {
     ).then(() => {}) : Promise.resolve();
 
     await Promise.all([morphDone, leavingOthersDone]);
+    if (flyingVideo && enteringImg) landVideo(flyingVideo, enteringImg);
+    else if (flyingVideo) abortFlight();
 
     if (morphHero) {
       morphHero.hidden = true;
       morphHero.style.cssText = '';
     }
-    if (enteringImg) enteringImg.style.visibility = '';
-    
+    if (enteringImg) setMainVisualHidden(enteringImg, false);
+
     if (leavingView === 'dezoom') {
       panels.dezoom!.hidden = true;
       visibleSiblings.forEach((el) => {
-        const img = el.querySelector('img');
+        const img = dezoomMask(el);
         if (img) img.style.clipPath = '';
       });
     }
 
     if (next === 'carousel') {
-      await showCarouselInfo(heroIndex);
+      void showCarouselInfo(heroIndex);
     } else {
-      const othersDone = Promise.all([
-        ...visibleSiblings.map((el) => {
-          const img = el.querySelector('img');
-          if (!img) return Promise.resolve();
-          return animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
-            duration: MORPH_SIBLING_FADE_DURATION,
-            delay: DEZOOM_OTHERS_IMAGE_DELAY,
-            easing: MORPH_SIBLING_EASE,
-            fill: 'forwards',
-          }).then(() => {
-            img.style.clipPath = '';
-          });
-        }),
-        ...visibleSiblings.map((el) => showDezoomItemInfo(el, DEZOOM_OTHERS_IMAGE_DELAY + DEZOOM_OTHERS_TEXT_DELAY)),
-      ]);
-      
-      await showDezoomItemInfo(dezoomItems[heroIndex]);
-      await othersDone;
+      void showDezoomItemInfo(dezoomItems[heroIndex]);
+      visibleSiblings.forEach((el) =>
+        revealDezoomCard(el, DEZOOM_OTHERS_IMAGE_DELAY, DEZOOM_OTHERS_IMAGE_DELAY + DEZOOM_OTHERS_TEXT_DELAY)
+      );
     }
   }
 
@@ -1126,18 +1196,9 @@ export function initProjetsPage(root: ParentNode = document) {
     if (view === 'dezoom') {
       showDezoomItemInfo(dezoomItems[current]);
       visibleDezoomItems(current).forEach((el, i) => {
-        const img = el.querySelector<HTMLElement>('img');
-        if (img && el.dataset.deferredReveal === 'true') {
+        if (el.dataset.deferredReveal === 'true') {
           delete el.dataset.deferredReveal;
-          const delay = i * DEZOOM_OTHERS_IMAGE_DELAY;
-          animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
-            duration: MORPH_SIBLING_FADE_DURATION,
-            delay,
-            easing: MORPH_SIBLING_EASE,
-            fill: 'forwards',
-          }).then(() => {
-            img.style.clipPath = '';
-          });
+          openDezoomMask(el, i * DEZOOM_OTHERS_IMAGE_DELAY);
         }
         showDezoomItemInfo(el, DEZOOM_OTHERS_TEXT_DELAY);
       });
@@ -1145,13 +1206,13 @@ export function initProjetsPage(root: ParentNode = document) {
     }
     if (view === 'liste') {
       revealListeTitle(listeRows[current]);
-      
+
       const currentRow = listeRows[current];
       if (currentRow) {
         delete currentRow.dataset.morphLanding;
         const otherImages = getRowCache(currentRow).images.slice(1);
         otherImages.forEach((wrap, i) => {
-          revealListeImageCurtain(wrap, (i + 1) * LISTE_IMAGE_STAGGER); 
+          revealListeImageCurtain(wrap, (i + 1) * LISTE_IMAGE_STAGGER);
         });
       }
 
@@ -1197,7 +1258,7 @@ export function initProjetsPage(root: ParentNode = document) {
       await Promise.all([
         hideDezoomItemInfo(clickedItem, 0),
         ...siblings.map((el) => {
-          const img = el.querySelector<HTMLElement>('img');
+          const img = dezoomMask(el);
           const textDone = hideDezoomItemInfo(el, 0);
           if (!img) return textDone;
           const cropDone = animateAndSettle(img, [{ clipPath: DEZOOM_MASK_VISIBLE }, { clipPath: DEZOOM_CROP_CLOSED }], {
@@ -1262,25 +1323,14 @@ export function initProjetsPage(root: ParentNode = document) {
       dezoomItems.forEach((el) => {
         if (onScreen.includes(el)) el.dataset.revealed = 'true';
         else delete el.dataset.revealed;
-        const img = el.querySelector<HTMLElement>('img');
+        const img = dezoomMask(el);
         if (img) img.style.clipPath = DEZOOM_MASK_HIDDEN;
         hideDezoomItemInfoInstant(el);
       });
       afterSiteLoader().then(() => {
-        onScreen.forEach((el, i) => {
-          const img = el.querySelector<HTMLElement>('img');
-          if (img) {
-            animateAndSettle(img, [{ clipPath: DEZOOM_MASK_HIDDEN }, { clipPath: DEZOOM_MASK_VISIBLE }], {
-              duration: MORPH_SIBLING_FADE_DURATION,
-              delay: i * DEZOOM_OTHERS_IMAGE_DELAY,
-              easing: MORPH_SIBLING_EASE,
-              fill: 'forwards',
-            }).then(() => {
-              img.style.clipPath = '';
-            });
-          }
-          showDezoomItemInfo(el, i === 0 ? 0 : DEZOOM_OTHERS_TEXT_DELAY);
-        });
+        onScreen.forEach((el, i) =>
+          revealDezoomCard(el, i * DEZOOM_OTHERS_IMAGE_DELAY, i === 0 ? 0 : DEZOOM_OTHERS_TEXT_DELAY)
+        );
       });
       rafId = requestAnimationFrame(dezoomRaf);
     } else if (view === 'dezoom') {
@@ -1292,7 +1342,7 @@ export function initProjetsPage(root: ParentNode = document) {
       const deferredSiblings = deferCurrentInfo ? new Set(visibleDezoomItems(current)) : null;
       dezoomItems.forEach((el, i) => {
         el.dataset.revealed = 'true';
-        const img = el.querySelector('img');
+        const img = dezoomMask(el);
         if (i === current) {
           if (img) img.style.clipPath = '';
           if (deferCurrentInfo) hideCurrentInfoInstant();

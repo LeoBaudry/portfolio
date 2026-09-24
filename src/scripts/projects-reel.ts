@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { lenis } from './smooth-scroll';
+import { refreshMainVideos } from './main-video';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
@@ -103,6 +104,13 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     });
   }
   const projectEls = Array.from(section.querySelectorAll<HTMLElement>('.reel-project'));
+  // Projects are shown/hidden with autoAlpha (visibility), from several
+  // places incl. timelines - invisible to main-video.ts's
+  // IntersectionObserver. Any style change on a project re-checks which
+  // main-visual videos should play (GSAP only touches these on show/hide;
+  // the scrubbed bars are separate elements).
+  const videoVisibilityWatch = new MutationObserver(() => refreshMainVideos());
+  projectEls.forEach((el) => videoVisibilityWatch.observe(el, { attributes: true, attributeFilter: ['style'] }));
   const gridLinesContainer = section.querySelector<HTMLElement>('.reel-grid-lines');
   const counterCurrent = section.querySelector<HTMLElement>('.reel-counter-current');
   const cursor = section.querySelector<HTMLElement>('.reel-cursor');
@@ -521,6 +529,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
 
   return {
     destroy: () => {
+      videoVisibilityWatch.disconnect();
       window.removeEventListener('resize', handleResize);
       ScrollTrigger.removeEventListener('refreshInit', handleRefreshInit);
       ScrollTrigger.removeEventListener('refresh', handleRefresh);

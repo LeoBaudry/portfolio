@@ -14,8 +14,8 @@ Ordered so that each step only builds on finished ones. Items marked
    with sharp: adaptive transparent `favicon.svg` (ink / paper in dark mode),
    ink transparent `favicon.ico` (16+32), ink-tile + paper-logo
    apple-touch-icon + android-chrome 192/512, `site.webmanifest`, head links.
-0c. [x] **/projets: no opacity transitions between views.** Done 2026-09-24
-   (Leo to confirm in browser): fadePanel removed. Vue 1/2 <-> vue 3 now use
+0c. [x] **/projets: no opacity transitions between views.** Done 2026-09-24,
+   confirmed by Leo: fadePanel removed. Vue 1/2 <-> vue 3 now use
    vue 3's own technique: an ink `.view-curtain` per item animated with
    transform scaleY (origin flipped bottom/top), NOT clip-path (first try
    used clip-path on the images - laggy, repaints every frame). Leaving:
@@ -31,14 +31,51 @@ Ordered so that each step only builds on finished ones. Items marked
    the first image of vue 3 rows, and the [slug] hero. The mobile version is
    served when the screen is portrait (taller than wide); projects without one
    keep the desktop file everywhere.
-2. [ ] **NEXT: Videos in [slug] content.** `ProjectImage` becomes `ProjectMedia`:
-   one component, picks `<img>`/`<picture>` or `<video>` from the file
-   extension. Muted, looping, autoplay, played only while on screen, same mask
-   reveal as images. Outside every morph, so zero risk to transitions.
-3. [ ] **Video as main visual (optional, decide once 1-2 are done).** Morph
-   uses the video's poster frame, video starts once the clone lands. Vue 3
-   shows the poster only (too many small videos at once otherwise). Known
-   catch: going back, the video is mid-loop but the clone shows the poster.
+2. [x] **Videos in [slug] content.** Done 2026-09-24 (Leo to check in
+   browser). An `images` entry in projets.json can be a video: a path ending
+   in .mp4/.webm, or `{ "desktop": "...mp4", "mobile": "...mp4" }` (mobile
+   served when portrait, like `main`). Files go in `public/`.
+   `ProjectMedia.astro` renders ProjectImage or a muted/looping/playsinline
+   `<video preload="none">` whose box ratio is read from the MP4 header at
+   build time (no layout jump). project-page.ts loads it ahead of view,
+   reveals it with the same mask as images once it has a frame, plays it only
+   while on screen; reduced motion = first frame, no autoplay. Vue 3 thumbs
+   skip videos (thumbsOf in projets.astro). Test data: Aurore's first
+   content item = placeholder-video-1 (desktop) / -2 (mobile).
+   Later, if needed: playable/focusable videos with controls (Leo: "we'll
+   see").
+3. [~] **Video as main visual.** Built 2026-09-24, Leo testing. Test data:
+   Aurore's `main.video` (placeholder videos).
+   - Data: `main` gets an optional `video: { desktop, mobile? }`; its images
+     stay and are the poster (real posters = the video's FIRST FRAME, or the
+     poster -> video swap shows).
+   - `MainVisual.astro`: ProjectImage + `<video data-main-video>` layered
+     exactly over it, shown once it has a frame (`visibility: inherit`,
+     never `visible` - a visible child leaks through vue 1's / the reel's
+     hidden stacked items). Muted via the property too (the attribute alone
+     plays with sound after a client-side navigation).
+   - Playing (`main-video.ts`): "shown" is judged on the video's <img> (not
+     the video - hidden until its first frame; not the parent -
+     .morph-link is display:contents). Vue 1 / reel toggle visibility, so
+     projets-page.ts (carousel steps) and projects-reel.ts
+     (MutationObserver on project styles) call refreshMainVideos().
+   - Scroll freeze fix (measured: long frames, no script, as a video
+     (re)started): warmUpVideos() STARTS every shown video ~1.2s after a
+     page/view settles (one per idle period), and a warm video keeps
+     playing off screen while shown; paused only when hidden. Reverses
+     "pause when out of view" - pending Leo's verdict; revert = drop the
+     `warm` flag. Approach preloader (rootMargin 100%) kept as fallback.
+   - Reveals wait for the video's first frame (whenVideoReady, 1s cap):
+     vue 2 cards (openDezoomMask / revealDezoomCard), view curtains, vue 3
+     curtains. Not vue 1's wheel step.
+   - Morphs fly the <img> clone plus the PLAYING video itself: liftVideo
+     moves the real <video> (same task = not paused) into
+     #morph-video-host (Layout, transition:persist, z just above the
+     clone); landVideo drops it into the destination slot. Vue 1 <-> 2:
+     the entering view's copy is swapped into the leaving slot.
+   - Vue 2 clip-path masks are on `.dezoom-image` (not the img) so the
+     video is masked too. /projets view switches unlock once the new view
+     is in place; reveal tails play on in the background.
 
 ## Phase 2 — Site-wide structure
 
@@ -69,6 +106,15 @@ Ordered so that each step only builds on finished ones. Items marked
 11. [ ] Interactive footer (ASCII / dithered idea). Not a priority.
 
 ## Before launch — test once the site is finished and online
+
+- [ ] **Video stress test:** give EVERY project a main video (placeholders
+  are fine), rebuild (`npm run build` + `npm run preview`, not dev), check
+  scroll freezes, CPU/battery with many warm videos playing off screen
+  (main-video.ts warm-up), mobile. Decide then whether to keep "play off
+  screen once warm" or cap it.
+
+- [ ] **Delete placeholder videos** `public/placeholder-video-1.mp4` /
+  `-2.mp4` and remove/replace Aurore's `main.video` in projets.json.
 
 - [ ] **Favicons / icons.** Only testable for real on the deployed site
   (browsers cache icons hard - use a private window):

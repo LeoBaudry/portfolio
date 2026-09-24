@@ -1,0 +1,66 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import ProjectImage from './ProjectImage.astro';
+import { isVideo, mediaSources, videoType, type MediaEntry } from '../utils/media';
+
+// [slug] content media: an image (ProjectImage, unchanged) or a muted,
+// looping video. The video has no autoplay attribute and preload="none" -
+// project-page.ts loads it just ahead of view, reveals it with the same mask
+// as the images once it has a frame, and plays it only while on screen.
+
+interface Props {
+  entry: MediaEntry;
+  [key: `data-${string}`]: unknown;
+}
+
+const { entry, ...attrs } = Astro.props;
+const { desktop, mobile } = mediaSources(entry);
+
+// Video files live in public/ as-is (Astro doesn't process video). Their size
+// is read from the MP4 header at build time so the box is reserved before
+// anything loads - no jump when the video arrives.
+function videoRatio(src: string): string | undefined {
+  try {
+    const buf = fs.readFileSync(path.join(process.cwd(), 'public', src));
+    for (let i = buf.indexOf('tkhd'); i > 0; i = buf.indexOf('tkhd', i + 1)) {
+      const off = i + 4 + (buf[i + 4] === 1 ? 88 : 76);
+      const w = buf.readUInt32BE(off) / 65536;
+      const h = buf.readUInt32BE(off + 4) / 65536;
+      if (w > 0 && h > 0) return `${w} / ${h}`;
+    }
+  } catch {}
+  return undefined;
+}
+
+const video = isVideo(entry);
+const ratio = video ? videoRatio(desktop) : undefined;
+const mobileRatio = video && mobile ? videoRatio(mobile) : undefined;
+const style = [ratio && `--media-ratio: ${ratio}`, mobileRatio && `--media-ratio-mobile: ${mobileRatio}`]
+  .filter(Boolean)
+  .join('; ');
+---
+
+{
+  video ? (
+    <video class="project-video" muted loop playsinline preload="none" aria-hidden="true" style={style} {...attrs}>
+      {mobile && <source src={mobile} media="(max-aspect-ratio: 1/1)" type={videoType(mobile)} />}
+      <source src={desktop} type={videoType(desktop)} />
+    </video>
+  ) : (
+    <ProjectImage src={desktop} role="content" {...attrs} />
+  )
+}
+
+<style>
+  /* Same portrait rule as ProjectImage's <picture> source. */
+  .project-video {
+    aspect-ratio: var(--media-ratio, 16 / 9);
+  }
+
+  @media (max-aspect-ratio: 1/1) {
+    .project-video {
+      aspect-ratio: var(--media-ratio-mobile, var(--media-ratio, 16 / 9));
+    }
+  }
+</style>

@@ -8,7 +8,8 @@
     "description": "Identité visuelle pour un festival pluridisciplinaire.",
     "main": {
       "desktop": "/images/projects/aurore/1.jpg",
-      "mobile": "/images/projects/aurore/1-mobile.jpg"
+      "mobile": "/images/projects/aurore/1-mobile.jpg",
+      "video": { "desktop": "/placeholder-video-1.mp4", "mobile": "/placeholder-video-2.mp4" }
     },
     "images": [
       "/images/projects/aurore/2.jpg",

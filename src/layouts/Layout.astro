@@ -171,6 +171,10 @@ const LOADER_COLS = 5;
       transition:persist
       transition:animate="none"
     />
+    <!-- Carries a main-visual video that keeps playing through a morph
+         (main-video.ts liftVideo/landVideo), animated alongside the clone.
+         Persisted so the video survives the page swap. -->
+    <div id="morph-video-host" class="morph-video-host" transition:persist transition:animate="none"></div>
 
     <div id="transition-root" class="transition-root" transition:animate="none">
       <slot />
@@ -233,6 +237,14 @@ const LOADER_COLS = 5;
     position: fixed;
     z-index: 210;
     object-fit: cover;
+    pointer-events: none;
+  }
+
+  /* z-index set per flight: just above whichever clone it travels with. */
+  .morph-video-host {
+    display: none;
+    position: fixed;
+    overflow: hidden;
     pointer-events: none;
   }
 </style>

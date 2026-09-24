@@ -7,6 +7,7 @@ import { initProjectsReel } from './projects-reel';
 import { initFooterParallax } from './footer';
 import { initProjetsPage } from './projets-page';
 import { initProjectPage } from './project-page';
+import { initMainVideos } from './main-video';
 import { runSiteLoader } from './site-loader';
 
 // The browser applies its own scroll restoration on back/forward navigation
@@ -33,8 +34,9 @@ function initPage(): void {
   initFooterParallax();
   const projets = initProjetsPage();
   const projectPage = initProjectPage();
+  const mainVideos = initMainVideos();
 
-  teardown = [reel?.destroy, projets?.destroy, projectPage?.destroy].filter(
+  teardown = [reel?.destroy, projets?.destroy, projectPage?.destroy, mainVideos?.destroy].filter(
     (fn): fn is () => void => typeof fn === 'function'
   );
 }

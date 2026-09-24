@@ -1,0 +1,50 @@
+---
+import ProjectImage from './ProjectImage.astro';
+import { videoType } from '../utils/media';
+
+// A project's main visual (homepage reel, /projets vue 1/2/3, [slug] hero).
+// The image is always there and is what every morph measures and flies
+// (project-morph.ts, the vue 1 <-> 2 morph); when the project has a video,
+// it's layered exactly over the image (the image doubles as its poster -
+// ideally the video's first frame) and only shown once it's actually
+// playing - see main-video.ts. The parent must be positioned and sized to
+// the image.
+
+interface Props {
+  main: { desktop: string; mobile?: string; video?: { desktop: string; mobile?: string } };
+  class?: string;
+  [key: `data-${string}`]: unknown;
+}
+
+const { main, ...attrs } = Astro.props;
+const video = main.video;
+---
+
+<ProjectImage src={main.desktop} mobile={main.mobile} role="morph" {...attrs} />
+{
+  video && (
+    <video class="main-video" data-main-video muted loop playsinline preload="none" aria-hidden="true">
+      {video.mobile && <source src={video.mobile} media="(max-aspect-ratio: 1/1)" type={videoType(video.mobile)} />}
+      <source src={video.desktop} type={videoType(video.desktop)} />
+    </video>
+  )
+}
+
+<style>
+  .main-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  /* inherit, not visible: a visible child shows through a hidden parent -
+     vue 1 hides non-current projects with visibility:hidden, and a played
+     video there was showing under the current one (seen mid-morph). */
+  .main-video.has-frame {
+    visibility: inherit;
+  }
+</style>

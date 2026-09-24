@@ -1,4 +1,6 @@
 // project-page.ts
+import { startLoading as startVideoLoading } from './main-video';
+
 const REVEAL_DURATION = 650;
 const REVEAL_DELAY = 150;
 const REVEAL_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -7,8 +9,17 @@ const MASK_VISIBLE = 'inset(0 0 0 0)';
 
 // Chrome's native lazy-load never starts on an image fully hidden by its own
 // clip-path, so loading is triggered by hand (loading='eager') ahead of view.
-// Revealing before load would open the mask on an empty box, so wait for it.
+// Videos (ProjectMedia) are preload="none" for the same reason. Revealing
+// before load would open the mask on an empty box, so wait for it - for a
+// video, its first frame.
 function whenLoaded(el: HTMLElement): Promise<void> {
+  if (el instanceof HTMLVideoElement) {
+    if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return Promise.resolve();
+    return new Promise((resolve) => {
+      el.addEventListener('loadeddata', () => resolve(), { once: true });
+      el.addEventListener('error', () => resolve(), { once: true });
+    });
+  }
   if (!(el instanceof HTMLImageElement) || (el.complete && el.naturalWidth > 0)) return Promise.resolve();
   return new Promise((resolve) => {
     el.addEventListener('load', () => resolve(), { once: true });
@@ -18,6 +29,7 @@ function whenLoaded(el: HTMLElement): Promise<void> {
 
 function startLoading(el: HTMLElement): void {
   if (el instanceof HTMLImageElement) el.loading = 'eager';
+  if (el instanceof HTMLVideoElement) startVideoLoading(el);
 }
 
 function prefersReducedMotion(): boolean {
@@ -27,13 +39,33 @@ function prefersReducedMotion(): boolean {
 export function initProjectPage(root: ParentNode = document): { destroy: () => void } | undefined {
   const images = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal-image]'));
   if (images.length === 0) return undefined;
+  const videos = images.filter((el): el is HTMLVideoElement => el instanceof HTMLVideoElement);
+  // Muted via the property (see startLoading in main-video.ts) - the
+  // attribute alone plays WITH sound after a client-side navigation.
+  videos.forEach((video) => {
+    video.muted = true;
+  });
 
+  // Reduced motion: no mask reveal and no autoplay - videos just show their
+  // first frame.
   if (prefersReducedMotion()) {
     images.forEach((img) => {
       img.style.clipPath = '';
+      startLoading(img);
     });
     return undefined;
   }
+
+  // Muted loops play only while on screen (and the tab is visible - browsers
+  // already pause hidden tabs' video decoding).
+  const player = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const video = entry.target as HTMLVideoElement;
+      if (entry.isIntersecting) video.play().catch(() => {});
+      else video.pause();
+    });
+  });
+  videos.forEach((video) => player.observe(video));
 
   images.forEach((img) => {
     img.style.clipPath = MASK_HIDDEN;
@@ -86,6 +118,8 @@ export function initProjectPage(root: ParentNode = document): { destroy: () => v
     destroy: () => {
       preloader.disconnect();
       observer.disconnect();
+      player.disconnect();
+      videos.forEach((video) => video.pause());
     },
   };
 }

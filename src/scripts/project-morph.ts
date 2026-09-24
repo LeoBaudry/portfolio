@@ -2,11 +2,14 @@ import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { toggleScrollLock } from './page-transitions';
 import { lenis as pageLenis, resetPageScroll } from './smooth-scroll';
+import { abortFlight, flightHost, landVideo, liftVideo, setMainVisualHidden } from './main-video';
 
 gsap.registerPlugin(CustomEase);
 
 const MORPH_DURATION = 0.95;
 const MORPH_EASE = CustomEase.create('projectMorph', '0.76, 0, 0.24, 1');
+// The flying video's host sits just above the clone (z-index 210, Layout).
+const FLIGHT_Z = 211;
 
 const CHROME_HIDE_DURATION = 0.38;
 const CHROME_REVEAL_DURATION = 0.45;
@@ -91,11 +94,18 @@ export function initProjectMorph(): void {
 
   let backSlug: string | null = null;
   let inFlightTween: gsap.core.Tween | null = null;
+  // The main-visual video flying with the clone, if the source was playing one.
+  let flyingVideo: HTMLVideoElement | null = null;
+  // Clone + video host: always moved together (the host is just hidden when
+  // there's no video).
+  const flyers = [clone, flightHost()].filter((el): el is HTMLElement => el !== null);
 
   function resetToIdle(snapChromeVisible = false): void {
     inFlightTween?.kill();
     inFlightTween = null;
     gsap.set(clone, { display: 'none' });
+    flyingVideo = null;
+    abortFlight();
     toggleScrollLock(false);
     direction = null;
     backSlug = null;
@@ -149,7 +159,7 @@ export function initProjectMorph(): void {
       if (isForward && clickedItem) await (centerHook?.(clickedItem) ?? Promise.resolve());
 
       const rect = sourceImg.getBoundingClientRect();
-      gsap.set(clone, { top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+      gsap.set(flyers, { top: rect.top, left: rect.left, width: rect.width, height: rect.height });
 
       await cloneReady;
 
@@ -227,17 +237,21 @@ export function initProjectMorph(): void {
       await Promise.all([leaving, chromeLeaving]);
 
       gsap.set(clone, { display: 'block' });
-      sourceImg.style.visibility = 'hidden';
+      // A playing main-visual video keeps playing on top of the clone
+      // (main-video.ts) - lifted before hiding the image, so it isn't hidden
+      // with it.
+      flyingVideo = liftVideo(sourceImg, FLIGHT_Z);
+      setMainVisualHidden(sourceImg, true);
       await pageLoaded;
     };
   });
 
   function morphTo(targetImg: HTMLImageElement, onSettled?: () => void): void {
     const wasBackward = direction === 'backward';
-    targetImg.style.visibility = 'hidden';
+    setMainVisualHidden(targetImg, true);
     const toRect = targetImg.getBoundingClientRect();
 
-    inFlightTween = gsap.to(clone, {
+    inFlightTween = gsap.to(flyers, {
       top: toRect.top - 1,
       left: toRect.left,
       width: toRect.width,
@@ -245,7 +259,9 @@ export function initProjectMorph(): void {
       duration: MORPH_DURATION,
       ease: MORPH_EASE,
       onComplete: () => {
-        targetImg.style.visibility = '';
+        if (flyingVideo) landVideo(flyingVideo, targetImg);
+        flyingVideo = null;
+        setMainVisualHidden(targetImg, false);
         resetToIdle();
         onSettled?.();
         if (wasBackward) morphEvents.dispatchEvent(new Event(MORPH_SETTLED_EVENT));
@@ -270,9 +286,7 @@ export function initProjectMorph(): void {
         revealChromeEl(projectBackEl);
       });
     } else if (direction === 'backward' && backSlug) {
-      allCopiesOf(backSlug).forEach((img) => {
-        img.style.visibility = 'hidden';
-      });
+      allCopiesOf(backSlug).forEach((img) => setMainVisualHidden(img, true));
       snapChromeHidden(document.querySelector<HTMLElement>('.view-switcher-mask .view-switcher'));
     }
   });
@@ -285,7 +299,7 @@ export function initProjectMorph(): void {
 
     if (backSlug) {
       allCopiesOf(backSlug).forEach((img) => {
-        if (!img.closest(scope)) img.style.visibility = '';
+        if (!img.closest(scope)) setMainVisualHidden(img, false);
       });
     }
 

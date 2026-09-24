@@ -2,7 +2,9 @@
 import Layout from '../../layouts/Layout.astro';
 import RevealText from '../../components/RevealText.astro';
 import projects from '../../data/projets.json';
-import ProjectImage from '../../components/ProjectImage.astro';
+import ProjectMedia from '../../components/ProjectMedia.astro';
+import MainVisual from '../../components/MainVisual.astro';
+import type { MediaEntry } from '../../utils/media';
 
 export function getStaticPaths() {
   return projects.map((project) => ({
@@ -25,19 +27,13 @@ const { project } = Astro.props;
     </div>
 
     <header class="project-hero">
-      <ProjectImage
-        src={project.main.desktop}
-        mobile={project.main.mobile}
-        role="morph"
-        class="project-hero-image"
-        data-project-hero
-      />
+      <MainVisual main={project.main} class="project-hero-image" data-project-hero />
     </header>
 
     <div class="project-content">
-      {project.images.map((src: string) => (
+      {project.images.map((entry: MediaEntry) => (
         <div class="project-extra">
-          <ProjectImage src={src} role="content" data-reveal-image />
+          <ProjectMedia entry={entry} data-reveal-image />
         </div>
       ))}
     </div>
@@ -86,6 +82,7 @@ const { project } = Astro.props;
   }
 
   .project-hero {
+    position: relative;
     width: 100%;
     height: 100dvh;
     overflow: hidden;
@@ -109,7 +106,8 @@ const { project } = Astro.props;
     margin-bottom: 2rem;
   }
 
-  .project-extra img {
+  .project-extra :global(img),
+  .project-extra :global(video) {
     width: 100%;
     height: auto;
     display: block;

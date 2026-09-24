@@ -2,6 +2,12 @@
 import Layout from '../layouts/Layout.astro';
 import projects from '../data/projets.json';
 import ProjectImage from '../components/ProjectImage.astro';
+import MainVisual from '../components/MainVisual.astro';
+import { isVideo, type MediaEntry } from '../utils/media';
+
+// Vue 3 thumbs are images only - a project's videos play on its own page.
+const thumbsOf = (images: MediaEntry[]) =>
+  images.filter((m): m is string => typeof m === 'string' && !isVideo(m)).slice(0, 3);
 ---
 
 <Layout title="Projets — Portfolio">
@@ -17,7 +23,7 @@ import ProjectImage from '../components/ProjectImage.astro';
             data-meta={`${project.categorie} ${project.secteur} (${String(i + 1).padStart(2, '0')})`}
           >
             <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-              <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
+              <MainVisual main={project.main} />
             </a>
             <!-- Same ink curtain as vue 3's .liste-image-curtain, used when
                  switching to/from vue 3 (transform, not clip-path: perf). -->
@@ -55,7 +61,7 @@ import ProjectImage from '../components/ProjectImage.astro';
               <!-- Image + its curtain in one box, so the curtain matches the
                    image exactly (the card itself is shorter than its content). -->
               <div class="dezoom-image">
-                <ProjectImage src={project.main.desktop} mobile={project.main.mobile} role="morph" />
+                <MainVisual main={project.main} />
                 <div class="view-curtain" aria-hidden="true"></div>
               </div>
             </a>
@@ -75,10 +81,10 @@ import ProjectImage from '../components/ProjectImage.astro';
             </span>
           </div>
           <a href={`/projets/${project.slug}`} data-morph-source class="liste-images">
-            {[project.main.desktop, ...project.images.slice(0, 3)].map((src, j) => (
+            {[project.main.desktop, ...thumbsOf(project.images)].map((src, j) => (
               <div class="liste-image">
                 {j === 0 ? (
-                  <ProjectImage src={src} mobile={project.main.mobile} role="morph" />
+                  <MainVisual main={project.main} />
                 ) : (
                   <ProjectImage src={src} role="thumb" />
                 )}
