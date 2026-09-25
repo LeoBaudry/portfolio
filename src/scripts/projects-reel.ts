@@ -16,14 +16,6 @@ import {
 
 gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
 
-/**
- * A/B comparison flag from content.md §5. Flip this to compare the two
- * curtain-trigger behaviours for project-to-project transitions; only one
- * should ever be installed at a time. The initial hero->project0 reveal is
- * always a discrete, triggered animation (see settleCurtain below).
- */
-export const MODE_RIDEAU: 'A' | 'B' = 'A';
-
 const BAR_DURATION = 0.4;
 const BAR_STAGGER = 0.04;
 // Project text (category / title / year) and the counter: each line sinks
@@ -40,11 +32,10 @@ const INFO_OUT_EASE = CustomEase.create('reelInfoOut', bezier(INFO_HIDE_EASE));
 const INFO_IN_EASE = CustomEase.create('reelInfoIn', bezier(INFO_REVEAL_EASE));
 const VH_PER_INTERVAL = 1;
 const CURSOR_LAG = 0.15;
-const CURSOR_RADIUS = 18;
 const PARALLAX_PERCENT = 12;
 
 /**
- * Another A/B flag, same spirit as MODE_RIDEAU: how the hero recedes into
+ * A/B comparison flag (content.md §5): how the hero recedes into
  * the dark before the text/grid/curtain sequence. 'fade' is a plain
  * cross-fade to the ink overlay. 'blur-dark' additionally blurs and darkens
  * the hero image as the fade progresses, reading as it losing focus/depth
@@ -112,7 +103,13 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   // elsewhere on the site (content.md §4's original spec), not reveal-
   // text.ts's clip-path sweep - that one's a different, later technique
   // (see its own "FIX" comment) and unrelated to this.
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let introLines: HTMLElement[] = [];
+  // Last intro progress applied (updateIntro). autoSplit re-splits on every
+  // width change, and the fresh lines come in unmasked (yPercent 0) - left
+  // alone they sat in the middle of the screen until the next scroll
+  // update. Each split puts them straight back where the scroll says.
+  let introProgressNow = 0;
   if (introText) {
     SplitText.create(introText, {
       type: 'lines',
@@ -121,6 +118,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
       autoSplit: true,
       onSplit(self) {
         introLines = self.lines as HTMLElement[];
+        if (!reducedMotion) placeIntroLines(introProgressNow);
         introText.style.visibility = 'visible';
       },
     });
@@ -136,13 +134,13 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   const gridLinesContainer = section.querySelector<HTMLElement>('.reel-grid-lines');
   const counterCurrent = section.querySelector<HTMLElement>('.reel-counter-current');
   const cursor = section.querySelector<HTMLElement>('.reel-cursor');
-  const cursorProgressCircle = section.querySelector<SVGCircleElement>('.reel-cursor-progress');
+  const cursorPill = cursor?.querySelector<HTMLElement>('.reel-cursor-pill') ?? null;
+  const cursorFill = cursor?.querySelector<HTMLElement>('.reel-cursor-fill') ?? null;
+  const cursorTexts = Array.from(cursor?.querySelectorAll<HTMLElement>('.reel-cursor-text') ?? []);
   const counterEl = section.querySelector<HTMLElement>('.reel-counter');
 
   const n = projectEls.length;
   if (!sticky || n === 0) return undefined;
-
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function buildBars(projectEl: HTMLElement): HTMLElement[] {
     const container = projectEl.querySelector<HTMLElement>('.reel-bars');
@@ -211,65 +209,127 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   gsap.set(section.querySelectorAll('.reel-line'), { yPercent: INFO_LINE_HIDDEN });
   gsap.set(barsByProject[0], { scaleX: 1 });
   gsap.set(gridlines, { scaleY: 0 });
+  // Same hidden states the CSS starts them in, now owned by GSAP (y: 0 -
+  // otherwise the CSS translateY(110%) is read in as px and stays on top).
+  gsap.set(cursorTexts, { y: 0, yPercent: INFO_LINE_HIDDEN });
+  if (cursorPill) gsap.set(cursorPill, { scale: 0 });
   if (counterCurrent) counterCurrent.textContent = '1';
   if (counterEl) gsap.set(counterEl, { autoAlpha: 0 });
 
-  function buildTransition(fromIndex: number, toIndex: number): gsap.core.Timeline {
-    const fromBars = barsByProject[fromIndex];
-    const toBars = barsByProject[toIndex];
-    let tl!: gsap.core.Timeline;
-    tl = gsap.timeline({
-      paused: true,
-      onUpdate: () => showProject(tl.progress() < 0.5 ? fromIndex : toIndex),
-    })
-      .set(toBars, { scaleX: 1 })
-      .to(fromBars, { scaleX: 1, duration: BAR_DURATION, stagger: BAR_STAGGER, ease: 'power3.inOut' })
-      .to(toBars, { scaleX: 0, duration: BAR_DURATION, stagger: BAR_STAGGER, ease: 'power3.inOut' });
-    return tl;
+  function buildCurtainOpen(): gsap.core.Timeline {
+    return gsap.timeline({ paused: true }).to(barsByProject[0], {
+      scaleX: 0,
+      duration: BAR_DURATION,
+      stagger: BAR_STAGGER,
+      ease: 'power3.inOut',
+    });
   }
 
-  let transitions = Array.from({ length: n - 1 }, (_, i) => buildTransition(i, i + 1));
+  let curtainOpenTl = buildCurtainOpen();
 
-  const curtainOpenTl = gsap.timeline({ paused: true }).to(barsByProject[0], {
-    scaleX: 0,
-    duration: BAR_DURATION,
-    stagger: BAR_STAGGER,
-    ease: 'power3.inOut',
-  });
-
+  // Bars and grid lines are flex children - they follow the new size on
+  // their own. Only a column-count change (--cols breakpoints) rebuilds
+  // them. The curtain timeline is rebuilt with them: it holds project 0's
+  // bars, and one left on the old (removed) bars animated nothing, so
+  // project 0 lost its entry/leave curtain after a resize.
+  let builtCols = barsByProject[0].length;
   let resizeTimer: number;
   const handleResize = () => {
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => {
+      const cols = parseInt(getComputedStyle(sticky!).getPropertyValue('--cols'), 10) || 5;
+      if (cols === builtCols) return;
+      builtCols = cols;
+
       const openIndex = curtainTarget === 'open' ? displayedIndex : -1;
       barsByProject = projectEls.map(buildBars);
       if (openIndex >= 0) gsap.set(barsByProject[openIndex], { scaleX: 0 });
-      transitions = Array.from({ length: n - 1 }, (_, i) => buildTransition(i, i + 1));
+
+      // Same progress, direction and callbacks as the one it replaces, so a
+      // curtain caught mid-open/close finishes on the new bars.
+      const old = curtainOpenTl;
+      curtainOpenTl = buildCurtainOpen();
+      curtainOpenTl.progress(old.progress());
+      curtainOpenTl.eventCallback('onComplete', old.eventCallback('onComplete'));
+      curtainOpenTl.eventCallback('onReverseComplete', old.eventCallback('onReverseComplete'));
+      if (old.isActive()) {
+        if (old.reversed()) curtainOpenTl.reverse();
+        else curtainOpenTl.play();
+      }
+      old.kill();
 
       // Grid lines are only ever fully grown once the curtain has opened
-      // (they finish exactly as the intro ends) - same signal as openIndex
-      // above, reused here so a resize mid-reel doesn't reset them to 0.
+      // (they finish exactly as the intro ends); during the intro they
+      // follow the scroll, so re-apply it.
       gridlines = buildGridlines();
-      gsap.set(gridlines, { scaleY: curtainTarget === 'open' ? 1 : 0 });
+      if (curtainTarget === 'open') gsap.set(gridlines, { scaleY: 1 });
+      else if (pinTrigger && pinTrigger.progress < introFraction) updateIntro(pinTrigger.progress / introFraction);
+      else gsap.set(gridlines, { scaleY: 0 });
     }, 200);
   };
   window.addEventListener('resize', handleResize);
 
   let displayedIndex = 0;
   let transitioning = false;
-  // Tracks the ad-hoc close/open tweens settleModeA creates, so a fast
+  // Tracks the ad-hoc close/open tweens settleProject creates, so a fast
   // reverse crossing back below introFraction (handled a bit further down)
   // can kill whichever one is in flight - otherwise its onComplete still
   // fires after that reset and calls showProject again, resurrecting a
   // project the reset just hid.
-  let modeATweens: gsap.core.Tween[] = [];
+  let projectTweens: gsap.core.Tween[] = [];
   let curtainTarget: 'open' | 'closed' = 'closed';
   let pinTrigger: ScrollTrigger | undefined;
+  let indicatorShown = false;
+  // A project was clicked: the indicator is unwinding, scroll updates keep
+  // their hands off it.
+  let leaving = false;
 
-  function setRingProgress(p: number): void {
-    if (!cursorProgressCircle) return;
-    const circumference = 2 * Math.PI * CURSOR_RADIUS;
-    cursorProgressCircle.style.strokeDashoffset = String(circumference * (1 - clamp(p, 0, 1)));
+  // Progress to the next project, shown as the pill's fill.
+  let fillP = 0;
+  function setCursorFill(p: number): void {
+    fillP = clamp(p, 0, 1);
+    if (cursorFill) cursorFill.style.clipPath = `inset(0 ${(1 - fillP) * 100}% 0 0)`;
+  }
+
+  function setProgress(p: number): void {
+    if (!leaving) setCursorFill(p);
+  }
+
+  // In: the pill grows (from the pointer, or up from the bottom edge on
+  // touch) and its label rises. Out: the reverse, no opacity anywhere.
+  function setIndicatorShown(shown: boolean): Promise<void> {
+    if (shown === indicatorShown) return Promise.resolve();
+    indicatorShown = shown;
+    const pill = cursorPill ? [cursorPill] : [];
+    gsap.killTweensOf([...pill, ...cursorTexts]);
+    if (shown) {
+      gsap.to(pill, { scale: 1, duration: INFO_IN_DURATION, ease: INFO_IN_EASE });
+      gsap.to(cursorTexts, { yPercent: 0, duration: INFO_IN_DURATION, ease: INFO_IN_EASE, delay: 0.1 });
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      gsap
+        .timeline({ onComplete: resolve, onInterrupt: resolve })
+        .to(cursorTexts, { yPercent: INFO_LINE_HIDDEN, duration: INFO_OUT_DURATION, ease: INFO_OUT_EASE }, 0)
+        .to(pill, { scale: 0, duration: INFO_OUT_DURATION, ease: INFO_OUT_EASE }, INFO_OUT_DURATION * 0.5);
+    });
+  }
+
+  // Clicking a project: the fill unwinds back to empty, then the pill goes.
+  function unwindIndicator(): Promise<void> {
+    leaving = true;
+    const fill = { p: fillP };
+    const unwind = new Promise<void>((resolve) => {
+      gsap.to(fill, {
+        p: 0,
+        duration: 0.35,
+        ease: 'power2.inOut',
+        onUpdate: () => setCursorFill(fill.p),
+        onComplete: resolve,
+        onInterrupt: resolve,
+      });
+    });
+    return unwind.then(() => setIndicatorShown(false));
   }
 
   function infoLines(index: number): HTMLElement[] {
@@ -336,6 +396,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     saveProjetsState('carousel', index);
     gsap.set(gridlines, { transformOrigin: 'bottom' });
     await Promise.all([
+      unwindIndicator(),
       maskOut([...infoLines(index), ...(counterLine ? [counterLine] : [])]),
       new Promise<void>((resolve) => {
         gsap.to(gridlines, { scaleY: 0, duration: 0.5, stagger: 0.02, ease: 'power3.inOut', onComplete: resolve });
@@ -366,7 +427,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
           // introFraction on the very first update, before this animation
           // has had a chance to play - catch up to wherever the scroll
           // position actually is now that the bars are free again.
-          if (MODE_RIDEAU === 'A') settleModeA();
+          settleProject();
         })
         .play();
     } else {
@@ -391,7 +452,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   // or skipping the closed ones with no animation at all (tried next,
   // looked like a glitchy instant swap). If the scroll keeps moving during
   // the open phase too, another full cycle follows once it settles.
-  function settleModeA(): void {
+  function settleProject(): void {
     if (transitioning || !pinTrigger) return;
     const { targetIndex } = readProgress(remainingProgress(pinTrigger.progress));
     if (targetIndex === displayedIndex) return;
@@ -421,14 +482,14 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
           onComplete: () => {
             displayedIndex = toIndex;
             transitioning = false;
-            modeATweens = [];
-            settleModeA();
+            projectTweens = [];
+            settleProject();
           },
         });
-        modeATweens.push(openTween);
+        projectTweens.push(openTween);
       },
     });
-    modeATweens.push(closeTween);
+    projectTweens.push(closeTween);
   }
 
   function readProgress(rawProgress: number) {
@@ -467,6 +528,19 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     if (heroFade) gsap.set(heroFade, { opacity: heroP });
     if (scrollHint) gsap.set(scrollHint, { opacity: 1 - heroP });
 
+    placeIntroLines(introProgress);
+
+    const gridP = localProgress(introProgress, PHASE_GRID_START, 1);
+    const lineWindow = 1 - GRID_STAGGER_FRACTION;
+    gridlines.forEach((line, i) => {
+      const lineStart = gridlines.length > 1 ? (i / (gridlines.length - 1)) * GRID_STAGGER_FRACTION : 0;
+      const lineProgress = localProgress(gridP, lineStart, lineStart + lineWindow);
+      gsap.set(line, { scaleY: lineProgress });
+    });
+  }
+
+  function placeIntroLines(introProgress: number): void {
+    introProgressNow = introProgress;
     const textInP = localProgress(introProgress, PHASE_TEXT_START, PHASE_TEXT_END);
     const textOutP = localProgress(introProgress, PHASE_TEXT_EXIT_START, PHASE_TEXT_EXIT_END);
     // The mask (each line's auto-generated overflow:clip wrapper, see the
@@ -490,14 +564,6 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
         gsap.set(line, { yPercent: (1 - lineReveal) * 100 });
       });
     }
-
-    const gridP = localProgress(introProgress, PHASE_GRID_START, 1);
-    const lineWindow = 1 - GRID_STAGGER_FRACTION;
-    gridlines.forEach((line, i) => {
-      const lineStart = gridlines.length > 1 ? (i / (gridlines.length - 1)) * GRID_STAGGER_FRACTION : 0;
-      const lineProgress = localProgress(gridP, lineStart, lineStart + lineWindow);
-      gsap.set(line, { scaleY: lineProgress });
-    });
   }
 
   pinTrigger = ScrollTrigger.create({
@@ -507,13 +573,13 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     pin: sticky,
     pinSpacing: true,
     onUpdate(self) {
-      cursor?.classList.toggle('is-active', self.isActive && self.progress >= introFraction);
+      if (!leaving) void setIndicatorShown(self.isActive && self.progress >= introFraction);
 
       if (self.progress < introFraction) {
         updateIntro(self.progress / introFraction);
 
         // A very fast scroll can cross back below introFraction in a single
-        // tick, skipping the step-by-step chain (settleModeA calling itself
+        // tick, skipping the step-by-step chain (settleProject calling itself
         // on each transition's completion) that would normally walk
         // displayedIndex back down to 0 first. settleCurtain only ever
         // touches project 0 specifically, so without this, whichever
@@ -521,10 +587,8 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
         // hide and stays stuck on top of everything. Hard-reset instead of
         // trying to reconstruct the skipped steps.
         if (displayedIndex !== 0 || transitioning) {
-          transitions.forEach((tl) => tl.kill());
-          transitions = Array.from({ length: n - 1 }, (_, i) => buildTransition(i, i + 1));
-          modeATweens.forEach((t) => t.kill());
-          modeATweens = [];
+          projectTweens.forEach((t) => t.kill());
+          projectTweens = [];
           curtainOpenTl.pause(0);
           curtainTarget = 'closed';
           gsap.set(projectEls, { autoAlpha: 0 });
@@ -542,7 +606,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
         }
 
         settleCurtain(false);
-        setRingProgress(0);
+        setProgress(0);
         return;
       }
 
@@ -557,21 +621,22 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
       // animation off. It catches up on its own via settleCurtain's own
       // onComplete once the bars are free again.
       if (curtainOpenTl.progress() < 1) {
-        setRingProgress(0);
+        setProgress(0);
         return;
       }
 
-      const { floatIndex, intervalProgress } = readProgress(remainingProgress(self.progress));
-      setRingProgress(intervalProgress);
-
-      if (MODE_RIDEAU === 'B') {
-        transitions.forEach((tl, i) => tl.progress(clamp(floatIndex - i, 0, 1)));
-      } else {
-        settleModeA();
-      }
+      const { targetIndex, intervalProgress } = readProgress(remainingProgress(self.progress));
+      // No next project after the last: its fill runs over the hold instead
+      // (the scroll left before the section lets go), not straight to full.
+      setProgress(targetIndex >= n - 1 ? localProgress(self.progress, contentFraction, 1) : intervalProgress);
+      settleProject();
     },
-    onLeave: () => cursor?.classList.remove('is-active'),
-    onLeaveBack: () => cursor?.classList.remove('is-active'),
+    onLeave: () => {
+      if (!leaving) void setIndicatorShown(false);
+    },
+    onLeaveBack: () => {
+      if (!leaving) void setIndicatorShown(false);
+    },
   });
 
   // The pin's scroll length is innerHeight * totalVH px, so any viewport
@@ -594,18 +659,23 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   ScrollTrigger.addEventListener('refreshInit', handleRefreshInit);
   ScrollTrigger.addEventListener('refresh', handleRefresh);
 
-  // Pointer-following progress indicator, with a slight lag; fixed placement
-  // when there is no fine pointer (touch/mobile).
-  const hasFinePointer = window.matchMedia('(pointer: fine)').matches;
+  // Pointer-following "Voir le projet" pill, with a slight lag. No fine
+  // pointer (touch): the pill stays put at the bottom centre (CSS). Checked
+  // live, not once at init: the pointer type can change mid-session (device
+  // emulation, a tablet with a mouse plugged in) - read once, a pill set up
+  // on touch never started following, stuck top left on switching to a mouse.
+  const finePointer = window.matchMedia('(pointer: fine)');
 
   let handleMouseMove: ((event: MouseEvent) => void) | undefined;
   let updateCursor: ((time?: number, deltaMs?: number) => void) | undefined;
 
-  if (cursor && hasFinePointer) {
-    let mouseX = 0;
-    let mouseY = 0;
-    let curX = 0;
-    let curY = 0;
+  if (cursor) {
+    // Screen centre until the pointer first moves, not the top-left corner.
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    let curX = mouseX;
+    let curY = mouseY;
+    let following = false;
 
     handleMouseMove = (event: MouseEvent) => {
       mouseX = event.clientX;
@@ -616,14 +686,28 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     // CURSOR_LAG is the share of the gap closed per 60Hz frame; scaled by
     // the real frame time so the lag feels the same at 120Hz (or 30).
     updateCursor = (_time?: number, deltaMs = 1000 / 60) => {
+      if (!finePointer.matches) {
+        // Touch layout: CSS places it; an inline translate left over from
+        // following would stack on top of that.
+        if (following) {
+          following = false;
+          cursor.style.transform = '';
+        }
+        return;
+      }
+      if (!following) {
+        // Switching (back) to a mouse: start from where the pointer is, no
+        // glide across the screen from wherever it was last.
+        following = true;
+        curX = mouseX;
+        curY = mouseY;
+      }
       const k = 1 - Math.pow(1 - CURSOR_LAG, deltaMs / (1000 / 60));
       curX += (mouseX - curX) * k;
       curY += (mouseY - curY) * k;
       cursor.style.transform = `translate(${curX}px, ${curY}px)`;
     };
     gsap.ticker.add(updateCursor);
-  } else if (cursor) {
-    cursor.classList.add('is-fixed-position');
   }
 
   return {
@@ -636,9 +720,8 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
       if (handleMouseMove) window.removeEventListener('mousemove', handleMouseMove);
       if (updateCursor) gsap.ticker.remove(updateCursor);
       pinTrigger?.kill();
-      transitions.forEach((tl) => tl.kill());
       curtainOpenTl.kill();
-      modeATweens.forEach((t) => t.kill());
+      projectTweens.forEach((t) => t.kill());
     },
   };
 }

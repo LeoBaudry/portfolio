@@ -15,7 +15,6 @@ import {
   liftVideo,
   refreshMainVideos,
   setMainVisualHidden,
-  warmUpVideos,
 } from './main-video';
 import { type ViewMode, consumeIsReload, readProjetsState, saveProjetsState } from './projets/state';
 import {
@@ -126,8 +125,6 @@ export function initProjetsPage(root: ParentNode = document) {
     const transition = isCarouselDezoomMorph ? morphBetweenCarouselAndDezoom(next) : transitionListe(next);
     transition.finally(() => {
       switching = false;
-      // The new view's videos, started while it's still (main-video.ts).
-      warmUpVideos();
     });
   }
 

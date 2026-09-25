@@ -13,17 +13,35 @@ import { videoType } from '../utils/media';
 interface Props {
   main: { desktop: string; mobile?: string; video?: { desktop: string; mobile?: string } };
   class?: string;
+  // false: on touch devices (no mouse) the video is never downloaded and the
+  // image stays - the listings (homepage reel, /projets vues 1-3), too heavy
+  // on mobile data. The [slug] hero keeps its video everywhere.
+  mobileVideo?: boolean;
+  // false: image only, everywhere (/projets vue 3 - a whole screen of rows,
+  // the one place videos lagged). The image is the video's first frame, so
+  // a morph to/from [slug] still reads as the same picture.
+  withVideo?: boolean;
   [key: `data-${string}`]: unknown;
 }
 
-const { main, ...attrs } = Astro.props;
-const video = main.video;
+const { main, mobileVideo = true, withVideo = true, ...attrs } = Astro.props;
+const video = withVideo ? main.video : undefined;
 ---
 
 <ProjectImage src={main.desktop} mobile={main.mobile} role="morph" {...attrs} />
 {
   video && (
-    <video class="main-video" data-main-video data-loop-video muted loop playsinline preload="none" aria-hidden="true">
+    <video
+      class="main-video"
+      data-main-video
+      data-loop-video
+      data-desktop-only={mobileVideo ? undefined : ''}
+      muted
+      loop
+      playsinline
+      preload="none"
+      aria-hidden="true"
+    >
       {video.mobile && <source src={video.mobile} media="(max-aspect-ratio: 1/1)" type={videoType(video.mobile)} />}
       <source src={video.desktop} type={videoType(video.desktop)} />
     </video>

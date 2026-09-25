@@ -23,7 +23,7 @@ const thumbsOf = (images: MediaEntry[]) =>
             data-meta={`${project.categorie} ${project.secteur} (${String(i + 1).padStart(2, '0')})`}
           >
             <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-              <MainVisual main={project.main} />
+              <MainVisual main={project.main} mobileVideo={false} />
             </a>
             <!-- Same ink curtain as vue 3's .liste-image-curtain, used when
                  switching to/from vue 3 (transform, not clip-path: perf). -->
@@ -45,7 +45,7 @@ const thumbsOf = (images: MediaEntry[]) =>
     </section>
 
     <!-- Vue 2: carrousel dézoomé, plusieurs projets visibles à la fois. -->
-    <section class="view-dezoom" hidden>
+    <section class="view-dezoom" data-video-play="current" hidden>
       <div class="dezoom-track">
         {projects.map((project, i) => (
           <div class="dezoom-item">
@@ -61,7 +61,7 @@ const thumbsOf = (images: MediaEntry[]) =>
               <!-- Image + its curtain in one box, so the curtain matches the
                    image exactly (the card itself is shorter than its content). -->
               <div class="dezoom-image">
-                <MainVisual main={project.main} />
+                <MainVisual main={project.main} mobileVideo={false} />
                 <div class="view-curtain" aria-hidden="true"></div>
               </div>
             </a>
@@ -71,7 +71,7 @@ const thumbsOf = (images: MediaEntry[]) =>
     </section>
 
     <!-- Vue 3: liste, une ligne par projet, défilement vertical normal. -->
-    <section class="view-liste" hidden>
+    <section class="view-liste" data-video-play="current" hidden>
       {projects.map((project, i) => (
         <div class="liste-row">
           <div class="item-info">
@@ -84,7 +84,7 @@ const thumbsOf = (images: MediaEntry[]) =>
             {[project.main.desktop, ...thumbsOf(project.images)].map((src, j) => (
               <div class="liste-image">
                 {j === 0 ? (
-                  <MainVisual main={project.main} />
+                  <MainVisual main={project.main} withVideo={false} />
                 ) : (
                   <ProjectImage src={src} role="thumb" />
                 )}

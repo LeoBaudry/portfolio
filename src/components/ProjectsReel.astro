@@ -29,7 +29,7 @@ const featured = projects.slice(0, 5);
     {featured.map((project, i) => (
       <div class="reel-project" data-index={i}>
         <a href={`/projets/${project.slug}`} data-morph-source class="morph-link">
-          <MainVisual main={project.main} class="reel-image" />
+          <MainVisual main={project.main} class="reel-image" mobileVideo={false} />
         </a>
         <div class="reel-overlay" aria-hidden="true"></div>
         <div class="reel-bars" aria-hidden="true"></div>
@@ -51,18 +51,17 @@ const featured = projects.slice(0, 5);
     </div>
   </div>
 
+  <!-- Follows the pointer; on touch (no pointer) it sits fixed at the bottom
+       centre instead. The fill layer is a copy of the label in inverted
+       colours, uncovered left to right as the scroll moves on to the next
+       project - projects-reel.ts setProgress. -->
   <div class="reel-cursor" aria-hidden="true">
-    <svg viewBox="0 0 40 40" class="reel-cursor-ring">
-      <circle cx="20" cy="20" r="18" class="reel-cursor-track" />
-      <circle
-        cx="20"
-        cy="20"
-        r="18"
-        class="reel-cursor-progress"
-        stroke-dasharray="113.097"
-        stroke-dashoffset="113.097"
-      />
-    </svg>
+    <div class="reel-cursor-pill font-mono">
+      <span class="reel-cursor-mask"><span class="reel-cursor-text">Voir le projet</span></span>
+      <span class="reel-cursor-fill">
+        <span class="reel-cursor-mask"><span class="reel-cursor-text">Voir le projet</span></span>
+      </span>
+    </div>
   </div>
 </section>
 
@@ -264,20 +263,55 @@ const featured = projects.slice(0, 5);
     will-change: transform;
   }
 
+  /* Project text on the reel's grid: one element per column (--cols, the
+     same columns as the grid lines), each starting just right of its line.
+     Vertically centred on the screen at every size.
+     Wide: category | title | year | - | counter, one row.
+     2-3 columns: no room for a row - the project stacks in column 1, the
+     counter keeps the last column. */
+  .reel-sticky {
+    --col-pad: 1.25rem;
+    --reel-title-size: clamp(2.25rem, 3.6vw, 4rem);
+    --reel-small-size: 0.95rem;
+    /* The row's bottom edge, placing the title's line box (line-height
+       1.1) exactly on the middle of the screen - a bottom rather than a
+       translate(-50%) so the counter below can share the same baseline. */
+    --row-bottom: calc(50% - 0.55 * var(--reel-title-size));
+  }
+
   .reel-info {
     position: absolute;
-    left: 1.5rem;
-    bottom: 1.5rem;
+    left: 0;
+    right: 0;
+    bottom: var(--row-bottom);
     z-index: 6;
     color: var(--color-paper);
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    align-items: last baseline;
+  }
+
+  /* Sized to their text, not to the column - a title wider than its
+     column runs on over the next one instead of its mask clipping it. */
+  .reel-info > * {
+    justify-self: start;
+    padding-left: var(--col-pad);
+    white-space: nowrap;
+  }
+
+  .reel-category {
+    grid-column: 1;
   }
 
   .reel-title {
-    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    grid-column: 2;
+    font-size: var(--reel-title-size);
+    line-height: 1.1;
     margin: 0;
+  }
+
+  .reel-year {
+    grid-column: 3;
   }
 
   /* The masks: fixed boundaries the .reel-line inside sinks under / rises
@@ -294,65 +328,122 @@ const featured = projects.slice(0, 5);
 
   .reel-category,
   .reel-year {
-    font-size: 0.8rem;
+    font-size: var(--reel-small-size);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     opacity: 0.8;
   }
 
+  /* Last column. Not in .reel-info's grid (one counter for all projects),
+     so its baseline is lined up by hand with the row's: the title's box
+     reaches ~0.25em of its own size below the baseline, a small line's
+     ~0.3em of its own. */
   .reel-counter {
     position: absolute;
-    right: 1.5rem;
-    bottom: 1.5rem;
+    left: calc(100% / var(--cols) * (var(--cols) - 1));
+    bottom: calc(var(--row-bottom) + 0.25 * var(--reel-title-size) - 0.3em);
+    padding-left: var(--col-pad);
     z-index: 6;
     overflow: hidden;
     color: var(--color-paper);
-    font-size: 0.8rem;
+    font-size: var(--reel-small-size);
     letter-spacing: 0.06em;
   }
 
+  @media (max-width: 900px) {
+    .reel-sticky {
+      --reel-title-size: clamp(1.75rem, 7vw, 2.75rem);
+      --reel-small-size: 0.8rem;
+    }
+
+    /* The stack and the counter each centred on the middle. */
+    .reel-info {
+      right: auto;
+      bottom: auto;
+      top: 50%;
+      translate: 0 -50%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.4rem;
+    }
+
+    .reel-counter {
+      bottom: auto;
+      top: 50%;
+      translate: 0 -50%;
+    }
+  }
+
+  /* Positioned by projects-reel.ts (translate to the lagged pointer); the
+     pill sits just below-right of the pointer, never under it. Shown /
+     hidden only by transform (pill scale + text masks), no opacity. */
   .reel-cursor {
     position: fixed;
     top: 0;
     left: 0;
-    width: 40px;
-    height: 40px;
-    margin: -20px 0 0 -20px;
     pointer-events: none;
     z-index: 10;
-    opacity: 0;
-    transition: opacity 0.2s ease;
   }
 
-  .reel-cursor.is-active {
-    opacity: 1;
+  .reel-cursor-pill {
+    position: relative;
+    display: block;
+    margin: 14px 0 0 14px;
+    padding: 0.95em 1.6em;
+    border-radius: 5px;
+    overflow: hidden;
+    /* Frosted: see-through with a light blur of what's behind. */
+    background: color-mix(in srgb, var(--color-ink) 45%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: var(--color-paper);
+    font-size: 0.7rem;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: scale(0);
+    transform-origin: top left;
   }
 
-  .reel-cursor.is-fixed-position {
-    top: auto;
-    left: auto;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    margin: 0;
-    transform: none !important;
+  /* Inverted copy on top, uncovered left to right. clip-path on purpose:
+     a pill-sized box repaints nothing worth measuring (unlike the images,
+     where it lagged), and the two labels have to line up exactly. */
+  .reel-cursor-fill {
+    position: absolute;
+    inset: 0;
+    padding: inherit;
+    background: color-mix(in srgb, var(--color-paper) 85%, transparent);
+    color: var(--color-ink);
+    clip-path: inset(0 100% 0 0);
   }
 
-  .reel-cursor-ring {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
+  .reel-cursor-mask {
+    display: block;
+    overflow: hidden;
+    /* Room for descenders inside the mask at line-height 1. */
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
   }
 
-  .reel-cursor-track {
-    fill: none;
-    stroke: color-mix(in srgb, var(--color-paper) 30%, transparent);
-    stroke-width: 2;
+  .reel-cursor-text {
+    display: block;
+    transform: translateY(110%);
   }
 
-  .reel-cursor-progress {
-    fill: none;
-    stroke: var(--color-paper);
-    stroke-width: 2;
-    stroke-linecap: round;
+  /* Touch: no pointer to follow - the pill takes the bottom centre. */
+  @media not all and (pointer: fine) {
+    .reel-cursor {
+      top: auto;
+      left: 50%;
+      bottom: 1.5rem;
+      translate: -50% 0;
+    }
+
+    .reel-cursor-pill {
+      margin: 0;
+      transform-origin: center bottom;
+    }
   }
 </style>

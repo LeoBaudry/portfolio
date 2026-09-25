@@ -13,6 +13,15 @@ if (!prefersReducedMotion) {
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((time) => lenis!.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
+  // Lenis re-measures the page on its own debounced timer (250ms after a
+  // resize), ScrollTrigger rebuilds pin spacing on another (200ms, on the
+  // ticker). Whenever Lenis measured first, its scroll limit was the old
+  // page height and it stopped scrolling there - on the homepage, partway
+  // through the reel after a window resize. Re-measure right after every
+  // refresh instead. Registered here, at module load, so it runs before
+  // any page's own 'refresh' listener that scrolls (projects-reel.ts keeps
+  // its progress with a scrollTo, which clamps to this limit).
+  ScrollTrigger.addEventListener('refresh', () => lenis!.resize());
 }
 
 // A raw `window.scrollTo(0, 0)` moves the actual scroll position but not

@@ -30,13 +30,74 @@ C. **Reel cursor on mobile.** No cursor there, so it's pinned bottom-right
    clearly on touch: e.g. merge it with the counter (ring around it, or a
    progress line under "1 / 5"), or move it (bottom-centre / top-right). Plus
    the same animate-out on click as B.
-D. **Remove reel mode B** (Leo, 2026-09-24: "we'll remove B later on").
-   `MODE_RIDEAU` in projects-reel.ts: A = triggered bar transitions (used,
-   and everything recent - text masks, click exit, videos - is built on it),
-   B = scroll-scrubbed bars (unused). Delete the flag, `buildTransition`,
-   the `transitions` array and the B branches in the scroll handler/reset
-   (~50 lines). Leave the separate hero-recede A/B flag (~line 47) alone
-   unless Leo decides on it too.
+D. [x] **Remove reel mode B.** Done 2026-09-25: MODE_RIDEAU, buildTransition
+   and the `transitions` array gone; settleModeA -> settleProject. The
+   hero-recede A/B flag stays.
+A. -> Decided 2026-09-25: keep the real links (URL bubble stays).
+I. [x] **Mobile = images only in the listings** (Leo, 2026-09-25: slow 4G
+   took ~2s per video even after re-encoding). MainVisual mobileVideo=
+   {false} (homepage reel, /projets vues 1-3) -> data-desktop-only; on a
+   touch device (not pointer:fine, checked live) main-video.ts treats it
+   as no video (isSkipped): never loaded/played, whenVideoReady immediate.
+   [slug] keeps its videos. A [slug] video flown back into a listing takes
+   the slot's flag (landVideo) and stops there. Placeholders re-encoded
+   2026-09-25: no audio, crf 28, faststart (-22% total).
+J. [x] **Vue 3 = images only, all devices** (Leo, 2026-09-25: vue 3 was
+   the only real lag). MainVisual withVideo={false} there - no <video> at
+   all; its first image = the video's first frame (real posters), so the
+   morph to [slug] reads as the same picture. [slug] -> vue 3 (and -> any
+   listing on mobile): the flying video lands, plays on to the END of its
+   loop, then settles into the image = its first frame (landVideo /
+   settle; data-finishing, loop=false, 'ended'). Settles early if scrolled
+   away / its project hidden. Replaced the "frozen frame" (Leo: odd, a
+   different picture from the other projects). Rejected: cut to image at
+   takeoff, fast-forward to the end. Forward to [slug]: video starts once
+   landed (not mid-flight - decoder start would stutter the morph). Mobile images-only rule for homepage /
+   vues 1-2 (item I) unchanged.
+G. [~] **Vue 2/3 lag with videos.** 2026-09-25 final rule (Leo): vue 2/3
+   panels are data-video-play="current" - only the current project's video
+   plays (nearest the middle; the line slides to the top/bottom edge at the
+   page ends so vue 3's first/last rows get a turn), mouse and touch alike.
+   Switches live as you scroll. The entering view's current video is
+   started behind its mask (whenVideoReady). Tried and dropped: hover-to-
+   play, and switching only once the scroll settled (Leo: worse). Homepage reel /
+   vue 1 unchanged (only the current project shows). Before that: max 3 playing (nearest centre), in-viewport only,
+   decoder start behind masks. Next steps: measure with the LoAF snippet
+   while scrolling vue 3 (is it the videos at all?); test with real exports
+   (no audio track - the placeholders have one); try MAX_PLAYING = 1-2.
+H. [ ] **Poster flash on return** (Leo, 2026-09-25): coming back from
+   [slug] or switching views, project 1's poster image sometimes shows
+   briefly before its video. Cause: the video layer only appears once it
+   has a frame; until then the poster shows, and the placeholder posters
+   are unrelated pictures, not the videos' first frames. It happens when
+   the video didn't fly with the morph (liftVideo skips a paused video,
+   e.g. [slug] scrolled down so the hero video was paused) or the new
+   page's video element hasn't decoded yet. Real posters (first frame,
+   docs/video-export.md) make that swap invisible - confirm then.
+   2026-09-25: main cause fixed - liftVideo now flies a PAUSED video too
+   (on its paused frame; data-flying="paused"|"playing", the after-swap
+   safety net only resumes "playing"). Reproduced by Leo: project 4,
+   scroll to bottom, back -> poster flew instead of the video.
+B/C. [~] Built 2026-09-25, Leo to judge the look. Desktop: ring replaced by
+   a "Voir le projet" pill following the pointer, inverted fill uncovered
+   left to right with the scroll (clip-path on the pill - tiny box), pill
+   scales in/out + label mask, fill unwinds on click (unwindIndicator in
+   the morph leave hook). Pill: 2px radius, roomy padding. Touch: segments
+   at the top were tried and dropped (clashed with the grid lines); the
+   same pill sits fixed bottom-centre instead, project text + counter
+   moved to the vertical middle (text stacked left, counter right).
+   Leo's other idea, if the counter ever goes: a column of small bars on
+   the right, one per project, the current one longer.
+F. [~] **Reel resize broke project 1's curtain** (fixed 2026-09-25): the
+   resize handler rebuilt the bars but curtainOpenTl kept the old ones. Now
+   rebuilt only on a --cols change, curtain timeline rebuilt with them.
+E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
+   showed mid-screen after a resize - SplitText autoSplit re-creates the
+   lines unmasked; onSplit now re-places them (placeIntroLines). (2) scroll
+   stopped mid-intro after a resize - likely Lenis's limit measured before
+   ScrollTrigger rebuilt the pin spacing; smooth-scroll.ts now calls
+   lenis.resize() on every ScrollTrigger 'refresh'. Not reproduced live
+   (test tab was hidden), so confirm by resizing mid-reel.
 
 ## Phase 1 — Media foundation (no design input needed)
 
@@ -95,7 +156,18 @@ D. **Remove reel mode B** (Leo, 2026-09-24: "we'll remove B later on").
      .morph-link is display:contents). Vue 1 / reel toggle visibility, so
      projets-page.ts (carousel steps) and projects-reel.ts
      (MutationObserver on project styles) call refreshMainVideos().
-   - Scroll freeze fix (measured: long frames, no script, as a video
+   - 2026-09-25: warm-up / off-screen playback REMOVED (Leo: never play
+     off screen). Now: play only while shown AND in the viewport, capped
+     at MAX_PLAYING = 3 (nearest the viewport centre), else paused; a
+     reveal beyond the cap only loads the first frame (vue 3 lagged with
+     every on-screen row playing). whenVideoReady starts the video and waits for
+     its first presented frame (requestVideoFrameCallback) behind the still-
+     closed mask, so the decoder start-up is hidden. Every project now has
+     a placeholder main video (stress test). Placeholders carry an audio
+     track - real exports must use -an (docs/video-export.md). Not covered
+     by whenVideoReady: vue 1 wheel steps and the homepage reel's
+     project changes (video starts as the curtain opens).
+   - (Superseded) Scroll freeze fix (measured: long frames, no script, as a video
      (re)started): warmUpVideos() STARTS every shown video ~1.2s after a
      page/view settles (one per idle period), and a warm video keeps
      playing off screen while shown; paused only when hidden. Reverses
