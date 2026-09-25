@@ -408,6 +408,10 @@ export function liftVideo(img: HTMLElement, zIndex: number, swapFrom?: HTMLEleme
   host.style.display = 'block';
   const replacement = swapFrom ? videoFor(swapFrom) : null;
   if (replacement) {
+    // The slot it lands in is swapFrom's, now empty but still a video slot:
+    // landVideo must not take it for an image-only one (it would play one
+    // last loop there, then remove itself for good).
+    video.dataset.swapped = 'true';
     forget(replacement);
     replacement.pause();
     video.replaceWith(replacement);
@@ -436,10 +440,17 @@ export function landVideo(video: HTMLVideoElement, img: HTMLElement): void {
     current.replaceWith(video);
     finish = isSkipped(video);
   } else {
-    video.setAttribute('data-image-only', '');
     (img.parentElement instanceof HTMLPictureElement ? img.parentElement : img).after(video);
-    finish = true;
+    if (video.dataset.swapped) {
+      // Its own video went to the view being left (liftVideo's swapFrom):
+      // a regular video slot, same rules as the one it came from.
+      finish = isSkipped(video);
+    } else {
+      video.setAttribute('data-image-only', '');
+      finish = true;
+    }
   }
+  delete video.dataset.swapped;
   delete video.dataset.flying;
   const host = flightHost();
   if (host) host.style.display = 'none';
@@ -482,6 +493,12 @@ function settle(video: HTMLVideoElement): void {
   video.classList.remove('has-frame');
   video.currentTime = 0;
 }
+
+// Back from another window / tab: the browser may have paused videos while
+// hidden, and the observer may not report again - re-apply the rules.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshMainVideos();
+});
 
 // A morph abandoned mid-flight: whatever is still in the host goes.
 export function abortFlight(): void {

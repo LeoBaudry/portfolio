@@ -3,7 +3,19 @@
 Ordered so that each step only builds on finished ones. Items marked
 (Figma) wait on a mockup from Leo before any code.
 
-## Next session (written 2026-09-24, for 2026-09-25)
+## Next session (written 2026-09-25, for 2026-09-26)
+
+Start the menu (item 5 below - full spec there, all questions answered):
+1. Role-named colour tokens first (quick, invisible): --color-bg / -text /
+   -line / -curtain / -accent instead of ink / paper, plus the 5 hard-coded
+   rgba(245, 244, 241, ...) -> tokens. Prep for light/dark (item 12).
+2. `src/data/site.json` (email, socials, CV, availability) + `"menu": true`
+   on 3 projects in projets.json.
+3. Build the menu bar first (square with logo -> widens into the bar) so
+   Leo can judge the look, then the panel, then the /projets view buttons
+   and the [slug] `← PROJETS`.
+
+## 2026-09-25 session (all done, confirmed by Leo - kept for the record)
 
 A. **Hide the link preview on hover.** Hovering a project image/video shows
    the browser's own URL bubble bottom-left ("localhost:4321/projets/mirage")
@@ -140,7 +152,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    content item = placeholder-video-1 (desktop) / -2 (mobile).
    Later, if needed: playable/focusable videos with controls (Leo: "we'll
    see").
-3. [~] **Video as main visual.** Built 2026-09-24, Leo testing. Test data:
+3. [x] **Video as main visual.** Done 2026-09-25, confirmed by Leo. Test data:
    Aurore's `main.video` (placeholder videos). How to export real videos
    (format, sizes, ffmpeg, first-frame posters): `docs/video-export.md`.
    - Data: `main` gets an optional `video: { desktop, mobile? }`; its images
@@ -197,17 +209,46 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    tokens (background / text / line / curtain instead of ink / paper), can
    still be done any time as a quick session so the menu and transition
    screen are built on them.
-5. [ ] **Menu.** Always-hamburger pill, centred, glass effect (dark/light,
-   slight transparency). Top-centre on the homepage, animates to bottom-centre
-   on other pages. On /projets the vue 1/2/3 buttons rise out of it (mask)
-   and slide right. On [slug] it splits: `← PROJETS` bottom-left, menu icon
-   bottom-right. Replaces today's temp-nav / view-switcher / project-back, so
-   the morph code's chrome hide/reveal hooks must move to it.
+5. [ ] **Menu.** Spec agreed with Leo 2026-09-25 (supersedes the older
+   "pill + split on [slug]" idea):
+   - **Bar (closed):** on load it appears masked as a SQUARE with Leo's
+     logo, then widens left and right into a bar: logo left, current page
+     name centre (ACCUEIL / PROJETS / the project's name on [slug]...),
+     hamburger (3 bars) right. Opaque.
+   - **Position:** top-centre on the homepage, bottom-centre everywhere
+     else (animates between them on navigation).
+   - **Open:** clicking the hamburger shrinks the bar back to a square with
+     a cross; at the same time a larger PANEL pops out with a small-medium
+     gap - below the bar on the homepage, above it elsewhere. Panel slightly
+     transparent + blur/glass. Clicking a link: back to the bar, then the
+     usual page transitions.
+   - **Panel content:** navigation (Accueil, Projets, A propos, Contact);
+     3 featured projects (`"menu": true` in projets.json); availability
+     line, toggle + custom text (e.g. "Recherche d'alternance - Paris,
+     sept. 26"); email copied on click ("Copie"); socials as mono text
+     links - LinkedIn + Behance placeholders (NOT Instagram / Dribbble).
+     Also: CV (PDF) download link, GitHub (both yes, Leo 2026-09-25); a
+     small "FR / EN" switch at the bottom of the panel (Leo: "let's try,
+     not sure" - easy to drop; the real switching comes with item 7).
+     Site-wide settings (email, socials, availability) go in
+     `src/data/site.json`, never hard-coded.
+   - **/projets:** once the bar is in place, the vue 1/2/3 buttons rise
+     out from under it (mask) and slide to the far right.
+   - **[slug]:** menu stays bottom-centre. /projets -> [slug]: the 3 view
+     buttons slide back and sink under the menu (reverse of their entry),
+     then `← PROJETS` rises out of it and slides to the bottom-left. Same
+     in reverse going back.
+   - Every element animates with the site's mask logic (no opacity).
+   - Replaces today's temp-nav / view-switcher / project-back, so the morph
+     code's chrome hide/reveal hooks must move to it.
 6. [ ] **Page transition redesign.** Brand colour + logo centred instead of
    the plain black wipe.
 7. [ ] **FR/EN.** Astro i18n routing, language picked from the browser
    language (not region) on first visit, plus a manual switch. Texts written
-   by Leo in both languages rather than machine-translated.
+   by Leo in both languages rather than machine-translated. Why keep a
+   manual switch (asked 2026-09-25): English browsers read by French
+   speakers, shared links, and Google crawls in English - it recommends
+   visible links between language versions, not auto-redirect only.
 
 ## Phase 3 — Content layouts (Figma)
 
