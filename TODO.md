@@ -78,7 +78,7 @@ G. [x] **Vue 2/3 lag with videos.** Confirmed gone by Leo 2026-09-26,
    decoder start behind masks. Next steps: measure with the LoAF snippet
    while scrolling vue 3 (is it the videos at all?); test with real exports
    (no audio track - the placeholders have one); try MAX_PLAYING = 1-2.
-G2. [ ] **Vue 2 lags a bit on re-entry** (Leo, 2026-09-26): switch to
+G2. [x] **Vue 2 lags a bit on re-entry** (Leo, 2026-09-26): switch to
    another view, come back to vue 2, scroll through projects -> slight lag.
    Measured 2026-09-26 (2 runs): re-entry is clean (no loads, no long
    frames). The ~120ms "(no script)" long frames come on the FIRST pass,
@@ -119,6 +119,21 @@ G2. [ ] **Vue 2 lags a bit on re-entry** (Leo, 2026-09-26): switch to
    to test. Same class, not touched: backdrop-filter blur on the reel's
    "Voir le projet" pill (homepage). Doesn't explain the dev test page
    (no blend, still lagged) - check it again if this helps.
+   SOLVED 2026-09-26 (Leo: no more lag, even slow 4G) by removing the
+   blend. Leftovers built on the wrong (decoder) diagnosis - REMOVED
+   2026-09-26:
+   /dev/webcodecs-test page + worker + mp4box dependency; warmDezoomVideos
+   (downloads all vue 2 videos on every /projets visit). waitsForRest
+   (180ms rest before a video's first start) also removed 2026-09-26 at
+   Leo's request - Leo to judge vue 2 first pass without it.
+K. [ ] **Flash on first back from [slug]** (Leo, 2026-09-26): first load /
+   hard reload, homepage reel -> click project -> [slug] (fine) -> "<-"
+   back: animates out but a quick flash shows under the page. Only once.
+   "<-" goes to /projets vue 1 (not the homepage): its full-width <img>
+   is cached (same URL as the clone) but not decoded on a first visit, so
+   the clone -> image swap on landing showed it popping in. Fix 2026-09-26
+   (Leo to test): morphTo keeps the clone on top until the destination
+   decodes (TARGET_DECODE_TIMEOUT 400ms cap), project-morph.ts.
 H. [x] **Poster flash on return** (confirmed fixed by Leo 2026-09-26) (Leo, 2026-09-25): coming back from
    [slug] or switching views, project 1's poster image sometimes shows
    briefly before its video. Cause: the video layer only appears once it

@@ -59,8 +59,5 @@ export const VIEW_REVEAL_DURATION = 1000;
 export const VIEW_REVEAL_EASE = STEP_EASE;
 export const VIEW_REVEAL_STAGGER = 180;
 export const VIEW_TEXT_AFTER_REVEAL = VIEW_REVEAL_DURATION * 0.6;
-// /projets: after the page's entrance (a view reveal plus a couple of
-// staggers), vue 2's first video pictures load at idle (warmDezoomVideos).
-export const DEZOOM_WARM_DELAY = VIEW_REVEAL_DURATION + 400;
 export const LISTE_IMAGE_STAGGER = 100;
 export const LISTE_TITLE_ROW_STAGGER = 80;

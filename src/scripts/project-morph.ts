@@ -7,6 +7,8 @@ import { abortFlight, flightHost, landVideo, liftVideo, setMainVisualHidden } fr
 gsap.registerPlugin(CustomEase);
 
 const MORPH_DURATION = 0.95;
+// Longest the landing waits for the destination image to be decoded.
+const TARGET_DECODE_TIMEOUT = 400;
 const MORPH_EASE = CustomEase.create('projectMorph', '0.76, 0, 0.24, 1');
 // The flying video's host sits just above the clone (z-index 210, Layout).
 const FLIGHT_Z = 211;
@@ -204,8 +206,17 @@ export function initProjectMorph(): void {
     const wasBackward = direction === 'backward';
     setMainVisualHidden(targetImg, true);
     const toRect = targetImg.getBoundingClientRect();
+    // The destination shares the clone's URL (ProjectImage), so it's in the
+    // cache - but on a page's first visit its <img> isn't decoded yet, and
+    // swapping the clone for it on landing showed an empty slot / the
+    // picture popping in (first load only, 2026-09-26). The clone stays on
+    // top until the destination can paint. Capped: decode() can hang.
+    const targetReady = Promise.race([
+      targetImg.decode().catch(() => {}),
+      new Promise<void>((resolve) => setTimeout(resolve, TARGET_DECODE_TIMEOUT)),
+    ]);
 
-    inFlightTween = gsap.to(flyers, {
+    const tween = (inFlightTween = gsap.to(flyers, {
       top: toRect.top - 1,
       left: toRect.left,
       width: toRect.width,
@@ -213,14 +224,18 @@ export function initProjectMorph(): void {
       duration: MORPH_DURATION,
       ease: MORPH_EASE,
       onComplete: () => {
-        if (flyingVideo) landVideo(flyingVideo, targetImg);
-        flyingVideo = null;
-        setMainVisualHidden(targetImg, false);
-        resetToIdle();
-        onSettled?.();
-        if (wasBackward) morphEvents.dispatchEvent(new Event(MORPH_SETTLED_EVENT));
+        void targetReady.then(() => {
+          // Reset meanwhile (another navigation started): nothing to land.
+          if (inFlightTween !== tween) return;
+          if (flyingVideo) landVideo(flyingVideo, targetImg);
+          flyingVideo = null;
+          setMainVisualHidden(targetImg, false);
+          resetToIdle();
+          onSettled?.();
+          if (wasBackward) morphEvents.dispatchEvent(new Event(MORPH_SETTLED_EVENT));
+        });
       },
-    });
+    }));
   }
 
   document.addEventListener('astro:after-swap', () => {

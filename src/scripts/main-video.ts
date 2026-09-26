@@ -11,8 +11,7 @@
 // - homepage reel, vue 1, [slug]: the MAX_PLAYING nearest the viewport's
 //   centre (the reel and vue 1 only ever show one project anyway);
 // - vue 2 / vue 3 (many projects on screen): only the current one, nearest
-//   the middle, following the scroll (isCurrentOnly / playingSet) - in
-//   vue 2, a video's first start waits for its row to stop (waitsForRest).
+//   the middle, following the scroll (isCurrentOnly / playingSet).
 // Everything else is paused - nothing decodes off screen.
 // Starting playback sets up the decoder, which can cost a few long frames
 // (measured: no script, right as a video started). So the first start
@@ -154,51 +153,12 @@ function nearestCurrentLine(list: HTMLVideoElement[]): HTMLVideoElement | null {
 // "Current" follows the scroll live: re-checked on every scroll (one pass
 // per frame at most - refreshMainVideos batches), including the last bit
 // of vue 3 where rows are already fully in view and the observer stays
-// silent. (Tried 2026-09-25: the old video playing on until the scroll
-// settled, then switching - Leo: worse. Now in vue 2 only a video's first
-// start waits for the row to rest, see waitsForRest.)
+// silent. (Tried: switching only once the scroll settled - Leo: worse.
+// Also tried 2026-09-26: a video's first start in vue 2 waiting for the row
+// to rest - dropped once the real lag cause, a mix-blend-mode overlay, was
+// gone; the wait was only a delay.)
 // Capture: vue 2 scrolls its own panel, whose scroll events don't bubble.
-document.addEventListener('scroll', onAnyScroll, { capture: true, passive: true });
-
-// A panel that scrolls itself (vue 2's sideways row): a video in it doesn't
-// START for the first time while the row moves - it waits until the row has
-// come to rest, like vue 1, where a video only starts after its step.
-const SCROLL_REST_MS = 180;
-const movingPanels = new Map<Element, number>();
-
-function onAnyScroll(event: Event): void {
-  const panel = event.target;
-  if (panel instanceof Element && panel.matches('[data-video-play="current"]')) {
-    clearTimeout(movingPanels.get(panel));
-    movingPanels.set(
-      panel,
-      window.setTimeout(() => {
-        movingPanels.delete(panel);
-        refreshMainVideos();
-      }, SCROLL_REST_MS)
-    );
-  }
-  refreshMainVideos();
-}
-
-// Only a video's FIRST start is costly (decoder set-up) - once it has
-// played, starting it again mid-glide was measured free (2026-09-26: going
-// back to vue 2, switches every ~150ms, no long frames). So only a video
-// that has never played waits for the row to rest.
-const hasPlayed = new WeakSet<HTMLVideoElement>();
-document.addEventListener(
-  'playing',
-  (event) => {
-    if (event.target instanceof HTMLVideoElement) hasPlayed.add(event.target);
-  },
-  true
-);
-
-function waitsForRest(video: HTMLVideoElement): boolean {
-  if (hasPlayed.has(video)) return false;
-  const panel = video.closest('[data-video-play="current"]');
-  return panel !== null && movingPanels.has(panel);
-}
+document.addEventListener('scroll', () => refreshMainVideos(), { capture: true, passive: true });
 
 // The videos allowed to play right now (among the eligible ones).
 function playingSet(all: HTMLVideoElement[]): Set<HTMLVideoElement> {
@@ -209,7 +169,7 @@ function playingSet(all: HTMLVideoElement[]): Set<HTMLVideoElement> {
     .sort((a, b) => distanceToCentre(a) - distanceToCentre(b));
   const playing = new Set(free.slice(0, MAX_PLAYING));
   const current = nearestCurrentLine(currentOnly);
-  if (current && !waitsForRest(current)) playing.add(current);
+  if (current) playing.add(current);
   return playing;
 }
 
@@ -351,31 +311,6 @@ function whenFirstFrame(video: HTMLVideoElement): Promise<void> {
     video.addEventListener('loadeddata', done);
     video.addEventListener('error', done);
   });
-}
-
-function whenIdle(): Promise<void> {
-  return new Promise((resolve) => {
-    if ('requestIdleCallback' in window) requestIdleCallback(() => resolve(), { timeout: 1000 });
-    else setTimeout(resolve, 50);
-  });
-}
-
-// Loads each video's first picture, one after another, whenever the page is
-// idle - for a scroller the preloader can't see ahead in (vue 2 scrolls
-// sideways inside its own panel; the preloader's margin is the window's, so
-// each card only loaded as it came in). Decoding a first picture sometimes
-// costs a ~120ms frame (measured 2026-09-26, LoAF "no script" right after
-// 'loadeddata'): done here, that happens while the view sits still rather
-// than mid-scroll. Stops as soon as `keepGoing` says no (view left).
-export async function warmFirstFrames(videos: HTMLVideoElement[], keepGoing: () => boolean): Promise<void> {
-  for (const video of videos) {
-    if (reducedMotionQuery.matches || isSkipped(video) || video.dataset.flying) continue;
-    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) continue;
-    await whenIdle();
-    if (!keepGoing()) return;
-    startLoading(video);
-    await whenFirstFrame(video);
-  }
 }
 
 // For masks about to open on a main image (vue 2 cards, view curtains, vue
