@@ -15,6 +15,7 @@ import {
   liftVideo,
   refreshMainVideos,
   setMainVisualHidden,
+  warmFirstFrames,
 } from './main-video';
 import { type ViewMode, consumeIsReload, readProjetsState, saveProjetsState } from './projets/state';
 import {
@@ -25,6 +26,7 @@ import {
   DEZOOM_MASK_VISIBLE,
   DEZOOM_OTHERS_IMAGE_DELAY,
   DEZOOM_OTHERS_TEXT_DELAY,
+  DEZOOM_WARM_DELAY,
   INFO_HIDE_TOTAL,
   INFO_PART_STAGGER,
   LISTE_IMAGE_STAGGER,
@@ -254,6 +256,28 @@ export function initProjetsPage(root: ParentNode = document) {
 
   const dezoomTrack = panels.dezoom?.querySelector<HTMLElement>('.dezoom-track') ?? null;
   const dezoomItems = Array.from(panels.dezoom?.querySelectorAll<HTMLElement>('.dezoom-item') ?? []);
+
+  // Every vue 2 card's first video picture, loaded once per visit shortly
+  // after the page's own entrance - whatever view is showing - nearest the
+  // current project first, so none loads while vue 2 scrolls (see
+  // warmFirstFrames). Not on entering vue 2: measured 2026-09-26, people
+  // scroll within a second of arriving, and the loads then hit mid-scroll.
+  // Coming back to an already-loaded vue 2 showed no long frames at all.
+  // Queried when it starts, not cached: vue 1 <-> 2 morphs swap video
+  // elements between the two views.
+  let warmGen = 0;
+  function warmDezoomVideos(): void {
+    const gen = ++warmGen;
+    window.setTimeout(() => {
+      if (gen !== warmGen) return;
+      const videos = dezoomItems
+        .map((el, i) => ({ video: el.querySelector<HTMLVideoElement>('video[data-main-video]'), distance: Math.abs(i - current) }))
+        .filter((entry): entry is { video: HTMLVideoElement; distance: number } => entry.video !== null)
+        .sort((a, b) => a.distance - b.distance)
+        .map((entry) => entry.video);
+      void warmFirstFrames(videos, () => gen === warmGen);
+    }, DEZOOM_WARM_DELAY);
+  }
 
   let dezoomLenis: Lenis | null = null;
 
@@ -957,6 +981,7 @@ export function initProjetsPage(root: ParentNode = document) {
   } else {
     pageLenis?.stop();
   }
+  void afterSiteLoader().then(warmDezoomVideos);
 
   const handleBeforePreparation = () => {
     if (view === 'dezoom') current = currentFromDezoom();
@@ -979,6 +1004,7 @@ export function initProjetsPage(root: ParentNode = document) {
   return {
     destroy: () => {
       isDezoomActive = false;
+      warmGen++;
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('astro:before-preparation', handleBeforePreparation);

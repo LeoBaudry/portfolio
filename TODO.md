@@ -66,7 +66,8 @@ J. [x] **Vue 3 = images only, all devices** (Leo, 2026-09-25: vue 3 was
    takeoff, fast-forward to the end. Forward to [slug]: video starts once
    landed (not mid-flight - decoder start would stutter the morph). Mobile images-only rule for homepage /
    vues 1-2 (item I) unchanged.
-G. [~] **Vue 2/3 lag with videos.** 2026-09-25 final rule (Leo): vue 2/3
+G. [x] **Vue 2/3 lag with videos.** Confirmed gone by Leo 2026-09-26,
+   except G2 below. 2026-09-25 final rule (Leo): vue 2/3
    panels are data-video-play="current" - only the current project's video
    plays (nearest the middle; the line slides to the top/bottom edge at the
    page ends so vue 3's first/last rows get a turn), mouse and touch alike.
@@ -77,7 +78,48 @@ G. [~] **Vue 2/3 lag with videos.** 2026-09-25 final rule (Leo): vue 2/3
    decoder start behind masks. Next steps: measure with the LoAF snippet
    while scrolling vue 3 (is it the videos at all?); test with real exports
    (no audio track - the placeholders have one); try MAX_PLAYING = 1-2.
-H. [ ] **Poster flash on return** (Leo, 2026-09-25): coming back from
+G2. [ ] **Vue 2 lags a bit on re-entry** (Leo, 2026-09-26): switch to
+   another view, come back to vue 2, scroll through projects -> slight lag.
+   Measured 2026-09-26 (2 runs): re-entry is clean (no loads, no long
+   frames). The ~120ms "(no script)" long frames come on the FIRST pass,
+   when a card's video decodes its first picture (loadeddata) mid-scroll -
+   2 of ~14 loads cost one. Each card only starts loading when the one
+   before it becomes current: the preloader (rootMargin 100%, root =
+   viewport) can't see ahead inside vue 2's own horizontal scroller.
+   Tried 2026-09-26: warm-up DEZOOM_WARM_DELAY after each vue 2 entrance
+   - no change for Leo: he scrolls ~0.7s after arriving, the loads landed
+   mid-scroll (log). Now (Leo to test): warmDezoomVideos once per /projets
+   visit, after the page's own entrance, whatever view shows - each vue 2
+   card's first picture loads at idle, one at a time, nearest the current
+   project first (warmFirstFrames in main-video.ts). Open question: does
+   Chrome decode the first picture while vue 2 is display:none?
+   Still lagged "a ton" (Leo). Next: WebCodecs prototype, dev-only page
+   /dev/webcodecs-test (src/pages/dev/, worker src/scripts/dev/
+   webcodecs-worker.ts, mp4box): vue 2's scroller, videos decoded in a
+   worker onto canvases, one decoder at a time; ?mode=video = same page
+   with <video>. On-page long-frame counter. Leo to compare both modes. If
+   the canvas mode is smooth -> port it to the real views (morphs fly a
+   canvas, <video> fallback); either way delete the dev page + mp4box if
+   unused. warmDezoomVideos may go too if the worker replaces <video>.
+   Result: canvas mode lagged exactly like <video> -> not decoder setup.
+   Vue 1 (videos, even slow 4G) never freezes: it never plays/starts a
+   video while moving. Fix 2026-09-26: in vue 2 no video plays while the
+   row moves, current starts SCROLL_REST_MS (180) after it stops -> Leo:
+   "much less lag", but the wait every time felt unnecessary. Now only a
+   video's FIRST start waits for the row to rest (waitsForRest; hasPlayed
+   = any 'playing' seen); already-played ones switch live mid-scroll. If vue 2 still
+   lags -> it's the sideways scroller itself (test ?mode=image on the dev
+   page), and warmDezoomVideos + the WebCodecs prototype can go.
+   New lead (Leo): vue 3 -> [slug] -> back, the landed video finishing its
+   loop made vue 3 lag while scrolling; gone once it settled. ONE playing
+   video + scroll = lag -> not loading/decoder. Audit: no per-frame JS on
+   videos; suspect = mix-blend-mode: difference on the fixed .temp-nav
+   (Layout, every page) and [slug]'s back link - forces a full-screen
+   re-blend per video frame + scroll frame. Removed both 2026-09-26, Leo
+   to test. Same class, not touched: backdrop-filter blur on the reel's
+   "Voir le projet" pill (homepage). Doesn't explain the dev test page
+   (no blend, still lagged) - check it again if this helps.
+H. [x] **Poster flash on return** (confirmed fixed by Leo 2026-09-26) (Leo, 2026-09-25): coming back from
    [slug] or switching views, project 1's poster image sometimes shows
    briefly before its video. Cause: the video layer only appears once it
    has a frame; until then the poster shows, and the placeholder posters
@@ -90,7 +132,7 @@ H. [ ] **Poster flash on return** (Leo, 2026-09-25): coming back from
    (on its paused frame; data-flying="paused"|"playing", the after-swap
    safety net only resumes "playing"). Reproduced by Leo: project 4,
    scroll to bottom, back -> poster flew instead of the video.
-B/C. [~] Built 2026-09-25, Leo to judge the look. Desktop: ring replaced by
+B/C. [x] Built 2026-09-25, look approved by Leo 2026-09-26. Desktop: ring replaced by
    a "Voir le projet" pill following the pointer, inverted fill uncovered
    left to right with the scroll (clip-path on the pill - tiny box), pill
    scales in/out + label mask, fill unwinds on click (unwindIndicator in

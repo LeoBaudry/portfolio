@@ -194,7 +194,11 @@ const LOADER_COLS = 5;
     /* The mask - no explicit height, so it auto-sizes to .temp-nav-inner's
        own (untransformed) height, same as .carousel-info elsewhere. */
     overflow: hidden;
-    mix-blend-mode: difference;
+    /* No mix-blend-mode (was difference): a fixed blended element over a
+       playing video makes the browser re-blend the whole screen for every
+       video frame and every scroll frame - suspected cause of the scroll
+       lag with a video playing (vue 2/3, 2026-09-26). The real menu (item
+       5) must not blend over video either. */
   }
 
   .temp-nav-inner {

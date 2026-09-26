@@ -1,0 +1,248 @@
+---
+// Dev-only prototype (G2 in TODO.md): vue 2's horizontal scroller with its
+// videos decoded in a worker (WebCodecs -> canvas), against the same
+// scroller with plain <video> elements (?mode=video). The counter at the
+// top-left counts long frames (>50ms) while you scroll. Delete once decided.
+if (import.meta.env.PROD) return Astro.redirect('/');
+
+const param = Astro.url.searchParams.get('mode');
+const mode = param === 'video' || param === 'image' ? param : 'canvas';
+const modes = { canvas: 'worker + canvas', video: '<video>', image: 'images only' } as const;
+const cards = Array.from({ length: 8 }, (_, i) => ({
+  n: i + 1,
+  src: `/placeholder-video-${(i % 5) + 1}.mp4`,
+  image: `/images/loader-anim-idea-${(i % 5) + 1}.jpg`,
+}));
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Video decode test</title>
+  </head>
+  <body data-mode={mode}>
+    <div class="hud">
+      <div>
+        mode: <strong>{modes[mode]}</strong> - switch to:
+        {Object.entries(modes).filter(([key]) => key !== mode).map(([key, label]) => (
+          <a href={`?mode=${key}`}>{label}</a>
+        ))}
+      </div>
+      <div>long frames: <strong data-count>0</strong> - worst: <strong data-worst>0</strong>ms</div>
+      <button type="button" data-reset>reset counter</button>
+      <ol data-list></ol>
+      <pre data-log></pre>
+    </div>
+
+    <section class="scroller">
+      <div class="track">
+        {cards.map((card) => (
+          <div class="card">
+            <div class="label">Projet {String(card.n).padStart(2, '0')}</div>
+            {mode === 'image' ? (
+              <img src={card.image} alt="" />
+            ) : mode === 'canvas' ? (
+              <canvas data-src={card.src} />
+            ) : (
+              <video data-src={card.src} src={card.src} muted loop playsinline preload="none" />
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <style is:global>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #111;
+        color: #eee;
+        font: 13px/1.4 ui-monospace, monospace;
+        overflow: hidden;
+      }
+      .scroller {
+        position: fixed;
+        inset: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        display: flex;
+        align-items: center;
+        scrollbar-width: none;
+      }
+      .track {
+        display: flex;
+        gap: 2rem;
+        padding: 0 25vw;
+      }
+      .card {
+        flex: 0 0 auto;
+        height: 56dvh;
+        aspect-ratio: 16 / 10;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .card canvas,
+      .card video,
+      .card img {
+        display: block;
+        width: 100%;
+        flex: 1;
+        min-height: 0;
+        object-fit: cover;
+        background: #222;
+      }
+      .hud {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 1;
+        background: rgb(0 0 0 / 0.75);
+        padding: 0.75rem 1rem;
+        max-width: 28rem;
+      }
+      .hud a {
+        color: #ff8a3d;
+        margin-left: 0.5rem;
+      }
+      .hud ol {
+        margin: 0.5rem 0 0;
+        padding-left: 1.25rem;
+      }
+      .hud pre {
+        margin: 0.5rem 0 0;
+        white-space: pre-wrap;
+        opacity: 0.6;
+        max-height: 8rem;
+        overflow: auto;
+      }
+    </style>
+
+    <script>
+      import Lenis from 'lenis';
+      import DecodeWorker from '../../scripts/dev/webcodecs-worker.ts?worker';
+
+      const mode = document.body.dataset.mode;
+      const scroller = document.querySelector<HTMLElement>('.scroller')!;
+      const track = document.querySelector<HTMLElement>('.track')!;
+      const media = Array.from(document.querySelectorAll<HTMLElement>('.card canvas, .card video, .card img'));
+
+      // --- Long frames counter (same measure as the console snippet) ---
+      const countEl = document.querySelector('[data-count]')!;
+      const worstEl = document.querySelector('[data-worst]')!;
+      const listEl = document.querySelector('[data-list]')!;
+      const logEl = document.querySelector('[data-log]')!;
+      let count = 0;
+      let worst = 0;
+      new PerformanceObserver((list) =>
+        list.getEntries().forEach((entry) => {
+          if (entry.duration < 50) return;
+          count++;
+          worst = Math.max(worst, entry.duration);
+          countEl.textContent = String(count);
+          worstEl.textContent = worst.toFixed(0);
+          const scripts = (entry as any).scripts?.length ? 'script' : 'no script';
+          const li = document.createElement('li');
+          li.textContent = `${(entry.startTime / 1000).toFixed(1)}s: ${entry.duration.toFixed(0)}ms (${scripts})`;
+          listEl.prepend(li);
+          while (listEl.children.length > 6) listEl.lastChild?.remove();
+        })
+      ).observe({ type: 'long-animation-frame' });
+      document.querySelector('[data-reset]')!.addEventListener('click', () => {
+        count = 0;
+        worst = 0;
+        countEl.textContent = '0';
+        worstEl.textContent = '0';
+        listEl.replaceChildren();
+      });
+      const log = (message: string) => {
+        logEl.textContent += `${message}\n`;
+      };
+
+      // --- Players ---
+      let play: (i: number) => void;
+      let pause: (i: number) => void;
+
+      if (mode === 'image') {
+        play = () => {};
+        pause = () => {};
+      } else if (mode === 'canvas') {
+        if (!('VideoDecoder' in window) || !('transferControlToOffscreen' in HTMLCanvasElement.prototype)) {
+          log('WebCodecs / OffscreenCanvas not supported in this browser');
+        }
+        const worker = new DecodeWorker();
+        worker.onmessage = (event) => {
+          if (event.data?.type === 'log') log(event.data.message);
+        };
+        media.forEach((el, id) => {
+          const canvas = el as HTMLCanvasElement;
+          const offscreen = canvas.transferControlToOffscreen();
+          worker.postMessage({ type: 'add', id, url: canvas.dataset.src, canvas: offscreen }, [offscreen]);
+        });
+        const sizes = new ResizeObserver((entries) =>
+          entries.forEach((entry) => {
+            const id = media.indexOf(entry.target as HTMLElement);
+            const box = entry.devicePixelContentBoxSize?.[0];
+            const width = box ? box.inlineSize : Math.round(entry.contentRect.width * devicePixelRatio);
+            const height = box ? box.blockSize : Math.round(entry.contentRect.height * devicePixelRatio);
+            worker.postMessage({ type: 'size', id, width, height });
+          })
+        );
+        media.forEach((el) => sizes.observe(el));
+        play = (id) => worker.postMessage({ type: 'play', id });
+        pause = (id) => worker.postMessage({ type: 'pause', id });
+      } else {
+        const videos = media as HTMLVideoElement[];
+        play = (i) => void videos[i].play().catch(() => {});
+        pause = (i) => videos[i].pause();
+      }
+
+      // --- Scroll: same Lenis setup as vue 2 ---
+      const lenis = new Lenis({
+        wrapper: scroller,
+        content: track,
+        orientation: 'horizontal',
+        gestureOrientation: 'vertical',
+        eventsTarget: scroller,
+        smoothWheel: true,
+      });
+      const raf = (time: number) => {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+      };
+      requestAnimationFrame(raf);
+
+      // Current = the card nearest the middle; only it plays. Card centres
+      // measured once (and on resize), not every scroll frame.
+      let centres: number[] = [];
+      const measure = () => {
+        centres = media.map((el) => {
+          const card = el.parentElement!;
+          return card.offsetLeft + card.offsetWidth / 2;
+        });
+      };
+      measure();
+      window.addEventListener('resize', () => {
+        measure();
+        update();
+      });
+      let current = -1;
+      const update = () => {
+        const middle = scroller.scrollLeft + scroller.clientWidth / 2;
+        let nearest = 0;
+        centres.forEach((c, i) => {
+          if (Math.abs(c - middle) < Math.abs(centres[nearest] - middle)) nearest = i;
+        });
+        if (nearest === current) return;
+        if (current >= 0) pause(current);
+        current = nearest;
+        play(current);
+      };
+      lenis.on('scroll', update);
+      update();
+    </script>
+  </body>
+</html>
