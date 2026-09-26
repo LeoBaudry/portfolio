@@ -1,0 +1,201 @@
+---
+// The site menu's bar (TODO.md item 5) and the panel it opens
+// (SiteMenuPanel). Persisted across navigations. site-menu.ts drives every animation: entrance
+// (square with the logo -> widens into the bar), top <-> bottom on
+// navigation, page-name swap, and the burger shrinking it back to a square
+// with a cross.
+import logoSvg from '../assets/logo.svg?raw';
+import SiteMenuPanel from './SiteMenuPanel.astro';
+
+interface Props {
+  pageName: string;
+  position: 'top' | 'bottom';
+}
+
+const { pageName, position } = Astro.props;
+
+// The logo file is white; here it takes the bar's text colour.
+const logo = logoSvg
+  .replace(/fill="white"/g, 'fill="currentColor"')
+  .replace(/\s(width|height)="[^"]*"/g, '')
+  .replace('<svg', '<svg aria-hidden="true"');
+---
+
+<nav
+  id="site-menu"
+  class="site-menu"
+  data-position={position}
+  aria-label="Menu principal"
+  transition:persist
+  transition:animate="none"
+>
+  <div class="site-menu-bg" aria-hidden="true"></div>
+  <!-- Every part sits in its own mask (overflow hidden) and slides through
+       it: the logo in/out on the left, the burger on the right, the page
+       name and the cross (same spot, centre) in from below / out above. -->
+  <div class="site-menu-cell site-menu-logo-mask">
+    <a href="/" class="site-menu-logo" aria-label="Accueil" set:html={logo} />
+  </div>
+  <div class="site-menu-centre">
+    <span class="site-menu-name font-mono"><span class="site-menu-name-text">{pageName}</span></span>
+    <button type="button" class="site-menu-close" aria-label="Fermer le menu" tabindex="-1">
+      <svg class="site-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <line x1="6" y1="6" x2="18" y2="18" />
+        <line x1="6" y1="18" x2="18" y2="6" />
+      </svg>
+    </button>
+  </div>
+  <div class="site-menu-cell site-menu-toggle-mask">
+    <button type="button" class="site-menu-toggle" aria-expanded="false" aria-label="Ouvrir le menu">
+      <svg class="site-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <line x1="5" y1="7.5" x2="19" y2="7.5" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+        <line x1="5" y1="16.5" x2="19" y2="16.5" />
+      </svg>
+    </button>
+  </div>
+</nav>
+<SiteMenuPanel position={position} />
+
+<style>
+  /* Sized in --menu-unit (global.css: vw with a floor), not rem/px: the
+     bar keeps the same size on screen at any browser zoom (Leo,
+     2026-09-26), and stays usable in a narrow window. */
+  .site-menu {
+    --menu-h: calc(3 * var(--menu-unit));
+    --menu-w: calc(20 * var(--menu-unit));
+    --menu-gap: calc(1 * var(--menu-unit));
+    --menu-name-size: calc(0.7 * var(--menu-unit));
+    --menu-icon-size: calc(1.3 * var(--menu-unit));
+    --menu-logo-size: calc(1.4 * var(--menu-unit));
+    position: fixed;
+    /* Centred without a transform: GSAP owns this element's transform (the
+       top <-> bottom move). */
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    width: var(--menu-w);
+    height: var(--menu-h);
+    /* Above the page wipe (200) and the morph clone (210): the bar stays
+       through every transition. Below the site-entry loader (300). */
+    z-index: 250;
+    display: flex;
+    align-items: center;
+    color: var(--color-text);
+    /* The bar's shape - the mask the whole menu (logo included) plays
+       through: nothing (CSS, so nothing shows before the JS) -> a centred
+       square revealed top to bottom -> the full bar. Set in px by
+       site-menu.ts from there on. */
+    clip-path: inset(0 calc(50% - var(--menu-h) / 2) 100% calc(50% - var(--menu-h) / 2) round 2px);
+  }
+
+  .site-menu[data-position='top'] {
+    top: var(--menu-gap);
+  }
+
+  .site-menu[data-position='bottom'] {
+    top: calc(100dvh - var(--menu-h) - var(--menu-gap));
+  }
+
+  .site-menu-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--color-surface);
+  }
+
+  .site-menu-cell,
+  .site-menu-centre {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .site-menu-cell {
+    flex: none;
+    width: var(--menu-h);
+  }
+
+  .site-menu-centre {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+  }
+
+  /* Full-height boxes, so sliding one by its own size clears the mask.
+     Hidden by default (CSS, so nothing shows before the JS). */
+  .site-menu-logo,
+  .site-menu-toggle,
+  .site-menu-name,
+  .site-menu-close {
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+  }
+
+  .site-menu-toggle,
+  .site-menu-name,
+  .site-menu-close {
+    transform: translateY(100%);
+  }
+
+  .site-menu-toggle,
+  .site-menu-close {
+    cursor: pointer;
+  }
+
+  .site-menu-logo :global(svg) {
+    width: var(--menu-logo-size);
+    height: auto;
+  }
+
+  .site-menu-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--menu-name-size);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .site-menu-icon {
+    width: calc(var(--menu-icon-size) * 1.35);
+    height: auto;
+    overflow: visible;
+    stroke: currentColor;
+    stroke-width: 1.1;
+  }
+
+  /* Touch screens held upright: vw that suits a desktop is far too small
+     there. Picked by device (touch, portrait), not by width: a width
+     breakpoint would kick in when zooming in on a desktop. Tablets first,
+     then phones. SiteMenuPanel.astro repeats these sizes. */
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
+    .site-menu {
+      --menu-h: 6.5vw;
+      --menu-w: 44vw;
+      --menu-gap: 2.5vw;
+      --menu-name-size: 1.6vw;
+      --menu-icon-size: 2.8vw;
+      --menu-logo-size: 3vw;
+    }
+  }
+
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
+    .site-menu {
+      --menu-h: calc(12 * var(--menu-unit));
+      --menu-w: calc(70 * var(--menu-unit));
+      --menu-gap: calc(4 * var(--menu-unit));
+      --menu-name-size: calc(2.9 * var(--menu-unit));
+      --menu-icon-size: calc(5 * var(--menu-unit));
+      --menu-logo-size: calc(5.35 * var(--menu-unit));
+    }
+  }
+</style>

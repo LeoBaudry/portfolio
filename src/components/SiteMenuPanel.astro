@@ -1,0 +1,402 @@
+---
+// The panel the menu bar opens (TODO.md item 5). A sibling of the bar, not
+// inside it: the bar's clip-path (its shape) would clip it. Persisted like
+// the bar; site-menu.ts opens / closes it and keeps its position (below
+// the bar on the homepage, above it elsewhere) in step with the bar's.
+//
+// Every line sits in a mask (.panel-mask) and rises into it - the site's
+// mask logic, no opacity. Content comes from src/data (site.json for the
+// contact details, projets.json's "menu": true for the featured projects).
+import site from '../data/site.json';
+import projects from '../data/projets.json';
+
+interface Props {
+  position: 'top' | 'bottom';
+}
+
+const { position } = Astro.props;
+
+// No page yet for À propos / Contact: listed, but inactive until they exist.
+const nav = [
+  { label: 'Accueil', href: '/' },
+  { label: 'Projets', href: '/projets' },
+  { label: 'À propos', href: null },
+  { label: 'Contact', href: null },
+];
+const featured = projects.filter((project) => (project as { menu?: boolean }).menu).slice(0, 3);
+// Placeholders until the real icons: one small square per link.
+const links = [
+  ...site.socials.map((social) => ({ label: social.label, href: social.url, download: false })),
+  { label: 'CV (PDF)', href: site.cv, download: true },
+];
+---
+
+<div
+  id="site-menu-panel"
+  class="site-menu-panel"
+  data-position={position}
+  inert
+  data-lenis-prevent
+  transition:persist
+  transition:animate="none"
+>
+  <div class="panel-content">
+    <div class="panel-section">
+      <p class="panel-mask"><span class="panel-line panel-title font-mono">Menu</span></p>
+      <ul class="panel-list panel-nav">
+        {nav.map((item) => (
+          <li class="panel-mask">
+            {item.href ? (
+              <a class="panel-line panel-item" href={item.href} data-menu-link>
+                {item.label}
+              </a>
+            ) : (
+              <span class="panel-line panel-item is-inactive" aria-disabled="true">
+                {item.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="panel-section">
+      <p class="panel-mask"><span class="panel-line panel-title font-mono">Projets</span></p>
+      <ul class="panel-list">
+        {featured.map((project) => (
+          <li class="panel-mask">
+            <a class="panel-line panel-item" href={`/projets/${project.slug}`} data-menu-link>
+              {project.titre}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="panel-section">
+      <p class="panel-mask"><span class="panel-line panel-title font-mono">Réseaux</span></p>
+      <ul class="panel-links">
+        {links.map((link) => (
+          <li class="panel-mask">
+            <a
+              class="panel-line panel-icon"
+              href={link.href}
+              aria-label={link.label}
+              title={link.label}
+              {...(link.download ? { download: true } : { target: '_blank', rel: 'noopener noreferrer' })}
+            ></a>
+          </li>
+        ))}
+      </ul>
+      {site.availability.enabled && (
+        <p class="panel-mask">
+          <span class="panel-line panel-availability">{site.availability.text}</span>
+        </p>
+      )}
+      <p class="panel-mask">
+        <a class="panel-line panel-cta font-mono" href={`mailto:${site.email}`}>
+          <span class="panel-cta-fill" aria-hidden="true"></span>
+          <span class="panel-cta-label">Contact</span>
+        </a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Sized in --menu-unit like the bar (global.css): same size at any
+     browser zoom, still usable in a narrow window. */
+  .site-menu-panel {
+    --panel-w: calc(24 * var(--menu-unit));
+    /* Inner margin - the content keeps well clear of the panel's edges. */
+    --panel-pad-y: calc(2.4 * var(--menu-unit));
+    /* More room above the first title than below the button. */
+    --panel-pad-top: calc(3.2 * var(--menu-unit));
+    --panel-pad-x: calc(3.4 * var(--menu-unit));
+    /* Between the three sections, and between a title and its list. */
+    --panel-space: calc(2 * var(--menu-unit));
+    --panel-title-gap: calc(0.6 * var(--menu-unit));
+    --panel-gap: calc(0.6 * var(--menu-unit));
+    /* Nav and projects share one size. */
+    --panel-item-size: calc(1.75 * var(--menu-unit));
+    --panel-small-size: calc(0.72 * var(--menu-unit));
+    --panel-title-size: calc(0.85 * var(--menu-unit));
+    --panel-note-size: calc(0.95 * var(--menu-unit));
+    --panel-cta-size: calc(0.9 * var(--menu-unit));
+    --panel-icon-size: calc(1.9 * var(--menu-unit));
+    /* The current page's marker sits in this gutter, left of the shared
+       text edge. */
+    --panel-marker-gutter: calc(1 * var(--menu-unit));
+    --panel-marker-size: calc(0.4 * var(--menu-unit));
+    /* The bar's height + its distance from the edge (the bar's own
+       --menu-h / --menu-gap, repeated: a sibling, not a child). */
+    --panel-offset: calc(calc(1 * var(--menu-unit)) + calc(3 * var(--menu-unit)) + var(--panel-gap));
+    position: fixed;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    width: var(--panel-w);
+    /* Never wider or taller than the screen (small phones): the height
+       limit is below, with its own scroll. */
+    max-width: calc(100vw - 4 * var(--panel-gap));
+    /* Just under the bar (250), above the page wipe and morph clone. */
+    z-index: 249;
+    color: var(--color-text);
+    /* See-through with a blur behind (Leo, 2026-09-26: "try the blur").
+       Watch for lag with a video behind the open panel: a backdrop-filter
+       re-blurs on every video frame - the same kind of cost as the
+       mix-blend-mode removed for lag. If it lags, drop the blur and go back
+       to 90% opacity. On the panel itself, not a layer inside it, so it
+       stays behind the content when that scrolls. */
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    /* Closed = fully clipped (CSS, so nothing shows before the JS). Opens
+       from the edge next to the bar: site-menu.ts sets it in px. */
+    clip-path: inset(0 0 100% 0 round 2px);
+    /* Not rendered at all while closed, and no blur set: site-menu.ts adds
+       .is-open for the whole open -> close run. Clipped away - and even
+       visibility: hidden - its blur still flashed where the panel sits on
+       every page change (Leo, 2026-09-26). */
+    display: none;
+    /* Never taller than the room left by the bar: on a short window it
+       scrolls inside itself (data-lenis-prevent: natively, not via Lenis). */
+    max-height: calc(100dvh - var(--panel-offset) - 2 * var(--panel-gap));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .site-menu-panel.is-open {
+    display: block;
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+
+  /* Below the bar on the homepage, above it elsewhere. */
+  .site-menu-panel[data-position='top'] {
+    top: var(--panel-offset);
+  }
+
+  .site-menu-panel[data-position='bottom'] {
+    bottom: var(--panel-offset);
+  }
+
+  .panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--panel-space);
+    padding: var(--panel-pad-top) var(--panel-pad-x) var(--panel-pad-y);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  /* The masks: each line rises into its own (site-menu.ts). */
+  .panel-mask {
+    display: block;
+    overflow: hidden;
+  }
+
+  .panel-line {
+    display: block;
+    transform: translateY(100%);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--panel-title-gap);
+  }
+
+  .panel-title {
+    font-size: var(--panel-title-size);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  }
+
+  /* Sans, sentence case, nearly white - a plain line, not a tag. */
+  .panel-availability {
+    font-size: var(--panel-note-size);
+    line-height: 1.35;
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+  }
+
+  .panel-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-item {
+    position: relative;
+    font-size: var(--panel-item-size);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .panel-item.is-inactive {
+    color: color-mix(in srgb, var(--color-text) 35%, transparent);
+  }
+
+  /* Every line shares one left edge. The nav's masks reach into the
+     padding on the left, so the current page's marker sits there, left of
+     that edge - still inside its mask, so it rises with its line. */
+  .panel-nav .panel-mask {
+    margin-left: calc(-1 * var(--panel-marker-gutter));
+  }
+
+  .panel-nav .panel-item {
+    padding-left: var(--panel-marker-gutter);
+  }
+
+  .panel-item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: var(--panel-marker-size);
+    height: var(--panel-marker-size);
+    margin-top: calc(var(--panel-marker-size) / -2);
+    background: var(--color-accent);
+  }
+
+  .panel-links {
+    display: flex;
+    gap: calc(0.5 * var(--menu-unit));
+    padding: calc(0.3 * var(--menu-unit)) 0;
+  }
+
+  /* Placeholder icons: small, slightly rounded squares. */
+  .panel-icon {
+    width: var(--panel-icon-size);
+    height: var(--panel-icon-size);
+    border-radius: calc(0.25 * var(--menu-unit));
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  }
+
+  /* Outline only. Hover: a fill slides up into it from below and the text
+     turns dark; leaving, the fill carries on up and out through the top.
+     Driven by site-menu.ts (a slide, not a scaleY with a flipping
+     transform-origin: hovering in and out quickly flipped the origin
+     mid-animation and the fill jumped to the top). */
+  .panel-cta {
+    position: relative;
+    overflow: hidden;
+    margin-top: var(--panel-title-gap);
+    padding: calc(0.9 * var(--menu-unit)) calc(1 * var(--menu-unit));
+    border: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    border-radius: 2px;
+    font-size: var(--panel-cta-size);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    transition:
+      color 0.45s cubic-bezier(0.76, 0, 0.24, 1),
+      border-color 0.45s cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  /* A pixel bigger than the button on every side: at rest, a fill exactly
+     the button's size, moved exactly its height down, left a sub-pixel
+     sliver showing as a 1px line along the bottom (Leo, 2026-09-26). */
+  .panel-cta-fill {
+    position: absolute;
+    inset: -1px;
+    background: var(--color-accent);
+    transform: translateY(100%);
+  }
+
+  .panel-cta-label {
+    position: relative;
+  }
+
+  .panel-cta:hover,
+  .panel-cta:focus-visible {
+    color: var(--color-bg);
+    border-color: var(--color-accent);
+  }
+
+  .panel-item:not(.is-inactive):hover {
+    color: var(--color-accent);
+  }
+
+  .panel-icon:hover {
+    background: color-mix(in srgb, var(--color-text) 45%, transparent);
+  }
+
+  /* Touch screens held upright - picked by device, not by width (a width
+     breakpoint would kick in when zooming in on a desktop). Tablets first,
+     then phones. Must match the bar's own tiers (SiteMenu.astro). */
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
+    .site-menu-panel {
+      --panel-w: 52vw;
+      --panel-pad-y: 5vw;
+      --panel-pad-top: 6.5vw;
+      --panel-pad-x: 7vw;
+      --panel-space: 4.2vw;
+      --panel-title-gap: 1.3vw;
+      --panel-gap: 1.2vw;
+      --panel-item-size: 4.2vw;
+      --panel-small-size: 1.7vw;
+      --panel-title-size: 2vw;
+      --panel-note-size: 2.3vw;
+      --panel-cta-size: 2.1vw;
+      --panel-icon-size: 4.5vw;
+      --panel-marker-gutter: 2.4vw;
+      --panel-marker-size: 1vw;
+      --panel-offset: calc(2.5vw + 6.5vw + var(--panel-gap));
+    }
+
+    .panel-links {
+      gap: 1.2vw;
+    }
+
+    .panel-icon {
+      border-radius: 0.6vw;
+    }
+
+    .panel-cta {
+      padding: 2.1vw;
+    }
+  }
+
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
+    .site-menu-panel {
+      --panel-w: calc(82 * var(--menu-unit));
+      --panel-pad-y: calc(7.5 * var(--menu-unit));
+      --panel-pad-top: calc(9.5 * var(--menu-unit));
+      --panel-pad-x: calc(10 * var(--menu-unit));
+      --panel-space: calc(6.5 * var(--menu-unit));
+      --panel-title-gap: calc(2 * var(--menu-unit));
+      --panel-gap: calc(2 * var(--menu-unit));
+      --panel-item-size: calc(7 * var(--menu-unit));
+      --panel-small-size: calc(2.8 * var(--menu-unit));
+      --panel-title-size: calc(3.2 * var(--menu-unit));
+      --panel-note-size: calc(3.7 * var(--menu-unit));
+      --panel-cta-size: calc(3.4 * var(--menu-unit));
+      --panel-icon-size: calc(7.5 * var(--menu-unit));
+      --panel-marker-gutter: calc(3.8 * var(--menu-unit));
+      --panel-marker-size: calc(1.6 * var(--menu-unit));
+      --panel-offset: calc(calc(4 * var(--menu-unit)) + calc(12 * var(--menu-unit)) + var(--panel-gap));
+    }
+
+    .panel-links {
+      gap: calc(2 * var(--menu-unit));
+    }
+
+    .panel-icon {
+      border-radius: calc(1 * var(--menu-unit));
+    }
+
+    .panel-cta {
+      padding: calc(3.5 * var(--menu-unit));
+    }
+  }
+</style>

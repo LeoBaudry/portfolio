@@ -3,12 +3,16 @@ import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import logoSvg from '../assets/logo.svg?raw';
 import loaderScript from '../scripts/site-loader-inline.js?raw';
+import SiteMenu from '../components/SiteMenu.astro';
 
 interface Props {
   title?: string;
+  // Shown in the middle of the menu bar (ACCUEIL, PROJETS, a project's name).
+  pageName: string;
 }
 
-const { title = 'Portfolio' } = Astro.props;
+const { title = 'Portfolio', pageName } = Astro.props;
+const menuPosition = Astro.url.pathname === '/' ? 'top' : 'bottom';
 
 // Site-entry loader geometry, computed here at build time so the logo's
 // masks exist in the HTML and its strokes can animate (pure CSS) from the
@@ -56,7 +60,14 @@ const LOADER_COLS = 5;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <ClientRouter />
-    <noscript><style>.site-loader { display: none; }</style></noscript>
+    <noscript>
+      <style>
+        .site-loader { display: none; }
+        .site-menu { clip-path: none !important; }
+        .site-menu-logo, .site-menu-name, .site-menu-toggle { transform: none !important; }
+        .site-menu-close { display: none !important; }
+      </style>
+    </noscript>
   </head>
   <!--
     transition:animate="none" on body: Astro's ClientRouter otherwise plays
@@ -70,23 +81,7 @@ const LOADER_COLS = 5;
     during the transition needs its own transition:animate="none" too.
   -->
   <body transition:animate="none">
-    <!--
-      Temporary nav, until the real one is designed. #temp-nav itself is the
-      mask (overflow:hidden, auto-sized to .temp-nav-inner's own height) -
-      project-morph.ts's chrome hide/reveal (see project-morph.ts) animates
-      .temp-nav-inner's own translateY within it, sinking it down out of
-      view through the mask's bottom edge and rising back the same way,
-      rather than sliding the whole nav off past the viewport - the same
-      "content moves, mask stays put" technique as the info-text mask
-      elsewhere on the site (see hideInfoParts/revealInfoParts in
-      projets-page.ts).
-    -->
-    <nav class="temp-nav" id="temp-nav" transition:persist transition:animate="none">
-      <div class="temp-nav-inner">
-        <a href="/">Index</a>
-        <a href="/projets">Projets</a>
-      </div>
-    </nav>
+    <SiteMenu pageName={pageName} position={menuPosition} />
 
     <!--
       Persisted across every navigation (content.md §8's "reveal par le
@@ -176,7 +171,7 @@ const LOADER_COLS = 5;
          Persisted so the video survives the page swap. -->
     <div id="morph-video-host" class="morph-video-host" transition:persist transition:animate="none"></div>
 
-    <div id="transition-root" class="transition-root" transition:animate="none">
+    <div id="transition-root" class="transition-root" data-page-name={pageName} transition:animate="none">
       <slot />
     </div>
     <script>
@@ -186,44 +181,11 @@ const LOADER_COLS = 5;
 </html>
 
 <style>
-  .temp-nav {
-    position: fixed;
-    top: 1.25rem;
-    right: 1.5rem;
-    z-index: 100;
-    /* The mask - no explicit height, so it auto-sizes to .temp-nav-inner's
-       own (untransformed) height, same as .carousel-info elsewhere. */
-    overflow: hidden;
-    /* No mix-blend-mode (was difference): a fixed blended element over a
-       playing video makes the browser re-blend the whole screen for every
-       video frame and every scroll frame - suspected cause of the scroll
-       lag with a video playing (vue 2/3, 2026-09-26). The real menu (item
-       5) must not blend over video either. */
-  }
-
-  .temp-nav-inner {
-    display: flex;
-    gap: 1.25rem;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  .temp-nav a {
-    color: #fff;
-    text-decoration: none;
-  }
-
-  .temp-nav a:hover {
-    text-decoration: underline;
-  }
-
   .page-wipe {
     position: fixed;
     inset: 0;
     z-index: 200;
-    background: var(--color-ink);
+    background: var(--color-curtain);
     pointer-events: none;
     /* No transform here - page-transitions.ts owns it entirely via GSAP's
        yPercent. A CSS transform here doesn't get folded into that; GSAP

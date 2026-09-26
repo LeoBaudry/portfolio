@@ -38,6 +38,18 @@ export function afterSiteLoader(): Promise<void> {
   return window.__siteLoader.uncovered;
 }
 
+/**
+ * Resolves once the site-entry loader has fully cleared - later than
+ * afterSiteLoader. For what must not play over the loader's own exit at all
+ * (the menu bar's entrance: it started while the columns were still
+ * leaving, Leo 2026-09-26). Immediate when the loader isn't showing.
+ */
+export function afterSiteLoaderDone(): Promise<void> {
+  const loader = document.getElementById('site-loader');
+  if (!loader || loader.hidden || !window.__siteLoader) return Promise.resolve();
+  return window.__siteLoader.done;
+}
+
 function hideLoader(loader: HTMLElement): void {
   loader.hidden = true;
   loader.setAttribute('aria-busy', 'false');

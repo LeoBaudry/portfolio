@@ -82,7 +82,7 @@ const featured = projects.slice(0, 5);
     max-width: none !important;
     max-height: none !important;
     overflow: hidden;
-    background: var(--color-ink);
+    background: var(--color-bg);
     /* Single source of truth for column count - inherited by both the
        curtain bars (.reel-project) and the grid lines, so they always
        match at every breakpoint. */
@@ -126,7 +126,7 @@ const featured = projects.slice(0, 5);
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: var(--color-ink);
+    background: var(--color-bg);
     opacity: 0;
     pointer-events: none;
   }
@@ -141,7 +141,7 @@ const featured = projects.slice(0, 5);
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    color: var(--color-paper);
+    color: var(--color-text);
     font-size: 0.75rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -169,7 +169,7 @@ const featured = projects.slice(0, 5);
     max-width: 40rem;
     margin: 0;
     text-align: center;
-    color: var(--color-paper);
+    color: var(--color-text);
     font-size: clamp(1.25rem, 3vw, 1.75rem);
     line-height: 1.4;
     /* Each line (split + masked individually by projects-reel.ts, see its
@@ -208,7 +208,7 @@ const featured = projects.slice(0, 5);
      created later via document.createElement. */
   .reel-grid-lines :global(.reel-gridline) {
     flex: 1;
-    border-right: 1.5px solid rgba(245, 244, 241, 0.25);
+    border-right: 1.5px solid color-mix(in srgb, var(--color-line) 25%, transparent);
     transform: scaleY(0);
     transform-origin: bottom;
   }
@@ -258,7 +258,7 @@ const featured = projects.slice(0, 5);
 
   .reel-bars :global(.reel-bar) {
     flex: 1;
-    background: var(--color-ink);
+    background: var(--color-curtain);
     margin-right: -1px;
     will-change: transform;
   }
@@ -285,7 +285,7 @@ const featured = projects.slice(0, 5);
     right: 0;
     bottom: var(--row-bottom);
     z-index: 6;
-    color: var(--color-paper);
+    color: var(--color-text);
     display: grid;
     grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
     align-items: last baseline;
@@ -345,7 +345,7 @@ const featured = projects.slice(0, 5);
     padding-left: var(--col-pad);
     z-index: 6;
     overflow: hidden;
-    color: var(--color-paper);
+    color: var(--color-text);
     font-size: var(--reel-small-size);
     letter-spacing: 0.06em;
   }
@@ -394,10 +394,10 @@ const featured = projects.slice(0, 5);
     border-radius: 5px;
     overflow: hidden;
     /* Frosted: see-through with a light blur of what's behind. */
-    background: color-mix(in srgb, var(--color-ink) 45%, transparent);
+    background: color-mix(in srgb, var(--color-bg) 45%, transparent);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    color: var(--color-paper);
+    color: var(--color-text);
     font-size: 0.7rem;
     line-height: 1;
     letter-spacing: 0.08em;
@@ -414,8 +414,8 @@ const featured = projects.slice(0, 5);
     position: absolute;
     inset: 0;
     padding: inherit;
-    background: color-mix(in srgb, var(--color-paper) 85%, transparent);
-    color: var(--color-ink);
+    background: color-mix(in srgb, var(--color-text) 85%, transparent);
+    color: var(--color-bg);
     clip-path: inset(0 100% 0 0);
   }
 

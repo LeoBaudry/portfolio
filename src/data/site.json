@@ -1,0 +1,13 @@
+{
+  "email": "contact@example.com",
+  "availability": {
+    "enabled": true,
+    "text": "Recherche d'alternance - Paris, sept. 26"
+  },
+  "cv": "/cv.pdf",
+  "socials": [
+    { "label": "LinkedIn", "url": "https://www.linkedin.com/" },
+    { "label": "Behance", "url": "https://www.behance.net/" },
+    { "label": "GitHub", "url": "https://github.com/" }
+  ]
+}

@@ -16,7 +16,7 @@ export function getStaticPaths() {
 const { project } = Astro.props;
 ---
 
-<Layout title={`${project.titre} — Portfolio`}>
+<Layout title={`${project.titre} — Portfolio`} pageName={project.titre}>
   <article class="project-page">
     <div class="project-intro">
       <RevealText as="p" class="project-meta font-mono">
@@ -47,8 +47,8 @@ const { project } = Astro.props;
 <style>
   .project-page {
     position: relative;
-    background: var(--color-ink);
-    color: var(--color-paper);
+    background: var(--color-bg);
+    color: var(--color-text);
   }
 
   .project-intro {
@@ -128,8 +128,9 @@ const { project } = Astro.props;
     text-transform: uppercase;
     text-decoration: none;
     opacity: 0.8;
-    color: #fff;
-    /* No mix-blend-mode over the hero video - see .temp-nav, Layout.astro. */
+    color: var(--color-text);
+    /* No mix-blend-mode over the hero video: blending over a playing video
+       re-blends every frame - it lagged scrolling (2026-09-26). */
   }
 
   .project-back:hover {

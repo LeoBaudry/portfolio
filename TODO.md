@@ -6,14 +6,121 @@ Ordered so that each step only builds on finished ones. Items marked
 ## Next session (written 2026-09-25, for 2026-09-26)
 
 Start the menu (item 5 below - full spec there, all questions answered):
-1. Role-named colour tokens first (quick, invisible): --color-bg / -text /
-   -line / -curtain / -accent instead of ink / paper, plus the 5 hard-coded
-   rgba(245, 244, 241, ...) -> tokens. Prep for light/dark (item 12).
-2. `src/data/site.json` (email, socials, CV, availability) + `"menu": true`
-   on 3 projects in projets.json.
-3. Build the menu bar first (square with logo -> widens into the bar) so
-   Leo can judge the look, then the panel, then the /projets view buttons
-   and the [slug] `← PROJETS`.
+1. [x] Role-named colour tokens (done 2026-09-26, global.css): components
+   use --color-bg / -text / -line / -curtain / -accent / -bg-inverse /
+   -text-inverse; ink / paper / brand are the raw palette only. All
+   rgba() -> color-mix() of a role. Computed colours checked identical,
+   except temp-nav + back link: #fff -> paper (#f5f4f1).
+2. [x] `src/data/site.json` (email, availability toggle + text, CV path,
+   socials LinkedIn / Behance / GitHub) - ALL PLACEHOLDERS, Leo to fill:
+   real email, profile URLs, and put the CV at public/cv.pdf. `"menu":
+   true` on aurore / solstice / mirage (placeholders, the first 3).
+   Panel decided 2026-09-26: slightly transparent, NO blur (backdrop-
+   filter over video = lag).
+3. [~] Menu bar built 2026-09-26, Leo to judge the look: SiteMenu.astro
+   (persisted, in Layout; pages pass pageName) + site-menu.ts (initSiteMenu
+   in main.ts). Dark bar (--color-surface = bg + 8% text; Leo 2026-09-26:
+   the light bar felt out of place), 2px radius. Sized in vw (20vw x
+   3vw; touch portrait 70vw x 12vw) so browser zoom doesn't change it
+   (Leo). Shape = clip-path tweened from numbers (a tweened clip string
+   jumped: the browser shortens it). Open (Leo's choreography): logo out
+   left, burger out right, name out upwards, shrink to centred square, a
+   separate cross rises into the centre; close = cross out upwards, widen,
+   name in from below, logo / burger back in from their sides.
+   Entrance after the loader (Leo 2026-09-26): the whole menu's clip-path
+   reveals a centred square TOP TO BOTTOM with the logo already inside ->
+   widens (logo rides left) -> name + burger rise from below (open /
+   close keep their own moves: burger out/in on the right). Icon lines
+   1.1 (was 1.5). Hiding (if ever needed) = bottom edge rising. Logo 1.4vw (~24px). Top-centre on /, bottom-centre
+   elsewhere (FLIP on astro:before-preparation, 0.9s). Name swaps through
+   its mask on after-swap: one roll (old up + new from below together;
+   out-then-in read as a double animation; 0.85s).
+   Panel built 2026-09-26 (Leo to judge): SiteMenuPanel.astro (sibling of
+   the bar - the bar's clip would clip it), 30vw wide, surface at 92%, no
+   blur. Opens with the bar's shrink: clip-path from its edge next to the
+   bar, then each line rises in its mask. Content: nav (Accueil, Projets;
+   A propos / Contact listed but inactive - no pages yet; current page in
+   accent), "Projets a la une" (menu: true), availability dot + text,
+   email (click = copy, Copier -> Copie), LinkedIn / Behance / GitHub /
+   CV (PDF), FR / EN (static until item 7). Closes: cross, Escape, click
+   outside, any navigation (closes while the transition starts, in
+   parallel - not "close, then navigate").
+   Round 2 (2026-09-26): lines only showed mid-close - GSAP kept the CSS's
+   hidden translate as px under its yPercent; fixed (y: 0). More padding /
+   spacing (34px pad on a 1705px window, panel 512 x 589). max-height +
+   own scroll on short windows. Tiers: desktop vw / touch-portrait tablet
+   / phone (<600px), bar and panel alike. Scroll: down hides the bar
+   (bottom edge rising), up shows it (top to bottom); any scroll / wheel /
+   swipe outside the panel closes an open menu.
+   Round 3 (Leo): content inset 38 x 48px; "MENU" label above the nav;
+   current page = small orange square in a left gutter (no colour
+   change); projects = just the 3 names, bigger and tighter (no title, no
+   category / number); bottom = availability + 4 placeholder squares
+   (LinkedIn, Behance, GitHub, CV - real icons later) + orange "Contact"
+   CTA (mailto for now, the /contact page later). Removed: email copy,
+   FR / EN. Panel 512 x 555 on a 1705 x 791 window.
+   Round 4 (Leo): panel 21vw (359px), bigger text (nav 1.8vw, projects
+   1.3vw); every line on ONE left edge (the nav's masks reach into the
+   padding, the current-page square sits there); availability = plain
+   mono text, no dot; icon squares centred; nav has no "Contact" (the CTA
+   is it); CTA = outline, orange fill rising on hover (scaleY curtain),
+   0.9vw text.
+   Round 5 (Leo): 3 titled sections MENU (Accueil, Projets, A propos,
+   Contact - Contact back in the nav per Leo's outline) / PROJETS (3
+   names) / RESEAUX (4 squares, availability, CTA); no separators; nav and
+   projects same size (1.5vw); equal gaps between sections; side padding
+   58px, panel 24vw (410px); CTA fill rises from the bottom, drains out
+   through the top (transform-origin flips on hover).
+   Round 6 (Leo): surface = #1a1a1b (--color-ink-raised, bar + panel).
+   TRYING a blur behind the panel (backdrop-filter 20px, background 80%) -
+   reverses the "no blur" decision: if an open panel over a playing video
+   lags, drop it (no blur). Background 90% (Leo).
+   Fix: opening the menu while Lenis was still gliding after a scroll
+   closed it at once (scroll events closed it). Now only gestures close it
+   (wheel / swipe / scroll keys outside the menu), never scroll events.
+   Round 7 (Leo): CTA fill = GSAP slide (up in on hover, on out through
+   the top on leave, from wherever it is) - the scaleY + flipping
+   transform-origin jumped when hovering in/out fast. More room above
+   MENU (pad-top 3.2vw). Icon squares 1.9vw. Panel max-width = screen
+   minus margins (max-height + own scroll already). Measured with the
+   phone sizes: fits at 320x568, 375x667, 390x844 without scrolling.
+   Fix: 1px lines left visible (CTA fill at rest, closed panel, and the
+   scroll-hidden bar) - sizes aren't whole pixels, clipping / moving
+   exactly to the edge left a sub-pixel sliver. Hidden states now go 1px
+   past the edge (PAST_EDGE in site-menu.ts, CTA fill inset -1px).
+   Round 8 (Leo): titles bigger (--panel-title-size 0.85u); availability =
+   sans, sentence case, 85% white; icon squares left-aligned. Narrow
+   desktop windows made the menu unusable (773px wide: 5px text - pure
+   vw). Desktop sizes now in --menu-unit = max(1vw, 15px) (global.css;
+   plain 1vw on touch screens): zoom-proof on wide windows, floored at
+   ~1500px-window sizes. Measured: 773x715, 1280x720 fit (panel 360 x
+   577); 1024x640 fits with the panel scrolling inside.
+   Round 9 (Leo): nav / projects 1.75u (30px on a 1707 window; tablet
+   4.2vw, phone 7vw), line-height 1.15 so the panel still fits a 791px-
+   tall window (673px). Faster line masks: PART_IN 0.4 (was 0.5),
+   PART_OUT 0.24 (0.3), LINE_STAGGER 0.025 (0.035), panel lines start at
+   0.3s (0.4) - PART_* also time the bar's own parts.
+   Round 10 (Leo): entrance quicker - square 0.4s (0.6), widen 0.55s
+   (0.8) - and the logo holds the CENTRE while the bar widens, then slides
+   left (0.5s, from 75% of the widening); name + burger rise as it lands.
+   Whole entrance ~1.6s.
+   Round 11 (Leo): entrance waits for the loader to be fully GONE
+   (afterSiteLoaderDone, site-loader.ts) - it started over the loader's
+   exit. Logo slide later (95% of the widening) and slower (0.65s). Phone
+   sizes stop shrinking under 375px (--menu-unit max(1vw, 3.75px) on
+   phones): at 320x568 the menu = the 375 one, panel 290 wide, scrolls
+   inside (518px of content, 486 of room). temp-nav REMOVED (Layout +
+   project-morph hooks). A menu link clicked while open: closes the menu
+   FIRST, then navigate() - both at once moved the open menu across the
+   screen. Other navigations (back / forward) snap it shut instantly.
+   Fix: the closed panel's blur showed for a moment during page
+   transitions (clipped away only). visibility: hidden did NOT fix it
+   (Leo: still flashing, exactly where the panel sits, every page change,
+   even never opened). Now display: none while closed and the blur only
+   set under .is-open (site-menu.ts adds it for the whole open -> close
+   run) - confirmed fixed by Leo.
+   Next: the /projets view buttons and `← PROJETS` out of the bar, then
+   remove view-switcher / project-back (temp-nav already gone).
 
 ## 2026-09-25 session (all done, confirmed by Leo - kept for the record)
 
@@ -125,8 +232,8 @@ G2. [x] **Vue 2 lags a bit on re-entry** (Leo, 2026-09-26): switch to
    /dev/webcodecs-test page + worker + mp4box dependency; warmDezoomVideos
    (downloads all vue 2 videos on every /projets visit). waitsForRest
    (180ms rest before a video's first start) also removed 2026-09-26 at
-   Leo's request - Leo to judge vue 2 first pass without it.
-K. [ ] **Flash on first back from [slug]** (Leo, 2026-09-26): first load /
+   Leo's request - confirmed: no lag without it.
+K. [x] **Flash on first back from [slug]** (fixed, confirmed by Leo 2026-09-26) (Leo, 2026-09-26): first load /
    hard reload, homepage reel -> click project -> [slug] (fine) -> "<-"
    back: animates out but a quick flash shows under the page. Only once.
    "<-" goes to /projets vue 1 (not the homepage): its full-width <img>
@@ -277,7 +384,8 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    - **Open:** clicking the hamburger shrinks the bar back to a square with
      a cross; at the same time a larger PANEL pops out with a small-medium
      gap - below the bar on the homepage, above it elsewhere. Panel slightly
-     transparent + blur/glass. Clicking a link: back to the bar, then the
+     transparent, NO blur (decided 2026-09-26: backdrop-filter over
+     playing video = the same lag as the removed mix-blend-mode). Clicking a link: back to the bar, then the
      usual page transitions.
    - **Panel content:** navigation (Accueil, Projets, A propos, Contact);
      3 featured projects (`"menu": true` in projets.json); availability
@@ -298,6 +406,20 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    - Every element animates with the site's mask logic (no opacity).
    - Replaces today's temp-nav / view-switcher / project-back, so the morph
      code's chrome hide/reveal hooks must move to it.
+5b. [ ] **File reorganisation** (agreed with Leo 2026-09-26, apply once the
+   menu is done). Feature folders, mirrored for components and scripts:
+   components/ menu/Menu.astro (<- SiteMenu), menu/MenuContent.astro (<-
+   SiteMenuPanel), footer/Footer.astro (<- SiteFooter), home/
+   ProjectsReel.astro, media/{MainVisual,ProjectImage,ProjectMedia}.astro,
+   animations/RevealText.astro. scripts/ main.ts (stays), menu/menu.ts (<-
+   site-menu), footer/footer.ts, home/projects-reel.ts, projets/page.ts
+   (<- projets-page, joins the existing projets/ folder), project/page.ts
+   (<- project-page), transitions/page-wipe.ts (<- page-transitions),
+   transitions/morph.ts (<- project-morph), media/video.ts (<- main-
+   video), loader/loader.ts + loader/loader-inline.js (<- site-loader*),
+   scroll/smooth-scroll.ts, animations/reveal-text.ts. Update every import,
+   the paths in TODO.md and code comments; check with astro check + one
+   load of each page.
 6. [ ] **Page transition redesign.** Brand colour + logo centred instead of
    the plain black wipe.
 7. [ ] **FR/EN.** Astro i18n routing, language picked from the browser
@@ -317,7 +439,9 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
 ## Phase 4 — Polish
 
 11. [ ] Interactive footer (ASCII / dithered idea). Not a priority.
-12. [ ] **Light/dark mode** (moved from item 4). Open questions, asked
+12. [ ] **Light/dark mode** (moved from item 4). The site WILL have a light
+   version (Leo 2026-09-26). Leo's leaning: the menu stays dark in both
+   modes - try it at the end. Open questions, asked
    2026-09-24, unanswered: OS setting only or + manual switch (in the
    menu)? Loader stays dark or follows the theme? Light palette = straight
    paper/ink swap or Leo's own values?

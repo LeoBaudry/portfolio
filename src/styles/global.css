@@ -43,14 +43,63 @@
 @theme {
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
+  /* Raw palette - referenced only by the role tokens below, never by
+     components, so a theme (light/dark, item 12) only remaps the roles. */
   --color-ink: #111214;
   --color-paper: #f5f4f1;
   --color-brand: #e18314;
+  --color-ink-raised: #1a1a1b;
+}
+
+/* The menu's sizing unit (bar + panel, SiteMenu*.astro): 1vw, so browser
+   zoom doesn't change the menu on screen (Leo) - but never less than it is
+   on a 1500px-wide window, or a narrow desktop window shrank it to the
+   point of being unusable (773px wide: 5px text; a 12px floor still left
+   the bar's name at 8px). Touch screens: plain vw,
+   their own size tiers take over. */
+:root {
+  --menu-unit: max(1vw, 15px);
+}
+
+@media (pointer: coarse) and (max-aspect-ratio: 1/1) {
+  :root {
+    --menu-unit: 1vw;
+  }
+}
+
+/* Phones: the menu stops shrinking below a 375px-wide screen (at 320px it
+   got too small - Leo, 2026-09-26). */
+@media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
+  :root {
+    --menu-unit: max(1vw, 3.75px);
+  }
+}
+
+/* Colour roles - what components use. */
+:root {
+  /* Page / section background, and the text on it. */
+  --color-bg: var(--color-ink);
+  --color-text: var(--color-paper);
+  /* Hairlines (grid lines, row borders). Each use sets its own strength:
+     color-mix(in srgb, var(--color-line) 15%, transparent). */
+  --color-line: var(--color-text);
+  /* Solid panels that cover content while it's hidden (view / row
+     curtains, reel bars, loader columns, page wipe) - must read as the
+     background itself. */
+  --color-curtain: var(--color-bg);
+  /* Raised panels on the background (the menu bar and panel): a touch
+     lighter so they read over the dark pages. */
+  --color-surface: var(--color-ink-raised);
+  /* Brand colour: loader fill and bar, highlights. */
+  --color-accent: var(--color-brand);
+  /* The light sections (homepage text blocks, body default). */
+  --color-bg-inverse: var(--color-paper);
+  --color-text-inverse: var(--color-ink);
 }
 
 body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
 }
 
 /* Lenis drives scrolling everywhere on the site; the native scrollbar is
@@ -105,7 +154,7 @@ img {
   z-index: 300;
   display: grid;
   place-items: center;
-  color: var(--color-paper);
+  color: var(--color-text);
 }
 
 .site-loader[hidden] {
@@ -139,7 +188,7 @@ html:has(#site-loader:not([hidden])) {
   position: relative;
   flex: 1;
   margin-right: -1px;
-  background: var(--color-ink);
+  background: var(--color-curtain);
   overflow: hidden;
   transform-origin: top;
 }
@@ -151,7 +200,7 @@ html:has(#site-loader:not([hidden])) {
 .site-loader-col-fill {
   position: absolute;
   inset: 0;
-  background: var(--color-brand);
+  background: var(--color-accent);
   transform: scaleY(0);
   transform-origin: bottom;
 }
@@ -176,7 +225,7 @@ html:has(#site-loader:not([hidden])) {
   bottom: 0;
   z-index: 1;
   height: 6px;
-  background: var(--color-brand);
+  background: var(--color-accent);
   transform: scaleX(0);
   transform-origin: left;
 }
@@ -195,7 +244,7 @@ html:has(#site-loader:not([hidden])) {
 
 .site-loader-gridline {
   flex: 1;
-  border-right: 1px solid rgba(245, 244, 241, 0.12);
+  border-right: 1px solid color-mix(in srgb, var(--color-line) 12%, transparent);
   transform: scaleY(0);
   transform-origin: bottom;
 }

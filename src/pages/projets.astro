@@ -10,7 +10,7 @@ const thumbsOf = (images: MediaEntry[]) =>
   images.filter((m): m is string => typeof m === 'string' && !isVideo(m)).slice(0, 3);
 ---
 
-<Layout title="Projets — Portfolio">
+<Layout title="Projets — Portfolio" pageName="Projets">
   <div class="projects-page" data-view="carousel">
     <!-- Vue 1: grand carrousel plein écran, un projet à la fois. -->
     <section class="view-carousel">
@@ -115,9 +115,8 @@ const thumbsOf = (images: MediaEntry[]) =>
          padding/background of its own - just the boundary). .view-switcher
          (the whole panel: background, padding, radius, AND the buttons
          together) is what project-morph.ts animates as one unit, sinking
-         down through the mask's bottom edge and rising back, same
-         technique as #temp-nav above - not just the icons within a static
-         panel, the panel goes with them. -->
+         down through the mask's bottom edge and rising back - not just the
+         icons within a static panel, the panel goes with them. -->
     <div class="view-switcher-mask">
       <div class="view-switcher" role="tablist" aria-label="Changer de vue">
         <button type="button" class="view-btn" data-set-view="carousel" aria-label="Grand carrousel">
@@ -147,8 +146,8 @@ const thumbsOf = (images: MediaEntry[]) =>
 <style>
   .projects-page {
     min-height: 100dvh;
-    background: var(--color-ink);
-    color: var(--color-paper);
+    background: var(--color-bg);
+    color: var(--color-text);
   }
 
   .info-name {
@@ -273,7 +272,7 @@ const thumbsOf = (images: MediaEntry[]) =>
      whole item. Vue 2: only the image (.dezoom-image), text left uncovered. */
   .view-curtain {
     position: absolute;
-    background: var(--color-ink);
+    background: var(--color-curtain);
     pointer-events: none;
     transform: scaleY(0);
     transform-origin: bottom;
@@ -341,7 +340,7 @@ const thumbsOf = (images: MediaEntry[]) =>
   }
 
   .liste-row {
-    border-bottom: 1px solid rgba(245, 244, 241, 0.15);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-line) 15%, transparent);
   }
 
   /* Back from a project page: the row's other images are still under their
@@ -385,7 +384,7 @@ const thumbsOf = (images: MediaEntry[]) =>
     flex: 1 1 0;
     width: 0;
     height: 22vw;
-    border-right: 1px solid var(--color-ink);
+    border-right: 1px solid var(--color-bg);
   }
 
   .liste-image:last-child {
@@ -417,7 +416,7 @@ const thumbsOf = (images: MediaEntry[]) =>
     right: 0;
     bottom: -2px;
     left: 0;
-    background: var(--color-ink);
+    background: var(--color-curtain);
     pointer-events: none;
     transform: scaleY(0);
     transform-origin: bottom;
@@ -483,7 +482,7 @@ const thumbsOf = (images: MediaEntry[]) =>
     display: flex;
     gap: 0.75rem;
     padding: 0.5rem;
-    background: rgba(17, 18, 20, 0.55);
+    background: color-mix(in srgb, var(--color-bg) 55%, transparent);
     border-radius: 0.5rem;
   }
 
@@ -493,15 +492,15 @@ const thumbsOf = (images: MediaEntry[]) =>
     justify-content: center;
     width: 2.25rem;
     height: 2.25rem;
-    border: 1px solid rgba(245, 244, 241, 0.3);
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
     background: transparent;
-    color: rgba(245, 244, 241, 0.5);
+    color: color-mix(in srgb, var(--color-text) 50%, transparent);
     cursor: pointer;
   }
 
   .view-btn.is-active {
-    color: var(--color-paper);
-    border-color: var(--color-paper);
+    color: var(--color-text);
+    border-color: var(--color-text);
   }
 
   /* --- Vue 1 <-> Vue 2 morph ---

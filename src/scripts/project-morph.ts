@@ -92,7 +92,6 @@ export function initProjectMorph(): void {
   const clone = document.getElementById('project-morph-clone') as HTMLImageElement | null;
   if (!clone || prefersReducedMotion()) return;
 
-  const tempNavInner = document.querySelector<HTMLElement>('#temp-nav .temp-nav-inner');
 
   let backSlug: string | null = null;
   let inFlightTween: gsap.core.Tween | null = null;
@@ -113,7 +112,6 @@ export function initProjectMorph(): void {
     backSlug = null;
     
     if (snapChromeVisible) {
-      if (tempNavInner) gsap.set(tempNavInner, { y: 0 });
       pageLenis?.start();
     }
   }
@@ -186,10 +184,7 @@ export function initProjectMorph(): void {
         }
       }
 
-      const chromeLeaving = Promise.all([
-        hideChromeEl(tempNavInner),
-        hideChromeEl(viewSwitcherEl ?? projectBackEl),
-      ]);
+      const chromeLeaving = hideChromeEl(viewSwitcherEl ?? projectBackEl);
       await Promise.all([leaving, chromeLeaving]);
 
       gsap.set(clone, { display: 'block' });
@@ -251,7 +246,6 @@ export function initProjectMorph(): void {
       const projectBackEl = document.querySelector<HTMLElement>('.project-back');
       snapChromeHidden(projectBackEl);
       morphTo(heroImg, () => {
-        revealChromeEl(tempNavInner);
         revealChromeEl(projectBackEl);
       });
     } else if (direction === 'backward' && backSlug) {
@@ -281,7 +275,6 @@ export function initProjectMorph(): void {
       return;
     }
     morphTo(targetImg, () => {
-      revealChromeEl(tempNavInner);
       revealChromeEl(document.querySelector<HTMLElement>('.view-switcher-mask .view-switcher'));
     });
   });

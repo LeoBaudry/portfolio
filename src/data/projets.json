@@ -2,6 +2,7 @@
   {
     "titre": "Aurore",
     "slug": "aurore",
+    "menu": true,
     "categorie": "Identité",
     "secteur": "Culture",
     "annee": 2024,
@@ -22,6 +23,7 @@
   {
     "titre": "Solstice",
     "slug": "solstice",
+    "menu": true,
     "categorie": "Web",
     "secteur": "Retail",
     "annee": 2023,
@@ -41,6 +43,7 @@
   {
     "titre": "Mirage",
     "slug": "mirage",
+    "menu": true,
     "categorie": "Motion",
     "secteur": "Mode",
     "annee": 2022,

@@ -9,6 +9,7 @@ import { initProjetsPage } from './projets-page';
 import { initProjectPage } from './project-page';
 import { initMainVideos } from './main-video';
 import { runSiteLoader } from './site-loader';
+import { initSiteMenu } from './site-menu';
 
 // The browser applies its own scroll restoration on back/forward navigation
 // immediately on popstate - before Astro's router has swapped in the new
@@ -86,3 +87,4 @@ window.addEventListener('pageshow', (event) => {
 
 initPageTransitions();
 initProjectMorph();
+initSiteMenu();
