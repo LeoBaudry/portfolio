@@ -3,7 +3,15 @@
 Ordered so that each step only builds on finished ones. Items marked
 (Figma) wait on a mockup from Leo before any code.
 
-## Next session (written 2026-09-25, for 2026-09-26)
+## Next session (written 2026-09-27)
+
+Menu (5), file reorganisation (5b) and page transition (6) are done.
+FR/EN (item 7) moved to the very end: once all content is prepared and
+on the back-end. Next: Phase 3 once Leo's Figma mockups exist, or Phase 4
+(interactive footer; light/dark stays at the end). Still waiting on Leo: real values in src/data/site.json
+(email, LinkedIn / Behance / GitHub) and public/cv.pdf.
+
+## Menu sessions (2026-09-25 -> 27, done - kept for the record)
 
 Start the menu (item 5 below - full spec there, all questions answered):
 1. [x] Role-named colour tokens (done 2026-09-26, global.css): components
@@ -439,9 +447,24 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    loader/loader.ts + loader/loader-inline.js, scroll/smooth-scroll.ts,
    animations/reveal-text.ts. Moved with git mv; imports, comments and
    this file updated.
-6. [ ] **Page transition redesign.** Brand colour + logo centred instead of
+6. [x] **Page transition redesign.** (Done 2026-09-27, confirmed by Leo:
+   the loader in miniature - components/transitions/PageTransition.astro +
+   transitions/page-wipe.ts. Ink columns rise from the bottom, left to
+   right (vertical: the page's 10vh parallax opens a strip at the bottom a
+   sideways sweep left showing); logo strokes slide into their masks; the
+   new page's name rises letter by letter under it (33px sans, absolutely
+   placed so the logo never moves); orange fills rise; strokes / name
+   leave; columns clear bottom to top, left to right. body is now the dark
+   curtain colour (every section sets its own background) so any strip
+   the parallax uncovers is dark. The overlay catches clicks while shown;
+   a menu link keeps the page blocked until its navigation starts.
+   Logo stroke geometry shared with the loader: utils/logo.ts.)
+   Original note: brand colour + logo centred instead of
    the plain black wipe.
-7. [ ] **FR/EN.** Astro i18n routing, language picked from the browser
+7. [ ] **FR/EN - MOVED TO THE VERY END (Leo, 2026-09-27):** done last,
+   once all the content is prepared and put on the back-end - see the
+   "Last" section after Phase 4. Original note: Astro i18n routing,
+   language picked from the browser
    language (not region) on first visit, plus a manual switch. Texts written
    by Leo in both languages rather than machine-translated. Why keep a
    manual switch (asked 2026-09-25): English browsers read by French
@@ -464,6 +487,13 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    2026-09-24, unanswered: OS setting only or + manual switch (in the
    menu)? Loader stays dark or follows the theme? Light palette = straight
    paper/ink swap or Leo's own values?
+
+## Last - FR/EN (moved here 2026-09-27)
+
+Item 7 (Phase 2 above, full notes there): only once all the content is
+prepared and put on the back-end. Decisions to take then: URL scheme
+(French at /, English under /en/ - English words in English URLs?), where
+the language switch lives (menu panel / footer), where the texts live.
 
 ## Before launch — test once the site is finished and online
 

@@ -105,8 +105,11 @@
   --color-text-inverse: var(--color-ink);
 }
 
+/* Dark behind the page: what shows when the page drifts during a page
+   transition (transitions/page-wipe.ts) - the curtain's colour. Every
+   section sets its own background (the light ones included). */
 body {
-  background: var(--color-bg-inverse);
+  background: var(--color-bg);
   color: var(--color-text-inverse);
 }
 

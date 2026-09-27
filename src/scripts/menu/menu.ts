@@ -126,6 +126,8 @@ export function initMenu(): void {
   let shape: Shape = 'hidden';
   let open = false;
   let busy: gsap.core.Timeline | null = null;
+  // A menu link clicked: the menu closes, then navigates there.
+  let leavingFor: string | null = null;
   // The entrance is over: the extras can come out.
   let entered = false;
 
@@ -237,8 +239,10 @@ export function initMenu(): void {
       }
       if (!reduced) close.focus({ preventScroll: true });
     } else {
-      // The page is usable again as soon as the menu starts closing.
-      if (backdrop) backdrop.hidden = true;
+      // The page is usable again as soon as the menu starts closing - unless
+      // it closes for one of its links: then the page stays blocked until
+      // that navigation starts (see the menu links below).
+      if (backdrop && !leavingFor) backdrop.hidden = true;
       if (panel) {
         // Lines sink out of their masks (downwards, Leo 2026-09-27), and
         // the panel only collapses once the last one is out - collapsing
@@ -297,6 +301,12 @@ export function initMenu(): void {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       const href = link.getAttribute('href')!;
+      // Nothing else can be clicked meanwhile (the backdrop stays up, the
+      // extras are disabled): a project clicked during the ~0.7s close
+      // started a morph that the menu's navigation then cut off halfway -
+      // its video stuck full screen, scrolling locked (Leo, 2026-09-27).
+      leavingFor = href;
+      if (extrasOut) extrasOut.inert = true;
       void forceClose().then(() => navigate(href));
     });
   });
@@ -477,10 +487,15 @@ export function initMenu(): void {
   // Any other navigation with the menu open (browser back / forward...):
   // snap it shut, so it never travels across the screen open.
   document.addEventListener('astro:before-preparation', (event: any) => {
+    // A menu link's navigation has started: the transition takes over.
+    leavingFor = null;
+    if (backdrop) backdrop.hidden = true;
     void forceClose(true);
     const to: string = event.to.pathname;
     // The same piece on the next page ([slug] -> [slug]): it just stays.
     if (extrasFor(to) !== extrasOut) extrasHiding = hideExtras();
+    // Staying: usable again (a menu link disabled it meanwhile).
+    else if (extrasOut) extrasOut.inert = scrollHidden;
     moveFor(to);
   });
 

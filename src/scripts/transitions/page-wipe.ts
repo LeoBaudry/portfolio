@@ -1,22 +1,55 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { SplitText } from 'gsap/SplitText';
 import { lenis, resetPageScroll } from '../scroll/smooth-scroll';
 import { whenVideoReady } from '../media/video';
 import { showMenuExtras } from '../menu/menu';
 
-gsap.registerPlugin(CustomEase, ScrollTrigger);
+gsap.registerPlugin(CustomEase, ScrollTrigger, SplitText);
 
+// The page transition (PageTransition.astro) - the site-entry loader in
+// miniature: ink columns rise (cover), the logo's strokes slide into their
+// masks, the new page's name rises under it, each column turns orange from
+// the bottom, the logo and name leave, the columns clear (reveal). Same
+// curves as the loader (loader/loader-inline.js).
 const WIPE_EASE = CustomEase.create('wipe', '0.76, 0, 0.24, 1');
-const WIPE_IN_DURATION = 0.7;
-const WIPE_OUT_DURATION = 0.9;
+const EXPO_OUT = CustomEase.create('ptExpoOut', '0.16, 1, 0.3, 1');
+const EXPO_IN = CustomEase.create('ptExpoIn', '0.7, 0, 0.84, 0');
+// Cover: each column, and the delay from one column to the next.
+const COVER = 0.6;
+const COLUMN_STAGGER = 0.06;
+const GRID_IN = 0.8;
+// The logo's strokes sliding in, one after another.
+const STROKE_IN = 0.7;
+const STROKE_STAGGER = 0.1;
+// The new page's name, under the logo: letter by letter, each in its own
+// mask.
+const NAME_IN = 0.6;
+const NAME_STAGGER = 0.035;
+const NAME_HOLD = 0.25;
+const NAME_OUT_STAGGER = 0.02;
+// Reveal: orange rising in each column, the logo / name leaving, the
+// columns clearing.
+const ORANGE = 0.5;
+const ORANGE_STAGGER = 0.04;
+const LOGO_OUT_AT = 0.5; // share of ORANGE after which the logo / name leave
+const STROKE_OUT = 0.55;
+const STROKE_OUT_STAGGER = 0.07;
+const NAME_OUT = 0.4;
+const CLEAR = 0.7;
+const CLEAR_AT = 0.85; // share of ORANGE after which the columns start clearing
+// The page drifting up as it's covered, and rising back into place over
+// the clear (the parallax the site has had from the start). The strip it
+// uncovers shows body's background: the curtain's dark (global.css).
+const CONTENT_IN = 1;
 const SAFE_TOP_THRESHOLD_PX = 8;
 const CONTENT_PARALLAX_VH = '10vh';
 // Longest the covered screen waits for the new page's visible images to be
 // decoded, then for its visible main video to play its first frame.
 const IMAGES_READY_CAP = 800;
 const VIDEOS_READY_CAP = 600;
-// Share of the wipe's lift after which the menu extras come out.
+// Share of the columns' clear after which the menu extras come out.
 const EXTRAS_SHOW_AT = 0.6;
 
 // --- GESTION DU BLOCAGE DU SCROLL ---
@@ -87,7 +120,7 @@ function canLiftViaTransform(content: HTMLElement): boolean {
   if (Math.abs(content.getBoundingClientRect().top) < SAFE_TOP_THRESHOLD_PX) {
     return true;
   }
-  
+
   const hasActivePin = ScrollTrigger.getAll().some((st) => st.pin && st.isActive);
   return !hasActivePin;
 }
@@ -132,10 +165,39 @@ export function isWipeNavigation(): boolean {
 }
 
 export function initPageTransitions(initPage: () => void): void {
-  const overlay = document.getElementById('page-wipe');
+  const overlay = document.getElementById('page-transition');
   if (!overlay || prefersReducedMotion()) return;
+  const name = overlay.querySelector<HTMLElement>('.pt-name')!;
+  const strokes = Array.from(overlay.querySelectorAll<SVGGElement>('.pt-stroke'), (g) => {
+    const [x, y] = (g.dataset.out ?? '0 0').split(' ').map(Number);
+    return { g, x, y };
+  });
+  // Only the columns / lines CSS shows at this width (5 / 3 / 2).
+  const shown = (el: Element) => getComputedStyle(el).display !== 'none';
+  const columns = () => Array.from(overlay.querySelectorAll<HTMLElement>('.pt-col')).filter(shown);
+  const gridlines = () => Array.from(overlay.querySelectorAll<HTMLElement>('.pt-gridline')).filter(shown);
+  const fills = () => columns().map((col) => col.firstElementChild as HTMLElement);
 
-  gsap.set(overlay, { yPercent: 100 });
+  let nameSplit: SplitText | null = null;
+  const nameChars = () => (nameSplit?.chars ?? []) as HTMLElement[];
+  let coverTl: gsap.core.Timeline | null = null;
+  let revealTl: gsap.core.Timeline | null = null;
+  // The new page's name rising, started on the swap.
+  let nameShown: Promise<void> = Promise.resolve();
+
+  // Everything back to "nothing shown": columns down, fills down, strokes
+  // out of their masks (at their entrance start), name under its mask.
+  function resetOverlay(): void {
+    gsap.set(overlay, { visibility: 'hidden' });
+    gsap.set(overlay!.querySelectorAll('.pt-col'), { scaleY: 0, transformOrigin: '50% 100%' });
+    gsap.set(overlay!.querySelectorAll('.pt-col-fill'), { scaleY: 0, transformOrigin: '50% 100%' });
+    gsap.set(overlay!.querySelectorAll('.pt-gridline'), { scaleY: 0, transformOrigin: '50% 100%' });
+    strokes.forEach(({ g, x, y }) => gsap.set(g, { x: -x, y: -y }));
+    nameSplit?.revert();
+    nameSplit = null;
+    name.textContent = '';
+  }
+  resetOverlay();
 
   // Started on the swap: the new page's visible images decoding.
   let imagesReady: Promise<void> = Promise.resolve();
@@ -153,29 +215,54 @@ export function initPageTransitions(initPage: () => void): void {
 
     // 🔒 On verrouille le scroll dès qu'on clique sur un lien !
     toggleScrollLock(true);
-    
+
     const content = document.getElementById('transition-root');
     const originalLoader = event.loader;
 
-    const tl = gsap.timeline();
-    tl.fromTo(overlay, { yPercent: 100 }, { yPercent: 0, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
-    
+    // A transition already under way (a link clicked mid-reveal): straight
+    // back to covered, then on as usual.
+    const midway = coverTl?.isActive() || revealTl?.isActive();
+    coverTl?.kill();
+    revealTl?.kill();
+    resetOverlay();
+    gsap.set(overlay, { visibility: 'visible' });
+    if (midway) gsap.set(columns(), { scaleY: 1 });
+
+    const cols = columns();
+    // Until the last column is up.
+    const coverDuration = COVER + COLUMN_STAGGER * (cols.length - 1);
+    const tl = (coverTl = gsap.timeline());
+    // Ink columns rise from the bottom, one after another left to right;
+    // the faint grid draws up with them. From the bottom, because the page
+    // drifts up meanwhile: the strip it opens at the bottom is covered as
+    // it forms (a sideways sweep left it showing - Leo, 2026-09-27).
+    tl.to(cols, { scaleY: 1, duration: COVER, ease: WIPE_EASE, stagger: COLUMN_STAGGER }, 0)
+      .to(gridlines(), { scaleY: 1, duration: GRID_IN, ease: WIPE_EASE, stagger: COLUMN_STAGGER }, 0.1)
+      // Covered: the logo's strokes slide into their masks one by one.
+      .to(
+        strokes.map(({ g }) => g),
+        { x: 0, y: 0, duration: STROKE_IN, ease: EXPO_OUT, stagger: STROKE_STAGGER },
+        coverDuration - 0.1
+      );
+
     if (content) {
       if (canLiftViaTransform(content)) {
-        tl.to(content, { y: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
+        tl.to(content, { y: `-${CONTENT_PARALLAX_VH}`, duration: coverDuration, ease: WIPE_EASE }, 0);
       } else {
-        tl.to(content, { top: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
-        
+        tl.to(content, { top: `-${CONTENT_PARALLAX_VH}`, duration: coverDuration, ease: WIPE_EASE }, 0);
+
         const activePins = ScrollTrigger.getAll()
           .filter((st) => st.pin && st.isActive)
           .map((st) => st.pin as Element);
-          
+
         if (activePins.length > 0) {
-          tl.to(activePins, { y: `-${CONTENT_PARALLAX_VH}`, duration: WIPE_IN_DURATION, ease: WIPE_EASE }, 0);
+          tl.to(activePins, { y: `-${CONTENT_PARALLAX_VH}`, duration: coverDuration, ease: WIPE_EASE }, 0);
         }
       }
     }
 
+    // The new page is swapped in once the screen is covered AND the logo
+    // is in (the loader's one floor: its strokes' entrance).
     event.loader = async () => {
       await Promise.all([originalLoader(), playTimeline(tl)]);
     };
@@ -184,6 +271,18 @@ export function initPageTransitions(initPage: () => void): void {
   document.addEventListener('astro:after-swap', () => {
     resetPageScroll();
     if (!transitionInFlight) return;
+    // Behind the columns now: the new page's name rises under the logo,
+    // letter by letter.
+    nameSplit?.revert();
+    name.textContent = document.getElementById('transition-root')?.dataset.pageName ?? '';
+    nameSplit = SplitText.create(name, { type: 'chars', mask: 'chars' });
+    gsap.set(nameChars(), { yPercent: 100 });
+    nameShown = playTimeline(
+      gsap
+        .timeline()
+        .to(nameChars(), { yPercent: 0, duration: NAME_IN, ease: EXPO_OUT, stagger: NAME_STAGGER })
+        .to({}, { duration: NAME_HOLD })
+    );
     // Capped: decode() can hang, and a lazy image that never starts loading
     // just rejects - either way the wipe doesn't wait long.
     imagesReady = capped(
@@ -210,6 +309,8 @@ export function initPageTransitions(initPage: () => void): void {
     if (id !== navigationId) return;
     initPage();
     await capped(Promise.all(visibleImages().map((img) => whenVideoReady(img))), VIDEOS_READY_CAP);
+    // The name has been read (it rose and held) before anything leaves.
+    await nameShown;
     await nextFrames();
     if (id !== navigationId) return;
 
@@ -217,25 +318,53 @@ export function initPageTransitions(initPage: () => void): void {
 
     ScrollTrigger.refresh();
 
-    const tl = gsap.timeline();
-    
+    const cols = columns();
+    const clearAt = ORANGE * CLEAR_AT;
+    const clearDuration = CLEAR + COLUMN_STAGGER * (cols.length - 1);
+    const tl = (revealTl = gsap.timeline());
+
     // 🔓 On déverrouille le scroll EXACTEMENT quand le rideau finit de s'effacer
     tl.eventCallback('onComplete', () => {
       toggleScrollLock(false);
+      resetOverlay();
+      revealTl = null;
     });
 
-    tl.to(overlay, { yPercent: -100, duration: WIPE_OUT_DURATION, ease: WIPE_EASE }, 0);
-    // The page's menu extras (menu/menu.ts) come out once
-    // most of the page is uncovered.
-    tl.call(showMenuExtras, [], WIPE_OUT_DURATION * EXTRAS_SHOW_AT);
+    // Each column turns orange from the bottom, behind the logo...
+    tl.to(fills(), { scaleY: 1, duration: ORANGE, ease: WIPE_EASE, stagger: ORANGE_STAGGER }, 0)
+      // ...the strokes carry on along their diagonal out of their masks,
+      // the name leaves upwards...
+      .to(
+        strokes.map(({ g }) => g),
+        {
+          x: (i: number) => strokes[i].x,
+          y: (i: number) => strokes[i].y,
+          duration: STROKE_OUT,
+          ease: EXPO_IN,
+          stagger: STROKE_OUT_STAGGER,
+        },
+        ORANGE * LOGO_OUT_AT
+      )
+      .to(nameChars(), { yPercent: -100, duration: NAME_OUT, ease: EXPO_IN, stagger: NAME_OUT_STAGGER }, ORANGE * LOGO_OUT_AT)
+      // ...and the columns clear bottom to top, left to right (the loader's
+      // exit), grid lines with them: the top of the screen stays covered
+      // longest, hiding the strip the page leaves there as it rises back
+      // into place (Leo, 2026-09-27 - clearing sideways showed it).
+      .set([...cols, ...gridlines()], { transformOrigin: '50% 0%' }, clearAt)
+      .to(cols, { scaleY: 0, duration: CLEAR, ease: WIPE_EASE, stagger: COLUMN_STAGGER }, clearAt)
+      .to(gridlines(), { scaleY: 0, duration: CLEAR, ease: WIPE_EASE, stagger: COLUMN_STAGGER }, clearAt);
+    // The page's menu extras (menu/menu.ts) come out once most of the page
+    // is uncovered.
+    tl.call(showMenuExtras, [], clearAt + clearDuration * EXTRAS_SHOW_AT);
 
     if (content) {
       tl.fromTo(
         content,
         { y: CONTENT_PARALLAX_VH },
-        { y: '0vh', duration: WIPE_OUT_DURATION, ease: WIPE_EASE, clearProps: 'transform' },
-        0
+        { y: '0vh', duration: CONTENT_IN, ease: WIPE_EASE, clearProps: 'transform' },
+        clearAt
       );
     }
+
   });
 }

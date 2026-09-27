@@ -1,0 +1,193 @@
+---
+// The page transition for plain navigations (menu links... - the project
+// morph has its own, transitions/morph.ts): the site-entry loader in
+// miniature, so every page change speaks the loader's language. Driven by
+// transitions/page-wipe.ts:
+//   cover   - the loader's ink columns rise from the bottom, one after
+//             another left to right, the faint grid drawing up with them;
+//             the logo's strokes slide into their masks one by one;
+//   arrive  - the new page's name rises under the logo, letter by letter;
+//   reveal  - each column's orange fill rises behind the logo, the strokes
+//             and the name leave, and the columns clear bottom to top, left
+//             to right (the loader's exit).
+// Persisted; hidden between transitions. Under the menu bar (250), which
+// stays through every transition.
+import { GRID_COLS, logoStrokes, logoViewBox } from '../../utils/logo';
+---
+
+<div id="page-transition" class="page-transition" aria-hidden="true" transition:persist transition:animate="none">
+  <div class="pt-cols">
+    {Array.from({ length: GRID_COLS }, () => (
+      <span class="pt-col"><span class="pt-col-fill" /></span>
+    ))}
+  </div>
+  <div class="pt-grid">
+    {Array.from({ length: GRID_COLS }, () => <span class="pt-gridline" />)}
+  </div>
+  <div class="pt-centre">
+    <div class="pt-logo">
+      <svg viewBox={logoViewBox}>
+        <defs>
+          {logoStrokes.map((stroke, i) => (
+            <clipPath id={`pt-mask-${i}`}><path d={stroke.d} /></clipPath>
+          ))}
+        </defs>
+        {logoStrokes.map((stroke, i) => (
+          <g clip-path={`url(#pt-mask-${i})`}>
+            <g class="pt-stroke" data-out={`${stroke.travel.x} ${stroke.travel.y}`}>
+              <path d={stroke.d} />
+            </g>
+          </g>
+        ))}
+      </svg>
+    </div>
+    <span class="pt-name"></span>
+  </div>
+</div>
+
+<style>
+  /* No background of its own: the columns are the background, so it can
+     leave column by column (same build as .site-loader, global.css). */
+  .page-transition {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: grid;
+    place-items: center;
+    color: var(--color-text);
+    /* Catches every click while it's on screen (hidden, it gets none):
+       a click on the page being covered started a second navigation on
+       top of this one. */
+    visibility: hidden;
+  }
+
+  .pt-cols,
+  .pt-grid {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+
+  /* The -1px overlap keeps sub-pixel seams between columns from showing
+     the page. */
+  /* Each column rises from the bottom (page-wipe.ts). */
+  .pt-col {
+    position: relative;
+    flex: 1;
+    margin-right: -1px;
+    background: var(--color-curtain);
+    overflow: hidden;
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+
+  .pt-col:last-child {
+    margin-right: 0;
+  }
+
+  .pt-col-fill {
+    position: absolute;
+    inset: 0;
+    background: var(--color-accent);
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+
+  .pt-grid {
+    z-index: 1;
+  }
+
+  .pt-gridline {
+    flex: 1;
+    border-right: 1px solid color-mix(in srgb, var(--color-line) 12%, transparent);
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+
+  .pt-gridline:last-child {
+    border-right: none;
+  }
+
+  /* Just the logo: the name hangs under it without taking room, so the
+     logo stays exactly centred, name or not - in the flow, the name
+     arriving after the swap pushed the logo up (Leo, 2026-09-27). */
+  .pt-centre {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* A little smaller than the loader's logo: this one passes by. */
+  .pt-logo {
+    width: clamp(48px, 5vw, 80px);
+  }
+
+  .pt-logo svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* logo.svg's own fill is white; the colour comes from here. */
+  .pt-logo path {
+    fill: currentColor;
+  }
+
+  /* The new page's name (Accueil, Projets, a project's) - the
+     transition's own signature (the loader has none): large, in the
+     site's sans like the menu panel's items, each letter rising into its
+     own mask (page-wipe.ts, SplitText). Empty between transitions. */
+  .pt-name {
+    position: absolute;
+    top: calc(100% + 1.2 * var(--menu-unit));
+    left: 50%;
+    transform: translateX(-50%);
+    display: block;
+    font-size: calc(2.2 * var(--menu-unit));
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  /* The reel's columns: 5 / 3 / 2 (same breakpoints as the loader). */
+  @media (max-width: 900px) {
+    .pt-col:nth-child(n + 4),
+    .pt-gridline:nth-child(n + 4) {
+      display: none;
+    }
+
+    .pt-col:nth-child(3) {
+      margin-right: 0;
+    }
+
+    .pt-gridline:nth-child(3) {
+      border-right: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .pt-col:nth-child(n + 3),
+    .pt-gridline:nth-child(n + 3) {
+      display: none;
+    }
+
+    .pt-col:nth-child(2) {
+      margin-right: 0;
+    }
+
+    .pt-gridline:nth-child(2) {
+      border-right: none;
+    }
+  }
+
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
+    .pt-name {
+      font-size: 4.6vw;
+    }
+  }
+
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
+    .pt-name {
+      font-size: calc(8 * var(--menu-unit));
+    }
+  }
+</style>
