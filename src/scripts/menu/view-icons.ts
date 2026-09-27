@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 
-// The /projets view buttons' icons (SiteMenuDock.astro): one animation
+// The /projets view buttons' icons (MenuExtras.astro): one animation
 // each, played on hover (repeating while the pointer stays) and on click
 // (one cycle). Leaving never cuts it: the cycle under way finishes and the
 // icon stops at rest. JS, not CSS, for that last part - a CSS animation
@@ -14,7 +14,7 @@ import { CustomEase } from 'gsap/CustomEase';
 
 gsap.registerPlugin(CustomEase);
 
-const PUSH_EASE = CustomEase.create('dockPush', '0.76, 0, 0.24, 1');
+const PUSH_EASE = CustomEase.create('viewIconPush', '0.76, 0, 0.24, 1');
 const PUSH = 0.6;
 // Between two pushes, while the pointer stays.
 const HOLD = 0.35;
@@ -68,20 +68,20 @@ function bind(button: HTMLElement, cycle: () => gsap.core.Timeline): void {
   });
 }
 
-export function initDockIcons(): void {
+export function initViewIcons(): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const carousel = document.querySelector<HTMLElement>('.site-menu-dock [data-set-view="carousel"]');
+  const carousel = document.querySelector<HTMLElement>('.site-menu-extras [data-set-view="carousel"]');
   const carouselTrack = carousel?.querySelector<SVGGElement>('.icon-track');
-  // Frame width + gap (SiteMenuDock.astro: 17 + 3).
+  // Frame width + gap (MenuExtras.astro: 17 + 3).
   if (carousel && carouselTrack) bind(carousel, () => pushCycle(carouselTrack, 20));
 
-  const dezoom = document.querySelector<HTMLElement>('.site-menu-dock [data-set-view="dezoom"]');
+  const dezoom = document.querySelector<HTMLElement>('.site-menu-extras [data-set-view="dezoom"]');
   const dezoomTrack = dezoom?.querySelector<SVGGElement>('.icon-track');
   // Card width + gap (4.5 + 2.75).
   if (dezoom && dezoomTrack) bind(dezoom, () => pushCycle(dezoomTrack, 7.25));
 
-  const liste = document.querySelector<HTMLElement>('.site-menu-dock [data-set-view="liste"]');
+  const liste = document.querySelector<HTMLElement>('.site-menu-extras [data-set-view="liste"]');
   const lines = Array.from(liste?.querySelectorAll<SVGLineElement>('line') ?? []);
   if (liste && lines.length) bind(liste, () => linesCycle(lines));
 }

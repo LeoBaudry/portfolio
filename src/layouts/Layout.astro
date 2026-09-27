@@ -2,8 +2,8 @@
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import logoSvg from '../assets/logo.svg?raw';
-import loaderScript from '../scripts/site-loader-inline.js?raw';
-import SiteMenu from '../components/SiteMenu.astro';
+import loaderScript from '../scripts/loader/loader-inline.js?raw';
+import Menu from '../components/menu/Menu.astro';
 
 interface Props {
   title?: string;
@@ -17,7 +17,7 @@ const menuPosition = Astro.url.pathname === '/' ? 'top' : 'bottom';
 // Site-entry loader geometry, computed here at build time so the logo's
 // masks exist in the HTML and its strokes can animate (pure CSS) from the
 // first paint, long before any JS has downloaded. See
-// site-loader-inline.js for what drives the count, line, grid and exit.
+// loader/loader-inline.js for what drives the count, line, grid and exit.
 //
 // The logo's two angles (measured from logo.svg's first stroke): AXIS is
 // the strokes' long diagonal - each slides along it, in and out of a mask
@@ -76,19 +76,19 @@ const LOADER_COLS = 5;
     persisted ones (transition:persist keeps the DOM node continuous, but
     the browser still renders a default fade of its own on top of it unless
     told not to). That native fade running at the same time as GSAP driving
-    the same nodes in page-transitions.ts is what produced the tearing/
+    the same nodes in transitions/page-wipe.ts is what produced the tearing/
     "two different elements" look last time - every element GSAP touches
     during the transition needs its own transition:animate="none" too.
   -->
   <body transition:animate="none">
-    <SiteMenu pageName={pageName} position={menuPosition} />
+    <Menu pageName={pageName} position={menuPosition} />
 
     <!--
       Persisted across every navigation (content.md §8's "reveal par le
       bas"): a single fixed panel that both covers the outgoing page and
-      uncovers the incoming one, driven entirely by page-transitions.ts via
+      uncovers the incoming one, driven entirely by transitions/page-wipe.ts via
       astro:before-preparation / astro:after-swap / astro:page-load. Its
-      transform is 100% GSAP-owned (see page-transitions.ts) - it must never
+      transform is 100% GSAP-owned (see transitions/page-wipe.ts) - it must never
       get a CSS transform of its own, GSAP's yPercent stacks on top of
       rather than replacing one.
     -->
@@ -97,10 +97,10 @@ const LOADER_COLS = 5;
       HTML and the strokes slide in with a CSS animation, so it's alive from
       the first paint; the inline script right below it runs everything else
       (count, line, grid, orange, column exit) while the page's JS bundle is
-      still downloading; site-loader.ts only inits the page as the columns
+      still downloading; loader/loader.ts only inits the page as the columns
       start clearing. Stacking, back to front: columns (the background, each
       with its orange fill) -> bottom line -> grid lines -> logo + count. Persisted and only ever
-      hidden after it plays, never removed - see site-loader.ts.
+      hidden after it plays, never removed - see loader/loader.ts.
     -->
     <div
       id="site-loader"
@@ -153,7 +153,7 @@ const LOADER_COLS = 5;
 
     <!--
       Persisted clone used only for the project-card -> project-page morph
-      (see project-morph.ts). Positioned via top/left/width/height, not
+      (see transitions/morph.ts). Positioned via top/left/width/height, not
       transform - it has no position:fixed descendants of its own to worry
       about, but staying off transform keeps it consistent with #page-wipe's
       rule and avoids the same stacking trap if it's ever animated further.
@@ -167,7 +167,7 @@ const LOADER_COLS = 5;
       transition:animate="none"
     />
     <!-- Carries a main-visual video that keeps playing through a morph
-         (main-video.ts liftVideo/landVideo), animated alongside the clone.
+         (media/video.ts liftVideo/landVideo), animated alongside the clone.
          Persisted so the video survives the page swap. -->
     <div id="morph-video-host" class="morph-video-host" transition:persist transition:animate="none"></div>
 
@@ -187,7 +187,7 @@ const LOADER_COLS = 5;
     z-index: 200;
     background: var(--color-curtain);
     pointer-events: none;
-    /* No transform here - page-transitions.ts owns it entirely via GSAP's
+    /* No transform here - transitions/page-wipe.ts owns it entirely via GSAP's
        yPercent. A CSS transform here doesn't get folded into that; GSAP
        stacks its own translate on top of the computed one instead of
        replacing it, so the element ends up offset by both at once and

@@ -1,12 +1,12 @@
 ---
 // The site menu's bar (TODO.md item 5) and the panel it opens
-// (SiteMenuPanel). Persisted across navigations. site-menu.ts drives every animation: entrance
+// (MenuContent). Persisted across navigations. menu/menu.ts drives every animation: entrance
 // (square with the logo -> widens into the bar), top <-> bottom on
 // navigation, page-name swap, and the burger shrinking it back to a square
 // with a cross.
-import logoSvg from '../assets/logo.svg?raw';
-import SiteMenuPanel from './SiteMenuPanel.astro';
-import SiteMenuDock from './SiteMenuDock.astro';
+import logoSvg from '../../assets/logo.svg?raw';
+import MenuContent from './MenuContent.astro';
+import MenuExtras from './MenuExtras.astro';
 
 interface Props {
   pageName: string;
@@ -56,11 +56,11 @@ const logo = logoSvg
     </button>
   </div>
 </nav>
-<SiteMenuPanel position={position} />
-<SiteMenuDock />
+<MenuContent position={position} />
+<MenuExtras />
 <!-- While the menu is open: covers the page, so a click / tap beside the
      menu only closes it - the project image behind it used to open
-     (site-menu.ts). Under the dock (248), the panel and the bar. -->
+     (menu/menu.ts). Under the menu extras (248), the panel and the bar. -->
 <div class="site-menu-backdrop" aria-hidden="true" hidden transition:persist transition:animate="none"></div>
 
 <style>
@@ -91,7 +91,7 @@ const logo = logoSvg
     /* The bar's shape - the mask the whole menu (logo included) plays
        through: nothing (CSS, so nothing shows before the JS) -> a centred
        square revealed top to bottom -> the full bar. Set in px by
-       site-menu.ts from there on. */
+       menu/menu.ts from there on. */
     clip-path: inset(0 calc(50% - var(--menu-h) / 2) 100% calc(50% - var(--menu-h) / 2) round 2px);
   }
 
@@ -188,7 +188,7 @@ const logo = logoSvg
   /* Touch screens held upright: vw that suits a desktop is far too small
      there. Picked by device (touch, portrait), not by width: a width
      breakpoint would kick in when zooming in on a desktop. Tablets first,
-     then phones. SiteMenuPanel.astro repeats these sizes. */
+     then phones. MenuContent.astro repeats these sizes. */
   @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
     .site-menu {
       --menu-h: 6.5vw;

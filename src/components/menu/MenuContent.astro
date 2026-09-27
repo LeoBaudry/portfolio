@@ -1,14 +1,14 @@
 ---
 // The panel the menu bar opens (TODO.md item 5). A sibling of the bar, not
 // inside it: the bar's clip-path (its shape) would clip it. Persisted like
-// the bar; site-menu.ts opens / closes it and keeps its position (below
+// the bar; menu/menu.ts opens / closes it and keeps its position (below
 // the bar on the homepage, above it elsewhere) in step with the bar's.
 //
 // Every line sits in a mask (.panel-mask) and rises into it - the site's
 // mask logic, no opacity. Content comes from src/data (site.json for the
 // contact details, projets.json's "menu": true for the featured projects).
-import site from '../data/site.json';
-import projects from '../data/projets.json';
+import site from '../../data/site.json';
+import projects from '../../data/projets.json';
 
 interface Props {
   position: 'top' | 'bottom';
@@ -150,9 +150,9 @@ const links = [
        stays behind the content when that scrolls. */
     background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     /* Closed = fully clipped (CSS, so nothing shows before the JS). Opens
-       from the edge next to the bar: site-menu.ts sets it in px. */
+       from the edge next to the bar: menu/menu.ts sets it in px. */
     clip-path: inset(0 0 100% 0 round 2px);
-    /* Not rendered at all while closed, and no blur set: site-menu.ts adds
+    /* Not rendered at all while closed, and no blur set: menu/menu.ts adds
        .is-open for the whole open -> close run. Clipped away - and even
        visibility: hidden - its blur still flashed where the panel sits on
        every page change (Leo, 2026-09-26). */
@@ -197,7 +197,7 @@ const links = [
     margin: 0;
   }
 
-  /* The masks: each line rises into its own (site-menu.ts). */
+  /* The masks: each line rises into its own (menu/menu.ts). */
   .panel-mask {
     display: block;
     overflow: hidden;
@@ -284,7 +284,7 @@ const links = [
 
   /* Outline only. Hover: a fill slides up into it from below and the text
      turns dark; leaving, the fill carries on up and out through the top.
-     Driven by site-menu.ts (a slide, not a scaleY with a flipping
+     Driven by menu/menu.ts (a slide, not a scaleY with a flipping
      transform-origin: hovering in and out quickly flipped the origin
      mid-animation and the fill jumped to the top). */
   .panel-cta {
@@ -333,7 +333,7 @@ const links = [
 
   /* Touch screens held upright - picked by device, not by width (a width
      breakpoint would kick in when zooming in on a desktop). Tablets first,
-     then phones. Must match the bar's own tiers (SiteMenu.astro). */
+     then phones. Must match the bar's own tiers (Menu.astro). */
   @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
     .site-menu-panel {
       --panel-w: 52vw;

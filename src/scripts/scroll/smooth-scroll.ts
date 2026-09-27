@@ -34,7 +34,7 @@ if (!prefersReducedMotion) {
 // "correcting" the real scroll position back toward that stale target -
 // on a page transition this reads as the new page briefly scrolling itself
 // to a wrong position on its own. `force: true` because this needs to work
-// even while `lenis.stop()` has been called (see project-morph.ts, which
+// even while `lenis.stop()` has been called (see transitions/morph.ts, which
 // stops it for the whole transition and expects this to still land).
 export function resetPageScroll(): void {
   if (lenis) {

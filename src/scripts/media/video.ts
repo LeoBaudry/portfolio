@@ -6,7 +6,7 @@
 //
 // When they play: only while shown (its view active, its vue 1 / reel
 // project current - those hide with visibility, invisible to an
-// IntersectionObserver, so projets-page.ts / projects-reel.ts call
+// IntersectionObserver, so projets/page.ts / projects-reel.ts call
 // refreshMainVideos() on change) AND on screen. Then:
 // - homepage reel, vue 1, [slug]: the MAX_PLAYING nearest the viewport's
 //   centre (the reel and vue 1 only ever show one project anyway);
@@ -52,7 +52,7 @@ let refreshQueued = false;
 
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-// Shared with project-page.ts (content videos load just ahead of view).
+// Shared with project/page.ts (content videos load just ahead of view).
 export function startLoading(video: HTMLVideoElement): void {
   // Property, not just the attribute: after a client-side navigation the
   // attribute alone leaves it playing with sound.

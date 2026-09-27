@@ -2,17 +2,17 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { CustomEase } from 'gsap/CustomEase';
-import { lenis } from './smooth-scroll';
-import { refreshMainVideos } from './main-video';
-import { registerMorphLeaveHook } from './project-morph';
-import { saveProjetsState } from './projets/state';
+import { lenis } from '../scroll/smooth-scroll';
+import { refreshMainVideos } from '../media/video';
+import { registerMorphLeaveHook } from '../transitions/morph';
+import { saveProjetsState } from '../projets/state';
 import {
   INFO_HIDE_DURATION,
   INFO_HIDE_EASE,
   INFO_PART_STAGGER,
   INFO_REVEAL_DURATION,
   INFO_REVEAL_EASE,
-} from './projets/timing';
+} from '../projets/timing';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
 
@@ -72,7 +72,7 @@ const TEXT_LINE_STAGGER_FRACTION = 0.35; // share of the text in/out phase spent
 
 // Same easing language as the rest of the site's mask reveals: power3.out
 // matches reveal-text.ts's EASE exactly (decelerate into place); power2.in
-// mirrors project-morph.ts's CHROME_HIDE_EASE (accelerate away). Applied
+// mirrors transitions/morph.ts's CHROME_HIDE_EASE (accelerate away). Applied
 // manually via parseEase since this section is scroll-scrubbed, not a
 // one-shot tween - scrub still wants an eased curve, just sampled by hand.
 const TEXT_REVEAL_EASE = gsap.parseEase('power3.out');
@@ -125,7 +125,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
   }
   const projectEls = Array.from(section.querySelectorAll<HTMLElement>('.reel-project'));
   // Projects are shown/hidden with autoAlpha (visibility), from several
-  // places incl. timelines - invisible to main-video.ts's
+  // places incl. timelines - invisible to media/video.ts's
   // IntersectionObserver. Any style change on a project re-checks which
   // main-visual videos should play (GSAP only touches these on show/hide;
   // the scrubbed bars are separate elements).
@@ -386,7 +386,7 @@ export function initProjectsReel(root: ParentNode = document): { destroy: () => 
     }
   }
 
-  // Clicking a project (-> its page, project-morph.ts): its text and the
+  // Clicking a project (-> its page, transitions/morph.ts): its text and the
   // counter sink into their masks and the grid lines retract, while the
   // clicked image stays for the morph. Also remembers the project so
   // /projets opens on it (vue 1) when coming back.

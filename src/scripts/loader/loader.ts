@@ -1,9 +1,9 @@
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { toggleScrollLock } from './page-transitions';
+import { toggleScrollLock } from '../transitions/page-wipe';
 
 // Site-entry loader, second half. #site-loader (Layout.astro) is server-
 // rendered and covers the viewport from the first paint; its whole
-// animation, exit included, runs from site-loader-inline.js, inlined in the
+// animation, exit included, runs from loader/loader-inline.js, inlined in the
 // HTML so it's alive while this bundle is still downloading. This half only
 // hooks the page in: init it as the loader's columns start clearing, then
 // hide the panel once they're gone.
@@ -64,7 +64,7 @@ export async function runSiteLoader(onReveal: () => void): Promise<void> {
   const loader = document.getElementById('site-loader');
   const reveal = () => {
     onReveal();
-    // Same as page-transitions.ts does after every client-side init: this
+    // Same as transitions/page-wipe.ts does after every client-side init: this
     // init can run after window 'load' (ScrollTrigger's own auto-refresh
     // point), so nothing else would re-measure the pins.
     ScrollTrigger.refresh();

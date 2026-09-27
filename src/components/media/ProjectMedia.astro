@@ -2,12 +2,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ProjectImage from './ProjectImage.astro';
-import { isVideo, mediaSources, videoType, type MediaEntry } from '../utils/media';
+import { isVideo, mediaSources, videoType, type MediaEntry } from '../../utils/media';
 
 // [slug] content media: an image (ProjectImage, unchanged) or a muted,
 // looping video. The video has no autoplay attribute and preload="none":
-// project-page.ts loads it just ahead of view and reveals it with the same
-// mask as the images once it has a frame; main-video.ts plays it (same
+// project/page.ts loads it just ahead of view and reveals it with the same
+// mask as the images once it has a frame; media/video.ts plays it (same
 // warm-up / keep-playing rules as the main visuals - data-loop-video).
 
 interface Props {

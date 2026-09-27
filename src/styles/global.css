@@ -51,7 +51,7 @@
   --color-ink-raised: #1a1a1b;
 }
 
-/* The menu's sizing unit (bar + panel, SiteMenu*.astro): 1vw, so browser
+/* The menu's sizing unit (bar + panel, components/menu/): 1vw, so browser
    zoom doesn't change the menu on screen (Leo) - but never less than it is
    on a 1500px-wide window, or a narrow desktop window shrank it to the
    point of being unusable (773px wide: 5px text; a 12px floor still left
@@ -60,7 +60,7 @@
 :root {
   --menu-unit: max(1vw, 15px);
   /* The room the menu takes at the bottom of the screen (its gap + height
-     + a gap above - SiteMenu.astro's sizes), for page text that must sit
+     + a gap above - Menu.astro's sizes), for page text that must sit
      clear of it where the bar leaves no room beside it (vue 1's project
      info: narrow windows, touch screens). */
   --menu-clearance: calc(5 * var(--menu-unit));
@@ -74,8 +74,8 @@
 }
 
 /* Phones: the menu stops shrinking below a 375px-wide screen (at 320px it
-   got too small - Leo, 2026-09-26). The clearance also counts the dock
-   row, which rests above the bar there (SiteMenuDock.astro). */
+   got too small - Leo, 2026-09-26). The clearance also counts the extras
+   row, which rests above the bar there (MenuExtras.astro). */
 @media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
   :root {
     --menu-unit: max(1vw, 3.75px);
@@ -153,7 +153,7 @@ img {
   -webkit-touch-callout: none;
 }
 
-/* Site-entry loader (Layout.astro + site-loader-inline.js). Covers the
+/* Site-entry loader (Layout.astro + loader/loader-inline.js). Covers the
    viewport from first paint. No background of its own: its columns are
    the background, so it can exit column by column. */
 .site-loader {
@@ -170,7 +170,7 @@ img {
 }
 
 /* No scrolling while the loader is up - from the very first paint, before
-   any JS has run (site-loader.ts's toggleScrollLock only takes over once
+   any JS has run (loader/loader.ts's toggleScrollLock only takes over once
    the module executes, and a slow first load leaves a real gap). */
 html:has(#site-loader:not([hidden])) {
   overflow: hidden;
@@ -225,7 +225,7 @@ html:has(#site-loader:not([hidden])) {
 }
 
 /* Progress line along the panel's bottom edge, scaled by
-   site-loader-inline.js. Above the columns, below the grid lines. */
+   loader/loader-inline.js. Above the columns, below the grid lines. */
 .site-loader-bar {
   position: absolute;
   left: 0;
@@ -294,7 +294,7 @@ html:has(#site-loader:not([hidden])) {
 /* Each stroke slides along the logo's diagonal into its own mask (the
    clipped <g> around it, see Layout.astro), one after another. Pure CSS so
    it plays from the first paint, before any JS has loaded. Duration and
-   stagger are mirrored in site-loader-inline.js (STROKE_IN /
+   stagger are mirrored in loader/loader-inline.js (STROKE_IN /
    STROKE_STAGGER) - keep them in sync. In SVG, px here = the logo's own
    viewBox units. */
 .site-loader-stroke {

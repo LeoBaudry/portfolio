@@ -1,13 +1,13 @@
 ---
 import ProjectImage from './ProjectImage.astro';
-import { videoType } from '../utils/media';
+import { videoType } from '../../utils/media';
 
 // A project's main visual (homepage reel, /projets vue 1/2/3, [slug] hero).
 // The image is always there and is what every morph measures and flies
-// (project-morph.ts, the vue 1 <-> 2 morph); when the project has a video,
+// (transitions/morph.ts, the vue 1 <-> 2 morph); when the project has a video,
 // it's layered exactly over the image (the image doubles as its poster -
 // ideally the video's first frame) and only shown once it's actually
-// playing - see main-video.ts. The parent must be positioned and sized to
+// playing - see media/video.ts. The parent must be positioned and sized to
 // the image.
 
 interface Props {

@@ -1,6 +1,6 @@
 // /projets: WAAPI settle helpers, the text masks, and "is this picture ready".
 
-import { whenVideoReady } from '../main-video';
+import { whenVideoReady } from '../media/video';
 import {
   INFO_HIDE_DURATION,
   INFO_HIDE_EASE,
@@ -18,7 +18,7 @@ document.fonts?.ready.then(() => {
   clearDistanceCache = new WeakMap();
 });
 
-// Also cleared on resize (projets-page.ts).
+// Also cleared on resize (projets/page.ts).
 export function resetClearDistanceCache(): void {
   clearDistanceCache = new WeakMap();
 }
@@ -121,7 +121,7 @@ function whenImageReady(img: HTMLImageElement | null): Promise<void> {
   );
 }
 
-// A main image's own readiness plus its video's (main-video.ts) - plain
+// A main image's own readiness plus its video's (media/video.ts) - plain
 // images/thumbs have no video, so that half is immediate.
 export function whenMainVisualReady(img: HTMLImageElement | null): Promise<void> {
   return Promise.all([whenImageReady(img), whenVideoReady(img)]).then(() => {});

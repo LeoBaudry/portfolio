@@ -1,7 +1,7 @@
 ---
-import projects from '../data/projets.json';
-import ProjectImage from './ProjectImage.astro';
-import MainVisual from './MainVisual.astro';
+import projects from '../../data/projets.json';
+import ProjectImage from '../media/ProjectImage.astro';
+import MainVisual from '../media/MainVisual.astro';
 
 const featured = projects.slice(0, 5);
 ---
@@ -225,7 +225,7 @@ const featured = projects.slice(0, 5);
   }
 
   /* Wraps .reel-image for the project-morph transition (see
-     project-morph.ts) without taking part in layout - same technique as
+     transitions/morph.ts) without taking part in layout - same technique as
      projets.astro's .morph-link. */
   .morph-link {
     display: contents;

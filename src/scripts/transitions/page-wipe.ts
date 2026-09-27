@@ -1,9 +1,9 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { lenis, resetPageScroll } from './smooth-scroll';
-import { whenVideoReady } from './main-video';
-import { showMenuDock } from './site-menu';
+import { lenis, resetPageScroll } from '../scroll/smooth-scroll';
+import { whenVideoReady } from '../media/video';
+import { showMenuExtras } from '../menu/menu';
 
 gsap.registerPlugin(CustomEase, ScrollTrigger);
 
@@ -16,8 +16,8 @@ const CONTENT_PARALLAX_VH = '10vh';
 // decoded, then for its visible main video to play its first frame.
 const IMAGES_READY_CAP = 800;
 const VIDEOS_READY_CAP = 600;
-// Share of the wipe's lift after which the menu dock piece comes out.
-const DOCK_SHOW_AT = 0.6;
+// Share of the wipe's lift after which the menu extras come out.
+const EXTRAS_SHOW_AT = 0.6;
 
 // --- GESTION DU BLOCAGE DU SCROLL ---
 let isScrollLocked = false;
@@ -40,7 +40,7 @@ function preventScrollKeys(e: KeyboardEvent) {
   }
 }
 
-// Exported: project-morph.ts reuses this for its own transition rather than
+// Exported: transitions/morph.ts reuses this for its own transition rather than
 // duplicating a second scroll lock.
 export function toggleScrollLock(locked: boolean) {
   isScrollLocked = locked;
@@ -72,7 +72,7 @@ document.addEventListener('visibilitychange', () => {
 // A project card's <a> is marked data-morph-source (see projets.astro), and
 // a project page's own back link is marked data-morph-back (see
 // [slug].astro) - navigating from either hands the whole transition to
-// project-morph.ts's own image-morph (forward or reverse) instead of this
+// transitions/morph.ts's own image-morph (forward or reverse) instead of this
 // file's plain wipe. Both files check this independently on the same
 // astro:before-preparation event rather than coordinating through shared
 // mutable state.
@@ -142,7 +142,7 @@ export function initPageTransitions(initPage: () => void): void {
 
   document.addEventListener('astro:before-preparation', (event: any) => {
     navigationId += 1;
-    // project-morph.ts owns this navigation entirely instead - see
+    // transitions/morph.ts owns this navigation entirely instead - see
     // isMorphNavigation's comment.
     if (isMorphNavigation(event.sourceElement)) {
       transitionInFlight = false;
@@ -198,7 +198,7 @@ export function initPageTransitions(initPage: () => void): void {
   // Now, under the still-covering wipe: images decoded -> page init (its
   // entrances start here, as before, right as the wipe lifts) -> the visible
   // main video started and on its first frame (the decoder start-up, the
-  // costly part - main-video.ts) -> two clean frames -> lift.
+  // costly part - media/video.ts) -> two clean frames -> lift.
   document.addEventListener('astro:page-load', async () => {
     if (!transitionInFlight) return;
     transitionInFlight = false;
@@ -225,9 +225,9 @@ export function initPageTransitions(initPage: () => void): void {
     });
 
     tl.to(overlay, { yPercent: -100, duration: WIPE_OUT_DURATION, ease: WIPE_EASE }, 0);
-    // The page's menu dock piece (site-menu.ts) comes out of the bar once
+    // The page's menu extras (menu/menu.ts) come out once
     // most of the page is uncovered.
-    tl.call(showMenuDock, [], WIPE_OUT_DURATION * DOCK_SHOW_AT);
+    tl.call(showMenuExtras, [], WIPE_OUT_DURATION * EXTRAS_SHOW_AT);
 
     if (content) {
       tl.fromTo(

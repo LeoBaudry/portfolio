@@ -17,8 +17,8 @@ Start the menu (item 5 below - full spec there, all questions answered):
    true` on aurore / solstice / mirage (placeholders, the first 3).
    Panel decided 2026-09-26: slightly transparent, NO blur (backdrop-
    filter over video = lag).
-3. [~] Menu bar built 2026-09-26, Leo to judge the look: SiteMenu.astro
-   (persisted, in Layout; pages pass pageName) + site-menu.ts (initSiteMenu
+3. [x] Menu bar built 2026-09-26 (done 2026-09-27): Menu.astro
+   (persisted, in Layout; pages pass pageName) + menu/menu.ts (initSiteMenu
    in main.ts). Dark bar (--color-surface = bg + 8% text; Leo 2026-09-26:
    the light bar felt out of place), 2px radius. Sized in vw (20vw x
    3vw; touch portrait 70vw x 12vw) so browser zoom doesn't change it
@@ -35,7 +35,7 @@ Start the menu (item 5 below - full spec there, all questions answered):
    elsewhere (FLIP on astro:before-preparation, 0.9s). Name swaps through
    its mask on after-swap: one roll (old up + new from below together;
    out-then-in read as a double animation; 0.85s).
-   Panel built 2026-09-26 (Leo to judge): SiteMenuPanel.astro (sibling of
+   Panel built 2026-09-26 (Leo to judge): MenuContent.astro (sibling of
    the bar - the bar's clip would clip it), 30vw wide, surface at 92%, no
    blur. Opens with the bar's shrink: clip-path from its edge next to the
    bar, then each line rises in its mask. Content: nav (Accueil, Projets;
@@ -87,7 +87,7 @@ Start the menu (item 5 below - full spec there, all questions answered):
    Fix: 1px lines left visible (CTA fill at rest, closed panel, and the
    scroll-hidden bar) - sizes aren't whole pixels, clipping / moving
    exactly to the edge left a sub-pixel sliver. Hidden states now go 1px
-   past the edge (PAST_EDGE in site-menu.ts, CTA fill inset -1px).
+   past the edge (PAST_EDGE in menu/menu.ts, CTA fill inset -1px).
    Round 8 (Leo): titles bigger (--panel-title-size 0.85u); availability =
    sans, sentence case, 85% white; icon squares left-aligned. Narrow
    desktop windows made the menu unusable (773px wide: 5px text - pure
@@ -105,7 +105,7 @@ Start the menu (item 5 below - full spec there, all questions answered):
    left (0.5s, from 75% of the widening); name + burger rise as it lands.
    Whole entrance ~1.6s.
    Round 11 (Leo): entrance waits for the loader to be fully GONE
-   (afterSiteLoaderDone, site-loader.ts) - it started over the loader's
+   (afterSiteLoaderDone, loader/loader.ts) - it started over the loader's
    exit. Logo slide later (95% of the widening) and slower (0.65s). Phone
    sizes stop shrinking under 375px (--menu-unit max(1vw, 3.75px) on
    phones): at 320x568 the menu = the 375 one, panel 290 wide, scrolls
@@ -117,22 +117,30 @@ Start the menu (item 5 below - full spec there, all questions answered):
    transitions (clipped away only). visibility: hidden did NOT fix it
    (Leo: still flashing, exactly where the panel sits, every page change,
    even never opened). Now display: none while closed and the blur only
-   set under .is-open (site-menu.ts adds it for the whole open -> close
+   set under .is-open (menu/menu.ts adds it for the whole open -> close
    run) - confirmed fixed by Leo.
-   Dock built 2026-09-27 (Leo to judge): SiteMenuDock.astro (persisted,
-   sibling of the bar, z 248 = under the bar and the panel) - the /projets
-   view buttons (far right) and `← Projets` (far left, data-morph-back).
-   Leo's picks: slide out sideways from behind the bar (not rise-then-
-   slide); look = the bar's (opaque surface, bar height, 2px radius), the
-   old icons at their old stroke weight, active view = an orange block
-   sliding between the buttons (CSS :has on is-active). Phones: pieces rest
-   just above the bar (no room beside it) and rise out of it - same code
-   (hidden = centred behind the bar, both axes). site-menu.ts: hide starts
-   on every navigation (slides back behind the bar; own mask - bottom edge
-   rising - when the bar moves top <-> bottom); shown by the bar's
-   entrance, project-morph.ts on landing, page-transitions.ts at 60% of
-   the lift. Follows the bar's scroll hide. view-switcher / project-back
-   and project-morph's chrome hide/reveal helpers removed.
+   Dock done 2026-09-27 (confirmed by Leo): MenuExtras.astro (persisted,
+   sibling of the bar; z-index 248 ON THE WRAPPER - persisted = view-
+   transition-name = stacking context, the page's z-index 1 image covered
+   the pieces otherwise). /projets view buttons (far right) + `← Projets`
+   (far left, data-morph-back), on the bar's line (phones: just above it).
+   Old switcher sizes (36px tiles, 18px icons), tiles 4px apart; active
+   view = orange fill rising in its tile. Each tile rises into its own mask
+   0.15s after the page shows (0.05s stagger), sinks out on navigation,
+   follows the bar's scroll hide (sliding out from behind the bar: rejected).
+   Shown by: bar entrance, project-morph landing, wipe at 60% of the lift.
+   Icons (menu/view-icons.ts, GSAP): one animation on hover (mouse only,
+   repeats, the cycle under way finishes on leave) and click / tap - vue 1
+   & 2 a new frame / card pushes the current one out (clipped), vue 3 the
+   longest line walks down. view-switcher / project-back removed.
+   Also 2026-09-27: bar hide/show counts travel in one direction (12px),
+   and only the visitor's own scrolling (the site's scrollTo - vue 3's
+   jump - no longer hides it); invisible backdrop while the menu is open
+   (a click / tap beside it only closes it - closes on the click, not the
+   press, or a tap went through on phones); panel lines sink out downwards
+   and the panel collapses only once they're out; phones: dock sinks while
+   the menu is open; vue 1 info lifted above the menu line under 1024px /
+   on touch screens (--menu-clearance, global.css).
 
 ## 2026-09-25 session (all done, confirmed by Leo - kept for the record)
 
@@ -143,7 +151,7 @@ A. **Hide the link preview on hover.** Hovering a project image/video shows
    (1) drop the `href` from the image links and navigate in JS (Astro's
    `navigate()`), keeping `role="link"` + `tabindex="0"` + Enter handling -
    loses middle-click / "open in new tab" / right-click link menu, and the
-   morph code finds sources by `[href="/projets/<slug>"]` (project-morph.ts
+   morph code finds sources by `[href="/projets/<slug>"]` (transitions/morph.ts
    allCopiesOf, targetLink) so it must switch to a `data-href`/`data-slug`;
    (2) keep the href on the text/title only and make the image a JS target;
    (3) keep it. Check SEO: crawlers still need real links somewhere (e.g. the
@@ -168,7 +176,7 @@ A. -> Decided 2026-09-25: keep the real links (URL bubble stays).
 I. [x] **Mobile = images only in the listings** (Leo, 2026-09-25: slow 4G
    took ~2s per video even after re-encoding). MainVisual mobileVideo=
    {false} (homepage reel, /projets vues 1-3) -> data-desktop-only; on a
-   touch device (not pointer:fine, checked live) main-video.ts treats it
+   touch device (not pointer:fine, checked live) media/video.ts treats it
    as no video (isSkipped): never loaded/played, whenVideoReady immediate.
    [slug] keeps its videos. A [slug] video flown back into a listing takes
    the slot's flag (landVideo) and stops there. Placeholders re-encoded
@@ -210,7 +218,7 @@ G2. [x] **Vue 2 lags a bit on re-entry** (Leo, 2026-09-26): switch to
    mid-scroll (log). Now (Leo to test): warmDezoomVideos once per /projets
    visit, after the page's own entrance, whatever view shows - each vue 2
    card's first picture loads at idle, one at a time, nearest the current
-   project first (warmFirstFrames in main-video.ts). Open question: does
+   project first (warmFirstFrames in media/video.ts). Open question: does
    Chrome decode the first picture while vue 2 is display:none?
    Still lagged "a ton" (Leo). Next: WebCodecs prototype, dev-only page
    /dev/webcodecs-test (src/pages/dev/, worker src/scripts/dev/
@@ -252,7 +260,7 @@ K. [x] **Flash on first back from [slug]** (fixed, confirmed by Leo 2026-09-26) 
    is cached (same URL as the clone) but not decoded on a first visit, so
    the clone -> image swap on landing showed it popping in. Fix 2026-09-26
    (Leo to test): morphTo keeps the clone on top until the destination
-   decodes (TARGET_DECODE_TIMEOUT 400ms cap), project-morph.ts.
+   decodes (TARGET_DECODE_TIMEOUT 400ms cap), transitions/morph.ts.
 H. [x] **Poster flash on return** (confirmed fixed by Leo 2026-09-26) (Leo, 2026-09-25): coming back from
    [slug] or switching views, project 1's poster image sometimes shows
    briefly before its video. Cause: the video layer only appears once it
@@ -291,7 +299,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
 
 0. [x] **Site-entry loader.** Done 2026-09-23: logo strokes slide into
    their masks (CSS), count + bottom line + grid lines follow real progress
-   (site-loader-inline.js), background turns orange at 100, exits column by
+   (loader/loader-inline.js), background turns orange at 100, exits column by
    column along the reel grid. Plays on every hard load; a cached refresh is
    naturally fast. Dev preview: `?loader-sim=6`.
 0b. [x] **Favicon set.** Done 2026-09-24, generated from `src/assets/logo.svg`
@@ -305,7 +313,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    used clip-path on the images - laggy, repaints every frame). Leaving:
    text sinks, then curtains close upward (vue 2 left to right). Arriving:
    curtains open upward, text rises last. See hide/showCarouselView,
-   hide/showDezoomView in projets-page.ts. View switch ignored mid
+   hide/showDezoomView in projets/page.ts. View switch ignored mid
    carousel step. Entering vue 3 (switch, reload, back from a project)
    reveals every row with any part on screen (onScreenListeRows), not just
    those >= 40% - the 40% rule is only for rows scrolled into view.
@@ -321,7 +329,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    served when portrait, like `main`). Files go in `public/`.
    `ProjectMedia.astro` renders ProjectImage or a muted/looping/playsinline
    `<video preload="none">` whose box ratio is read from the MP4 header at
-   build time (no layout jump). project-page.ts loads it ahead of view,
+   build time (no layout jump). project/page.ts loads it ahead of view,
    reveals it with the same mask as images once it has a frame, plays it only
    while on screen; reduced motion = first frame, no autoplay. Vue 3 thumbs
    skip videos (thumbsOf in projets.astro). Test data: Aurore's first
@@ -339,10 +347,10 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
      never `visible` - a visible child leaks through vue 1's / the reel's
      hidden stacked items). Muted via the property too (the attribute alone
      plays with sound after a client-side navigation).
-   - Playing (`main-video.ts`): "shown" is judged on the video's <img> (not
+   - Playing (`media/video.ts`): "shown" is judged on the video's <img> (not
      the video - hidden until its first frame; not the parent -
      .morph-link is display:contents). Vue 1 / reel toggle visibility, so
-     projets-page.ts (carousel steps) and projects-reel.ts
+     projets/page.ts (carousel steps) and projects-reel.ts
      (MutationObserver on project styles) call refreshMainVideos().
    - 2026-09-25: warm-up / off-screen playback REMOVED (Leo: never play
      off screen). Now: play only while shown AND in the viewport, capped
@@ -385,7 +393,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    tokens (background / text / line / curtain instead of ink / paper), can
    still be done any time as a quick session so the menu and transition
    screen are built on them.
-5. [ ] **Menu.** Spec agreed with Leo 2026-09-25 (supersedes the older
+5. [x] **Menu.** (Done 2026-09-27, confirmed by Leo.) Spec agreed with Leo 2026-09-25 (supersedes the older
    "pill + split on [slug]" idea):
    - **Bar (closed):** on load it appears masked as a SQUARE with Leo's
      logo, then widens left and right into a bar: logo left, current page
@@ -418,20 +426,19 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
    - Every element animates with the site's mask logic (no opacity).
    - Replaces today's temp-nav / view-switcher / project-back, so the morph
      code's chrome hide/reveal hooks must move to it.
-5b. [ ] **File reorganisation** (agreed with Leo 2026-09-26, apply once the
-   menu is done). Feature folders, mirrored for components and scripts:
-   components/ menu/Menu.astro (<- SiteMenu), menu/MenuContent.astro (<-
-   SiteMenuPanel), footer/Footer.astro (<- SiteFooter), home/
-   ProjectsReel.astro, media/{MainVisual,ProjectImage,ProjectMedia}.astro,
-   animations/RevealText.astro. scripts/ main.ts (stays), menu/menu.ts (<-
-   site-menu), footer/footer.ts, home/projects-reel.ts, projets/page.ts
-   (<- projets-page, joins the existing projets/ folder), project/page.ts
-   (<- project-page), transitions/page-wipe.ts (<- page-transitions),
-   transitions/morph.ts (<- project-morph), media/video.ts (<- main-
-   video), loader/loader.ts + loader/loader-inline.js (<- site-loader*),
-   scroll/smooth-scroll.ts, animations/reveal-text.ts. Update every import,
-   the paths in TODO.md and code comments; check with astro check + one
-   load of each page.
+5b. [x] **File reorganisation** (done 2026-09-27). Feature folders,
+   mirrored for components and scripts: components/ menu/Menu.astro,
+   menu/MenuContent.astro (the panel), menu/MenuExtras.astro (view
+   buttons + `← Projets` - Leo's name; "dock" is gone from the code too),
+   footer/Footer.astro, home/ProjectsReel.astro,
+   media/{MainVisual,ProjectImage,ProjectMedia}.astro,
+   animations/RevealText.astro. scripts/ main.ts, menu/menu.ts,
+   menu/view-icons.ts, footer/footer.ts, home/projects-reel.ts,
+   projets/page.ts (+ the existing projets/ modules), project/page.ts,
+   transitions/page-wipe.ts, transitions/morph.ts, media/video.ts,
+   loader/loader.ts + loader/loader-inline.js, scroll/smooth-scroll.ts,
+   animations/reveal-text.ts. Moved with git mv; imports, comments and
+   this file updated.
 6. [ ] **Page transition redesign.** Brand colour + logo centred instead of
    the plain black wipe.
 7. [ ] **FR/EN.** Astro i18n routing, language picked from the browser
@@ -463,7 +470,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
 - [ ] **Video stress test:** give EVERY project a main video (placeholders
   are fine), rebuild (`npm run build` + `npm run preview`, not dev), check
   scroll freezes, CPU/battery with many warm videos playing off screen
-  (main-video.ts warm-up), mobile. Decide then whether to keep "play off
+  (media/video.ts warm-up), mobile. Decide then whether to keep "play off
   screen once warm" or cap it. Also watch vue 2's clip-path masks (reveal /
   morph-sibling crop on `.dezoom-image`), which now clip playing videos -
   clip-path repaints every frame; move them to curtains if they stutter.
@@ -488,7 +495,7 @@ E. [x] **Homepage resize bugs** (2026-09-25, confirmed by Leo): (1) intro text
 
 # TODO / Known issues — /projets page
 
-`src/pages/projets.astro` and `src/scripts/projets-page.ts` hold the current
+`src/pages/projets.astro` and `src/scripts/projets/page.ts` hold the current
 three-view (carousel / dezoom / liste) implementation with a working
 vue1<->vue2 morph transition. Vue 3 (liste) is done, no changes needed there.
 
@@ -499,11 +506,11 @@ choreography's extra siblings'-text phase) are done - fixed in
 
 Vue 3 (liste) now has its own enter/leave transition (row stagger, distinct
 from the vue1<->vue2 morph and from the page wipe) - see transitionListe()
-in projets-page.ts.
+in projets/page.ts.
 
 /projets/[slug].astro added: individual project pages, reached from any of
 the 3 views via a morph transition (clicked image grows into the page's
-hero) - see src/scripts/project-morph.ts.
+hero) - see src/scripts/transitions/morph.ts.
 
 ## 2026-09-22 session — chrome masking, vue3 perf, dezoom centering
 
@@ -512,21 +519,21 @@ session" below):
 
 - Vue1's info text wasn't animating out when opening a project (it worked
   fine for the vue1<->vue2 view switch). Root cause: vue1's carousel image
-  is already full-bleed, so project-morph.ts's floating clone appeared
+  is already full-bleed, so transitions/morph.ts's floating clone appeared
   already at ~its final size/position - it covered the whole screen the
   instant it became visible, before the leave-out animations (which ran
   concurrently, not before) had a chance to actually play or be seen.
 - Same root cause explained `#temp-nav` and `.view-switcher` (bottom-right
   icons) popping away instantly instead of animating - nothing was ever
   animating them at all, they just happened to be covered by the clone.
-  project-morph.ts's event.loader is now sequenced so all of the leave
+  transitions/morph.ts's event.loader is now sequenced so all of the leave
   animations (info text, temp-nav, view-switcher/project-back) actually
   play - visible, on the real outgoing page - *before* the clone is ever
   shown/covers anything. temp-nav and view-switcher/project-back now slide
   off toward their nearest viewport edge (same eases as
   hideInfoParts/revealInfoParts) instead of just vanishing on swap, and
   slide back in once the morph settles on the other side - see
-  hideChromeEl/revealChromeEl in project-morph.ts.
+  hideChromeEl/revealChromeEl in transitions/morph.ts.
 - Vue3 (liste) leaving was genuinely laggy, not just slow-feeling: each row
   was animating up to 4 separate `<img>` clip-paths at once (clip-path
   forces a repaint per animated element per frame), so several visible rows
@@ -535,8 +542,8 @@ session" below):
   wrapper instead of each image - same visual result (the images sit flush
   against it with no gap), a fraction of the animation count.
 - Dezoom card centering before its morph: implemented via a new
-  registerMorphCenterHook in project-morph.ts, called before the source
-  rect is captured - projets-page.ts's handleMorphCenter recenters a
+  registerMorphCenterHook in transitions/morph.ts, called before the source
+  rect is captured - projets/page.ts's handleMorphCenter recenters a
   clicked dezoom card (if it wasn't already centered) and corrects
   `current`/sessionStorage to the card that was actually clicked (previously
   whatever currentFromDezoom() guessed from the scroll position *before*
@@ -550,7 +557,7 @@ User feedback on the round 1 fixes above, addressed:
   then getting covered by the still-mid-flight clone, then popping visible
   again at settle - because it's freshly mounted on the incoming page (not
   persisted like `#temp-nav`), so it started fully visible with nothing
-  hiding it first. Fixed with `snapChromeHidden()` in project-morph.ts -
+  hiding it first. Fixed with `snapChromeHidden()` in transitions/morph.ts -
   snaps it to its hidden position the instant the swap happens, before
   anything can paint. Same latent bug existed for `.view-switcher` on the
   backward arrival at /projets; fixed the same way.
@@ -576,7 +583,7 @@ User feedback on the round 1 fixes above, addressed:
   fully GPU/compositor-driven, same visual crop (verified the scaleY math
   reproduces the exact original clip-path crop, not an approximation) and
   identical timing. See hideListeRow/showListeRow's comment in
-  projets-page.ts for the derivation.
+  projets/page.ts for the derivation.
 
 Live-tested this round via a Chrome tab: confirmed via instrumented
 `astro:after-swap` logging that `.project-back`/`.view-switcher-inner`
@@ -607,7 +614,7 @@ tab, not a real bug - see feedback_browser_test_tooling_flaky).
   new `.view-switcher-mask` (fixed, overflow:hidden, no padding/size of its
   own) wraps `.view-switcher` (now just the panel - background, padding,
   radius, buttons, unchanged from before this whole feature started), and
-  `.view-switcher` itself is what project-morph.ts translates - whole
+  `.view-switcher` itself is what transitions/morph.ts translates - whole
   panel moves as one piece, and since the mask has no extra padding its
   height matches the panel's exactly, so a full-height translate clears it
   completely. Verified via `getBoundingClientRect()`: mask and panel rects
@@ -647,19 +654,19 @@ instead of the page genuinely sitting at the top.
 
 Fixed with a new `resetPageScroll()` in smooth-scroll.ts (Lenis-aware:
 `lenis.scrollTo(0, {immediate:true, force:true})` when Lenis exists, a raw
-`window.scrollTo(0,0)` otherwise), used by both page-transitions.ts and
-project-morph.ts instead of the raw call. Also `pageLenis.stop()`/`start()`
-now bracket the whole morph transition in project-morph.ts (stopped when a
+`window.scrollTo(0,0)` otherwise), used by both transitions/page-wipe.ts and
+transitions/morph.ts instead of the raw call. Also `pageLenis.stop()`/`start()`
+now bracket the whole morph transition in transitions/morph.ts (stopped when a
 morph nav starts, so Lenis can't keep drifting the still-visible outgoing
 page during the leave animations either; restarted once forward lands on a
 project page, or immediately if the transition gets aborted mid-flight -
-backward intentionally leaves the restart to projets-page.ts's own
+backward intentionally leaves the restart to projets/page.ts's own
 view-specific pageLenis start()/stop(), which already existed).
 
 That stop() surfaced a real, easy-to-miss bug of its own: liste's own
 `scrollListeToCurrent()` calls `pageLenis.scrollTo(target, {immediate:true})`
 *without* `force: true` - Lenis silently no-ops a scrollTo while stopped
-unless forced, and this now runs while project-morph.ts has just stopped
+unless forced, and this now runs while transitions/morph.ts has just stopped
 it (it only restarts pageLenis for liste a few lines later in the same
 init function) - so a backward-morph restore into liste was quietly
 landing at the top instead of the actual saved row. Fixed by adding
@@ -682,7 +689,7 @@ wasn't):
 
 - **Project pages: every image below the hero was permanently stuck
   unloaded.** `.project-extra img` had `loading="lazy"`, but
-  `initProjectPage` (project-page.ts) sets every one of those images'
+  `initProjectPage` (project/page.ts) sets every one of those images'
   `clip-path` to fully hidden (`inset(100% 0 0 0)`) the instant it runs -
   combined with no explicit width/height (so `height: auto` collapses to
   0px before the image has loaded and its aspect ratio is known), this
@@ -704,7 +711,7 @@ wasn't):
   improvement - a closed row and "nothing rendered" look identical since
   the curtain color matches the page background. The actual clone only
   ever targets a row's *first* image (see allCopiesOf's comment in
-  project-morph.ts) - every other image, in every row including the
+  transitions/morph.ts) - every other image, in every row including the
   current one, was never covered by anything and never needed hiding.
   Reverted applyRestoredView's liste branch and revealAfterMorphSettle back
   to the pre-round-3 shape: only the current row's *text* defers/reveals
@@ -725,7 +732,7 @@ animating in the same way the *first* time they're scrolled to during
 normal vertical scrolling, not just during transitions. Implemented both
 with one mechanism instead of two:
 
-- New `initListeRevealObserver()` in projets-page.ts: a single
+- New `initListeRevealObserver()` in projets/page.ts: a single
   IntersectionObserver, set up once and left running for the page's
   lifetime, that reveals any not-yet-`revealed` row (via the existing
   `showListeRow`) the moment it's scrolled into view - whether that
@@ -818,13 +825,13 @@ More user feedback on vue3 <-> [slug] and the scroll-reveal:
   the concern it was. Restructured to a curtain pair *per image*
   (`.liste-image` wrapping each `<img>`, in projets.astro) and gave each a
   100ms stagger behind the previous one (`LISTE_IMAGE_STAGGER` in
-  projets-page.ts) - the "in line, slightly delayed compared to each
+  projets/page.ts) - the "in line, slightly delayed compared to each
   other" ask.
 - Scroll-reveal threshold raised 0.15 -> 0.4 (`initListeRevealObserver`) -
   rows are tall, and revealing at only 15% visible meant most of the row
   (and the reveal animation) was still below the fold when it played,
   reading as underwhelming rather than as a real "it opens" moment.
-- Pacing bumped modestly (project-morph.ts): `MORPH_DURATION` 0.8 -> 0.95,
+- Pacing bumped modestly (transitions/morph.ts): `MORPH_DURATION` 0.8 -> 0.95,
   `CHROME_HIDE_DURATION` 0.32 -> 0.38, `CHROME_REVEAL_DURATION` 0.38 ->
   0.45.
 
@@ -850,7 +857,7 @@ Confirmed live this round that the fix holds: the clicked row's first image
 now stays fully visible throughout, untouched by any curtain.
 
 Full requested choreography for vue3 -> [slug] via `handleListeRowMorphLeave`
-(new, in projets-page.ts) - clicked row's title first (small nudge +
+(new, in projets/page.ts) - clicked row's title first (small nudge +
 curtain, not a full slide) -> every other visible row's title right behind
 it -> *then* images close, skipping only the clicked row's first:
 
@@ -922,7 +929,7 @@ foreground tab. First thing next time:
   `current` survives correctly (back button lands on the right card).
 
 Scroll lock during the morph transition - `toggleScrollLock(true)` fires on
-every morph nav in project-morph.ts and intercepts wheel/touchmove/keydown
+every morph nav in transitions/morph.ts and intercepts wheel/touchmove/keydown
 at the window level with `capture: true`, ahead of Lenis entirely - reading
 the code, this should already hold regardless of Lenis's own state, but
 still worth a real scroll-during-morph check since it's never been

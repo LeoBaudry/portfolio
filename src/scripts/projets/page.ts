@@ -1,13 +1,13 @@
 import Lenis from 'lenis';
-import { lenis as pageLenis } from './smooth-scroll';
-import { afterSiteLoader } from './site-loader';
+import { lenis as pageLenis } from '../scroll/smooth-scroll';
+import { afterSiteLoader } from '../loader/loader';
 import {
   isBackwardMorphPending,
   morphEvents,
   MORPH_SETTLED_EVENT,
   registerMorphLeaveHook,
   registerMorphCenterHook,
-} from './project-morph';
+} from '../transitions/morph';
 import {
   abortFlight,
   flightHost,
@@ -15,8 +15,8 @@ import {
   liftVideo,
   refreshMainVideos,
   setMainVisualHidden,
-} from './main-video';
-import { type ViewMode, consumeIsReload, readProjetsState, saveProjetsState } from './projets/state';
+} from '../media/video';
+import { type ViewMode, consumeIsReload, readProjetsState, saveProjetsState } from './state';
 import {
   CAROUSEL_INFO_HIDE_DELAY,
   DEZOOM_CROP_CLOSED,
@@ -43,7 +43,7 @@ import {
   VIEW_REVEAL_STAGGER,
   VIEW_TEXT_AFTER_REVEAL,
   WHEEL_THRESHOLD,
-} from './projets/timing';
+} from './timing';
 import {
   animateAndSettle,
   hideInfoParts,
@@ -51,7 +51,7 @@ import {
   resetClearDistanceCache,
   revealInfoParts,
   settle,
-} from './projets/anim';
+} from './anim';
 import {
   getRowCache,
   hideListeRow,
@@ -62,7 +62,7 @@ import {
   setListeRowClosedInstant,
   setListeTitleClosedInstant,
   showListeRow,
-} from './projets/liste-rows';
+} from './liste-rows';
 import {
   dezoomMask,
   hideDezoomItemInfo,
@@ -71,8 +71,8 @@ import {
   resetDezoomItemInfoInstant,
   revealDezoomCard,
   showDezoomItemInfo,
-} from './projets/dezoom-cards';
-import { closeViewCurtain, openViewCurtain, resetViewCurtains } from './projets/view-curtains';
+} from './dezoom-cards';
+import { closeViewCurtain, openViewCurtain, resetViewCurtains } from './view-curtains';
 
 export function initProjetsPage(root: ParentNode = document) {
   const isReload = consumeIsReload();
@@ -84,7 +84,7 @@ export function initProjetsPage(root: ParentNode = document) {
     dezoom: page.querySelector('.view-dezoom'),
     liste: page.querySelector('.view-liste'),
   };
-  // In the menu's dock (SiteMenuDock.astro, persisted), not in the page:
+  // In the menu extras (MenuExtras.astro, persisted), not in the page:
   // bound here per page, released in destroy().
   const switcherButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-set-view]'));
   const morphHero = page.querySelector<HTMLImageElement>('.morph-hero');
@@ -599,7 +599,7 @@ export function initProjetsPage(root: ParentNode = document) {
     const fromRect = leavingImg?.getBoundingClientRect() ?? null;
 
     // A playing main-visual video flies with .morph-hero and keeps playing
-    // (main-video.ts). The entering view's copy takes its place in the view
+    // (media/video.ts). The entering view's copy takes its place in the view
     // being left, so that view still has one next time.
     const videoHost = flightHost();
     if (videoHost && fromRect) {

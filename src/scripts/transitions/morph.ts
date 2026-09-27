@@ -1,9 +1,9 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
-import { toggleScrollLock } from './page-transitions';
-import { lenis as pageLenis, resetPageScroll } from './smooth-scroll';
-import { abortFlight, flightHost, landVideo, liftVideo, setMainVisualHidden } from './main-video';
-import { showMenuDock, whenMenuDockHidden } from './site-menu';
+import { toggleScrollLock } from './page-wipe';
+import { lenis as pageLenis, resetPageScroll } from '../scroll/smooth-scroll';
+import { abortFlight, flightHost, landVideo, liftVideo, setMainVisualHidden } from '../media/video';
+import { showMenuExtras, whenMenuExtrasHidden } from '../menu/menu';
 
 gsap.registerPlugin(CustomEase);
 
@@ -141,7 +141,7 @@ export function initProjectMorph(): void {
       let leaving: Promise<any> = Promise.resolve();
       if (isForward && clickedItem) {
         // Each page registers how its own UI leaves: /projets
-        // (projets-page.ts) and the homepage reel (projects-reel.ts).
+        // (projets/page.ts) and the homepage reel (projects-reel.ts).
         if (leaveHook) leaving = leaveHook(clickedItem);
       } else if (isBackward) {
         const introEls = document.querySelectorAll('.project-intro > *, .project-extra');
@@ -159,13 +159,13 @@ export function initProjectMorph(): void {
         }
       }
 
-      // The menu's dock piece (view buttons / `← Projets`) goes back
-      // behind the bar first - site-menu.ts started it with the navigation.
-      await Promise.all([leaving, whenMenuDockHidden()]);
+      // The menu extras (view buttons / `← Projets`) go back
+      // behind the bar first - menu/menu.ts started it with the navigation.
+      await Promise.all([leaving, whenMenuExtrasHidden()]);
 
       gsap.set(clone, { display: 'block' });
       // A playing main-visual video keeps playing on top of the clone
-      // (main-video.ts) - lifted before hiding the image, so it isn't hidden
+      // (media/video.ts) - lifted before hiding the image, so it isn't hidden
       // with it.
       flyingVideo = liftVideo(sourceImg, FLIGHT_Z);
       setMainVisualHidden(sourceImg, true);
@@ -218,11 +218,11 @@ export function initProjectMorph(): void {
       const heroImg = document.querySelector<HTMLImageElement>('[data-project-hero]');
       if (!heroImg) {
         resetToIdle();
-        showMenuDock();
+        showMenuExtras();
         return;
       }
       // Landed: `← Projets` comes out of the menu bar.
-      morphTo(heroImg, showMenuDock);
+      morphTo(heroImg, showMenuExtras);
     } else if (direction === 'backward' && backSlug) {
       allCopiesOf(backSlug).forEach((img) => setMainVisualHidden(img, true));
     }
@@ -246,10 +246,10 @@ export function initProjectMorph(): void {
     const targetImg = targetLink?.querySelector<HTMLImageElement>('img');
     if (!targetImg) {
       resetToIdle();
-      showMenuDock();
+      showMenuExtras();
       return;
     }
     // Landed: the view buttons come out of the menu bar.
-    morphTo(targetImg, showMenuDock);
+    morphTo(targetImg, showMenuExtras);
   });
 } 

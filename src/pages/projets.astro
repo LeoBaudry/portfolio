@@ -1,8 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import projects from '../data/projets.json';
-import ProjectImage from '../components/ProjectImage.astro';
-import MainVisual from '../components/MainVisual.astro';
+import ProjectImage from '../components/media/ProjectImage.astro';
+import MainVisual from '../components/media/MainVisual.astro';
 import { isVideo, type MediaEntry } from '../utils/media';
 
 // Vue 3 thumbs are images only - a project's videos play on its own page.
@@ -89,7 +89,7 @@ const thumbsOf = (images: MediaEntry[]) =>
                   <ProjectImage src={src} role="thumb" />
                 )}
                 <!-- Solid ink curtain, not a clip-path crop, for perf (see
-                     hideListeRow/showListeRow in projets-page.ts) - transform
+                     hideListeRow/showListeRow in projets/page.ts) - transform
                      is the only thing animated, so this stays on the
                      compositor instead of the clip-path repaint every frame
                      that made leaving vue3 laggy. One curtain per image (not
@@ -108,7 +108,7 @@ const thumbsOf = (images: MediaEntry[]) =>
 
     <!-- Vue 1 <-> Vue 2 morph: a single dedicated image, not part of either
          view, physically resized over the real one during the transition -
-         see morphBetweenCarouselAndDezoom in projets-page.ts. -->
+         see morphBetweenCarouselAndDezoom in projets/page.ts. -->
     <img class="morph-hero" alt="" aria-hidden="true" hidden />
 
   </div>
@@ -133,7 +133,7 @@ const thumbsOf = (images: MediaEntry[]) =>
   }
 
   /* Wraps a single project image (carousel, dezoom) for the project-morph
-     transition (see project-morph.ts) without taking part in layout itself
+     transition (see transitions/morph.ts) without taking part in layout itself
      - its child <img> keeps behaving exactly as if it were still a direct
      child of .carousel-item / .dezoom-item, positioned/sized by their
      existing rules. Vue 3's own link (.liste-images) doesn't use this: it
@@ -355,7 +355,7 @@ const thumbsOf = (images: MediaEntry[]) =>
   }
 
   /* One wrapper per image (not per row) so each can reveal/hide on its own
-     stagger - see LISTE_IMAGE_STAGGER in projets-page.ts, the "in line,
+     stagger - see LISTE_IMAGE_STAGGER in projets/page.ts, the "in line,
      slightly delayed compared to each other" request. position:relative
      anchors that image's own curtain below to just its own box, not the
      whole row. */
@@ -379,7 +379,7 @@ const thumbsOf = (images: MediaEntry[]) =>
   }
 
   /* Solid ink panel, not a clip-path crop - see hideListeRow/showListeRow
-     in projets-page.ts for why (perf). Reveals bottom-to-top (shrinks from
+     in projets/page.ts for why (perf). Reveals bottom-to-top (shrinks from
      scaleY(1), anchored top, so the remaining cover recedes upward) and
      hides bottom-to-top too (grows to scaleY(1), anchored bottom, so
      coverage advances upward) - JS flips transform-origin between the two
@@ -455,7 +455,7 @@ const thumbsOf = (images: MediaEntry[]) =>
      so it reads as the same photo continuously reframing itself. */
   .morph-hero {
     position: fixed;
-    /* Well below the menu and its dock (248-250): the view buttons stay
+    /* Well below the menu and its extras (248-250): the view buttons stay
        on top of the image while it's mid-morph. */
     z-index: 15;
     object-fit: cover;

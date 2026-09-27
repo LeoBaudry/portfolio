@@ -11,7 +11,7 @@
 // same grid, each column clearing bottom to top, left to right.
 //
 // It resolves window.__siteLoader.reveal as the columns start clearing (the
-// bundled half, site-loader.ts, inits the page then), .uncovered once most
+// bundled half, loader/loader.ts, inits the page then), .uncovered once most
 // of the page shows (pages start their entrance animations then - see
 // afterSiteLoader) and .done once the columns are gone (the panel is hidden
 // and scrolling unlocked).

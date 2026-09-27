@@ -1,10 +1,10 @@
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { navigate } from 'astro:transitions/client';
-import { afterSiteLoaderDone } from './site-loader';
-import { initDockIcons } from './menu-dock-icons';
+import { afterSiteLoaderDone } from '../loader/loader';
+import { initViewIcons } from './view-icons';
 
-// The site menu's bar (SiteMenu.astro). Persisted, so everything here is
+// The site menu's bar (Menu.astro). Persisted, so everything here is
 // set up once per session (main.ts), not per page.
 //
 // - Entrance, once the site-entry loader is fully gone: a square with the
@@ -19,7 +19,7 @@ import { initDockIcons } from './menu-dock-icons';
 // - Burger: the logo leaves left, the burger right, the page name upwards;
 //   the bar shrinks back to a centred square and a cross rises into it.
 //   Closing plays it back (the cross leaves upwards, the name rises in).
-//   At the same time the panel (SiteMenuPanel) opens from its edge next to
+//   At the same time the panel (MenuContent) opens from its edge next to
 //   the bar - below it on the homepage, above it elsewhere - and its lines
 //   rise into their masks. Closes on the cross, Escape, a click outside,
 //   and any navigation (the page transition then plays as usual).
@@ -54,14 +54,14 @@ const LINE_STAGGER = 0.025;
 const CTA_FILL = 0.45;
 const SCROLL_HIDE = 0.45;
 const SCROLL_SHOW = 0.55;
-// Dock pieces (SiteMenuDock): each tile rises into its mask, tile after
+// Menu extras (MenuExtras): each tile rises into its mask, tile after
 // tile, a moment after the page is in view, and sinks back out of it - the
 // same mask moves as the bar's own parts (Leo, 2026-09-27: sliding them out
 // from behind the bar read badly).
-const DOCK_IN = 0.5;
-const DOCK_OUT = 0.3;
-const DOCK_DELAY = 0.15;
-const DOCK_STAGGER = 0.05;
+const EXTRAS_IN = 0.5;
+const EXTRAS_OUT = 0.3;
+const EXTRAS_DELAY = 0.15;
+const EXTRAS_STAGGER = 0.05;
 // How far the page has to scroll in one direction (since it last changed
 // direction) to hide / bring back the bar - counted over the whole
 // movement, not per scroll event: a slow scroll or a gentle swipe moves 1-3px
@@ -85,25 +85,25 @@ type Shape = 'hidden' | 'square' | 'bar';
 // size left a sub-pixel sliver, drawn as a 1px line (Leo, 2026-09-26).
 const PAST_EDGE = 1;
 
-// The dock (SiteMenuDock.astro): the piece for the current page - the
+// The menu extras (MenuExtras.astro): the piece for the current page - the
 // /projets view buttons, `← Projets` on a project page - comes out from
 // behind the bar once that page is on screen, and goes back behind it on
 // the way out. Hiding starts on every navigation (here); showing is called
 // by whoever knows the page is in view: the bar's entrance (first load),
-// project-morph.ts (morph landed), page-transitions.ts (wipe lifting).
-let dock: { show: () => void; hidden: () => Promise<void> } | null = null;
+// transitions/morph.ts (morph landed), transitions/page-wipe.ts (wipe lifting).
+let extras: { show: () => void; hidden: () => Promise<void> } | null = null;
 
-export function showMenuDock(): void {
-  dock?.show();
+export function showMenuExtras(): void {
+  extras?.show();
 }
 
 // The hide started by the current navigation (the morph waits for it
 // before flying, as it did for the old view switcher).
-export function whenMenuDockHidden(): Promise<void> {
-  return dock?.hidden() ?? Promise.resolve();
+export function whenMenuExtrasHidden(): Promise<void> {
+  return extras?.hidden() ?? Promise.resolve();
 }
 
-export function initSiteMenu(): void {
+export function initMenu(): void {
   const menu = document.getElementById('site-menu');
   if (!menu) return;
   const logo = menu.querySelector<HTMLElement>('.site-menu-logo')!;
@@ -119,14 +119,14 @@ export function initSiteMenu(): void {
   const backdrop = document.querySelector<HTMLElement>('.site-menu-backdrop');
   const panelLines = panel ? Array.from(panel.querySelectorAll<HTMLElement>('.panel-line')) : [];
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // SiteMenuDock.astro's phone tier (pieces above the bar).
+  // MenuExtras.astro's phone tier (pieces above the bar).
   const phoneQuery = window.matchMedia('(pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px)');
   const d = (seconds: number) => (reduced ? 0 : seconds);
 
   let shape: Shape = 'hidden';
   let open = false;
   let busy: gsap.core.Timeline | null = null;
-  // The entrance is over: dock pieces can come out from behind the bar.
+  // The entrance is over: the extras can come out.
   let entered = false;
 
   // The bar's shape = the menu's clip-path, tweened as plain numbers and
@@ -186,7 +186,7 @@ export function initSiteMenu(): void {
         onComplete: () => {
           busy = null;
           entered = true;
-          showDock();
+          showExtras();
         },
       })
       .add(shapeTo('square', SQUARE_IN), 0)
@@ -228,12 +228,12 @@ export function initSiteMenu(): void {
         tl.to(panelClip, { ...panelClipFor(true), duration: d(PANEL_IN), ease: EASE, onUpdate: applyPanelClip }, d(0.15))
           .to(panelLines, { yPercent: 0, duration: d(PART_IN), ease: REVEAL_EASE, stagger: d(LINE_STAGGER) }, d(0.3));
       }
-      // The dock piece makes way - on a phone only, where it rests just
-      // above the bar, right where the open panel's bottom edge lands: a
-      // few pixels of it showed under the panel (Leo, 2026-09-27).
-      if (dockOut && phoneQuery.matches) {
-        dockOut.inert = true;
-        sinkTiles(dockOut);
+      // The extras make way - on a phone only, where they rest just above
+      // the bar, right where the open panel's bottom edge lands: a few
+      // pixels of them showed under the panel (Leo, 2026-09-27).
+      if (extrasOut && phoneQuery.matches) {
+        extrasOut.inert = true;
+        sinkTiles(extrasOut);
       }
       if (!reduced) close.focus({ preventScroll: true });
     } else {
@@ -251,9 +251,9 @@ export function initSiteMenu(): void {
             panel.classList.remove('is-open');
           });
       }
-      if (dockOut && phoneQuery.matches && !scrollHidden) {
-        dockOut.inert = false;
-        tl.add(() => void (dockOut && riseTiles(dockOut)), d(0.3));
+      if (extrasOut && phoneQuery.matches && !scrollHidden) {
+        extrasOut.inert = false;
+        tl.add(() => void (extrasOut && riseTiles(extrasOut)), d(0.3));
       }
       tl.to(close, { yPercent: -100, duration: d(PART_OUT), ease: HIDE_EASE }, 0)
         .add(shapeTo('bar', SHRINK), d(0.15))
@@ -344,7 +344,7 @@ export function initSiteMenu(): void {
   }
 
   // The current page's link gets its marker (the small accent square on
-  // its left, SiteMenuPanel.astro). A project page counts as Projets.
+  // its left, MenuContent.astro). A project page counts as Projets.
   function markCurrent(): void {
     const path = location.pathname.replace(/\/$/, '') || '/';
     panel?.querySelectorAll<HTMLAnchorElement>('.panel-nav .panel-item[href]').forEach((link) => {
@@ -402,26 +402,26 @@ export function initSiteMenu(): void {
       .to(incoming, { yPercent: 0, duration: d(ROLL), ease: EASE }, 0);
   }
 
-  // --- Dock ---
-  const dockPieces = Array.from(document.querySelectorAll<HTMLElement>('.site-menu-dock [data-dock]'));
+  // --- Extras ---
+  const extrasPieces = Array.from(document.querySelectorAll<HTMLElement>('.site-menu-extras [data-extras]'));
   // The piece that's out (shown), if any.
-  let dockOut: HTMLElement | null = null;
-  let dockHiding: Promise<void> = Promise.resolve();
+  let extrasOut: HTMLElement | null = null;
+  let extrasHiding: Promise<void> = Promise.resolve();
 
-  function dockFor(pathname: string): HTMLElement | null {
+  function extrasFor(pathname: string): HTMLElement | null {
     const path = pathname.replace(/\/$/, '') || '/';
     const kind = path === '/projets' ? 'views' : /^\/projets\/[^/]+$/.test(path) ? 'back' : null;
-    return dockPieces.find((el) => el.dataset.dock === kind) ?? null;
+    return extrasPieces.find((el) => el.dataset.extras === kind) ?? null;
   }
 
-  const tilesOf = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('.dock-tile'));
+  const tilesOf = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('.extras-tile'));
   // Each from wherever it is (a scroll can turn one around mid-way).
   function riseTiles(el: HTMLElement, delay = 0): gsap.core.Tween {
     return gsap.to(tilesOf(el), {
       yPercent: 0,
-      duration: d(DOCK_IN),
+      duration: d(EXTRAS_IN),
       ease: REVEAL_EASE,
-      stagger: d(DOCK_STAGGER),
+      stagger: d(EXTRAS_STAGGER),
       delay: d(delay),
       overwrite: true,
     });
@@ -429,31 +429,31 @@ export function initSiteMenu(): void {
   function sinkTiles(el: HTMLElement): gsap.core.Tween {
     return gsap.to(tilesOf(el), {
       yPercent: 100,
-      duration: d(DOCK_OUT),
+      duration: d(EXTRAS_OUT),
       ease: HIDE_EASE,
-      stagger: d(DOCK_STAGGER),
+      stagger: d(EXTRAS_STAGGER),
       overwrite: true,
     });
   }
 
-  function showDock(): void {
-    const el = dockFor(location.pathname);
+  function showExtras(): void {
+    const el = extrasFor(location.pathname);
     // Before the bar's entrance ends, the entrance calls this itself.
-    if (!el || el === dockOut || !entered) return;
-    dockOut = el;
+    if (!el || el === extrasOut || !entered) return;
+    extrasOut = el;
     // The CSS's hidden offset again, as a percentage (GSAP would read the
     // CSS translate back as fixed px).
     gsap.set(tilesOf(el), { yPercent: 100, y: 0 });
     el.style.visibility = 'visible';
     el.inert = scrollHidden;
     // Scrolled away with the bar: it rises when the bar comes back.
-    if (!scrollHidden) riseTiles(el, DOCK_DELAY);
+    if (!scrollHidden) riseTiles(el, EXTRAS_DELAY);
   }
 
-  function hideDock(): Promise<void> {
-    const el = dockOut;
+  function hideExtras(): Promise<void> {
+    const el = extrasOut;
     if (!el) return Promise.resolve();
-    dockOut = null;
+    extrasOut = null;
     el.inert = true;
     const done = () => void (el.style.visibility = 'hidden');
     // Already sunk with the bar (scroll): nothing to animate.
@@ -471,8 +471,8 @@ export function initSiteMenu(): void {
     });
   }
 
-  dock = { show: showDock, hidden: () => dockHiding };
-  initDockIcons();
+  extras = { show: showExtras, hidden: () => extrasHiding };
+  initViewIcons();
 
   // Any other navigation with the menu open (browser back / forward...):
   // snap it shut, so it never travels across the screen open.
@@ -480,13 +480,13 @@ export function initSiteMenu(): void {
     void forceClose(true);
     const to: string = event.to.pathname;
     // The same piece on the next page ([slug] -> [slug]): it just stays.
-    if (dockFor(to) !== dockOut) dockHiding = hideDock();
+    if (extrasFor(to) !== extrasOut) extrasHiding = hideExtras();
     moveFor(to);
   });
 
-  // Reduced motion: no morph and no wipe to call showMenuDock - the piece
+  // Reduced motion: no morph and no wipe to call showMenuExtras - the piece
   // just appears with the page (every duration is 0 then).
-  if (reduced) document.addEventListener('astro:page-load', () => showDock());
+  if (reduced) document.addEventListener('astro:page-load', () => showExtras());
 
   document.addEventListener('astro:after-swap', () => {
     const next = document.getElementById('transition-root')?.dataset.pageName;
@@ -530,11 +530,11 @@ export function initSiteMenu(): void {
       ease: EASE,
       onUpdate: applyClip,
     });
-    // The dock piece that's out sinks and rises with the bar.
-    if (dockOut) {
-      dockOut.inert = hide;
-      if (hide) sinkTiles(dockOut);
-      else riseTiles(dockOut);
+    // The extras piece that's out sinks and rises with the bar.
+    if (extrasOut) {
+      extrasOut.inert = hide;
+      if (hide) sinkTiles(extrasOut);
+      else riseTiles(extrasOut);
     }
   }
 

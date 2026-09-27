@@ -10,6 +10,15 @@ export function saveProjetsState(view: ViewMode, current: number): void {
   } catch {}
 }
 
+// A project page just opened - however it was reached (from /projets, the
+// homepage reel, the menu, another project): it's the one /projets comes
+// back to, in the view last used. Reaching one through the menu left the
+// previous project saved: `← Projets` then flashed and landed on that one
+// (Leo, 2026-09-27).
+export function rememberProject(current: number): void {
+  saveProjetsState(readProjetsState()?.view ?? 'carousel', current);
+}
+
 export function readProjetsState(): { view: ViewMode; current: number } | null {
   try {
     const raw = sessionStorage.getItem(PROJETS_STATE_KEY);

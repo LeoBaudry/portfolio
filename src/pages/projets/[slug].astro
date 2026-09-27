@@ -1,9 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import RevealText from '../../components/RevealText.astro';
+import RevealText from '../../components/animations/RevealText.astro';
 import projects from '../../data/projets.json';
-import ProjectMedia from '../../components/ProjectMedia.astro';
-import MainVisual from '../../components/MainVisual.astro';
+import ProjectMedia from '../../components/media/ProjectMedia.astro';
+import MainVisual from '../../components/media/MainVisual.astro';
 import type { MediaEntry } from '../../utils/media';
 
 export function getStaticPaths() {
@@ -14,10 +14,13 @@ export function getStaticPaths() {
 }
 
 const { project } = Astro.props;
+// Its place in /projets' list (same order: projets.json) - project/page.ts
+// makes it the project /projets comes back to.
+const projectIndex = projects.findIndex((p) => p.slug === project.slug);
 ---
 
 <Layout title={`${project.titre} — Portfolio`} pageName={project.titre}>
-  <article class="project-page">
+  <article class="project-page" data-project-index={projectIndex}>
     <div class="project-intro">
       <RevealText as="p" class="project-meta font-mono">
         {project.categorie} — {project.secteur} — {project.annee}

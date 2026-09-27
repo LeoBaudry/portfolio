@@ -1,5 +1,6 @@
-// project-page.ts
-import { startLoading as startVideoLoading } from './main-video';
+// project/page.ts
+import { startLoading as startVideoLoading } from '../media/video';
+import { rememberProject } from '../projets/state';
 
 const REVEAL_DURATION = 650;
 const REVEAL_DELAY = 150;
@@ -7,7 +8,7 @@ const REVEAL_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const MASK_HIDDEN = 'inset(100% 0 0 0)';
 const MASK_VISIBLE = 'inset(0 0 0 0)';
 
-// Videos only load and reveal here - playing them is main-video.ts's job
+// Videos only load and reveal here - playing them is media/video.ts's job
 // (data-loop-video), shared with the main visuals.
 //
 // Chrome's native lazy-load never starts on an image fully hidden by its own
@@ -40,6 +41,9 @@ function prefersReducedMotion(): boolean {
 }
 
 export function initProjectPage(root: ParentNode = document): { destroy: () => void } | undefined {
+  const index = Number(root.querySelector<HTMLElement>('[data-project-index]')?.dataset.projectIndex);
+  if (Number.isInteger(index) && index >= 0) rememberProject(index);
+
   const images = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal-image]'));
   if (images.length === 0) return undefined;
 

@@ -1,15 +1,15 @@
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { resetPageScroll } from './smooth-scroll';
-import { initPageTransitions, isWipeNavigation } from './page-transitions';
-import { initProjectMorph } from './project-morph';
-import { initRevealText } from './reveal-text';
-import { initProjectsReel } from './projects-reel';
-import { initFooterParallax } from './footer';
-import { initProjetsPage } from './projets-page';
-import { initProjectPage } from './project-page';
-import { initMainVideos } from './main-video';
-import { runSiteLoader } from './site-loader';
-import { initSiteMenu } from './site-menu';
+import { resetPageScroll } from './scroll/smooth-scroll';
+import { initPageTransitions, isWipeNavigation } from './transitions/page-wipe';
+import { initProjectMorph } from './transitions/morph';
+import { initRevealText } from './animations/reveal-text';
+import { initProjectsReel } from './home/projects-reel';
+import { initFooterParallax } from './footer/footer';
+import { initProjetsPage } from './projets/page';
+import { initProjectPage } from './project/page';
+import { initMainVideos } from './media/video';
+import { runSiteLoader } from './loader/loader';
+import { initMenu } from './menu/menu';
 
 // The browser applies its own scroll restoration on back/forward navigation
 // immediately on popstate - before Astro's router has swapped in the new
@@ -54,10 +54,10 @@ function teardownPage(): void {
 // Runs right before the outgoing page's DOM is torn down.
 document.addEventListener('astro:before-swap', teardownPage);
 // The very first page-load of a hard load is held back until the site-entry
-// loader starts lifting (see site-loader.ts) - the same moment a client-side
+// loader starts lifting (see loader/loader.ts) - the same moment a client-side
 // navigation inits its page under the lifting #page-wipe - so no entrance
 // animation plays unseen under the loader.
-// A wiped navigation (menu links...) is inited by page-transitions.ts
+// A wiped navigation (menu links...) is inited by transitions/page-wipe.ts
 // instead, once the covered screen's images are decoded.
 let isHardLoad = true;
 document.addEventListener('astro:page-load', () => {
@@ -92,4 +92,4 @@ window.addEventListener('pageshow', (event) => {
 
 initPageTransitions(initPage);
 initProjectMorph();
-initSiteMenu();
+initMenu();
