@@ -59,19 +59,27 @@
    their own size tiers take over. */
 :root {
   --menu-unit: max(1vw, 15px);
+  /* The room the menu takes at the bottom of the screen (its gap + height
+     + a gap above - SiteMenu.astro's sizes), for page text that must sit
+     clear of it where the bar leaves no room beside it (vue 1's project
+     info: narrow windows, touch screens). */
+  --menu-clearance: calc(5 * var(--menu-unit));
 }
 
 @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
   :root {
     --menu-unit: 1vw;
+    --menu-clearance: 11.5vw;
   }
 }
 
 /* Phones: the menu stops shrinking below a 375px-wide screen (at 320px it
-   got too small - Leo, 2026-09-26). */
+   got too small - Leo, 2026-09-26). The clearance also counts the dock
+   row, which rests above the bar there (SiteMenuDock.astro). */
 @media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
   :root {
     --menu-unit: max(1vw, 3.75px);
+    --menu-clearance: calc(31 * var(--menu-unit));
   }
 }
 

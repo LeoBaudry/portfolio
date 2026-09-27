@@ -6,6 +6,7 @@
 // with a cross.
 import logoSvg from '../assets/logo.svg?raw';
 import SiteMenuPanel from './SiteMenuPanel.astro';
+import SiteMenuDock from './SiteMenuDock.astro';
 
 interface Props {
   pageName: string;
@@ -56,6 +57,11 @@ const logo = logoSvg
   </div>
 </nav>
 <SiteMenuPanel position={position} />
+<SiteMenuDock />
+<!-- While the menu is open: covers the page, so a click / tap beside the
+     menu only closes it - the project image behind it used to open
+     (site-menu.ts). Under the dock (248), the panel and the bar. -->
+<div class="site-menu-backdrop" aria-hidden="true" hidden transition:persist transition:animate="none"></div>
 
 <style>
   /* Sized in --menu-unit (global.css: vw with a floor), not rem/px: the
@@ -87,6 +93,12 @@ const logo = logoSvg
        square revealed top to bottom -> the full bar. Set in px by
        site-menu.ts from there on. */
     clip-path: inset(0 calc(50% - var(--menu-h) / 2) 100% calc(50% - var(--menu-h) / 2) round 2px);
+  }
+
+  .site-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 247;
   }
 
   .site-menu[data-position='top'] {

@@ -38,9 +38,6 @@ const { project } = Astro.props;
       ))}
     </div>
 
-    <div class="project-back-mask">
-      <a href="/projets" data-morph-back class="project-back font-mono">← Projets</a>
-    </div>
   </article>
 </Layout>
 
@@ -111,29 +108,5 @@ const { project } = Astro.props;
     width: 100%;
     height: auto;
     display: block;
-  }
-
-  .project-back-mask {
-    position: fixed;
-    left: 1.5rem;
-    bottom: 1.5rem;
-    z-index: 20;
-    overflow: hidden;
-  }
-
-  .project-back {
-    display: block;
-    font-size: 0.8rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    text-decoration: none;
-    opacity: 0.8;
-    color: var(--color-text);
-    /* No mix-blend-mode over the hero video: blending over a playing video
-       re-blends every frame - it lagged scrolling (2026-09-26). */
-  }
-
-  .project-back:hover {
-    opacity: 1;
   }
 </style>

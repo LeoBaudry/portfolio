@@ -1,0 +1,226 @@
+---
+// Pieces that come with the menu bar for one page (TODO.md item 5), a
+// sibling of the bar (its clip-path would clip them): the /projets view
+// buttons (far right) and `← Projets` on a project page (far left).
+// Persisted with the bar: /projets -> [slug] is one continuous move (the
+// view buttons sink away, then `← Projets` rises). Every tile sits in its
+// own mask and rises into it / sinks out of it (site-menu.ts).
+// projets-page.ts binds the view buttons; project-morph.ts owns the
+// data-morph-back link's transition.
+---
+
+<div class="site-menu-dock" transition:persist transition:animate="none">
+  <div class="dock-piece dock-views" data-dock="views" role="group" aria-label="Changer de vue" inert>
+    <div class="dock-mask">
+      <button type="button" class="dock-tile dock-btn" data-set-view="carousel" aria-label="Grand carrousel">
+        <span class="dock-fill" aria-hidden="true"></span>
+        <svg class="dock-icon icon-carousel" viewBox="0 0 24 24" aria-hidden="true">
+          <defs>
+            <clipPath id="dock-clip-carousel"><rect x="2.75" y="5.25" width="18.5" height="13.5" /></clipPath>
+          </defs>
+          <g clip-path="url(#dock-clip-carousel)">
+            <g class="icon-track">
+              <rect x="3.5" y="6" width="17" height="12" rx="1" />
+              <rect x="23.5" y="6" width="17" height="12" rx="1" />
+            </g>
+          </g>
+        </svg>
+      </button>
+    </div>
+    <div class="dock-mask">
+      <button type="button" class="dock-tile dock-btn" data-set-view="dezoom" aria-label="Carrousel dézoomé">
+        <span class="dock-fill" aria-hidden="true"></span>
+        <svg class="dock-icon icon-dezoom" viewBox="0 0 24 24" aria-hidden="true">
+          <defs>
+            <clipPath id="dock-clip-dezoom"><rect x="1.75" y="6.25" width="20.5" height="11.5" /></clipPath>
+          </defs>
+          <g clip-path="url(#dock-clip-dezoom)">
+            <g class="icon-track">
+              <rect x="2.5" y="7" width="4.5" height="10" />
+              <rect x="9.75" y="7" width="4.5" height="10" />
+              <rect x="17" y="7" width="4.5" height="10" />
+              <rect x="24.25" y="7" width="4.5" height="10" />
+            </g>
+          </g>
+        </svg>
+      </button>
+    </div>
+    <div class="dock-mask">
+      <button type="button" class="dock-tile dock-btn" data-set-view="liste" aria-label="Liste">
+        <span class="dock-fill" aria-hidden="true"></span>
+        <svg class="dock-icon icon-liste" viewBox="0 0 24 24" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="dock-piece dock-back" data-dock="back" inert>
+    <div class="dock-mask">
+      <a href="/projets" class="dock-tile dock-back-link font-mono" data-morph-back>
+        <span aria-hidden="true">←</span> Projets
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* The z-index is on this wrapper, not only on the pieces: persisted, it
+     gets a view-transition-name, which makes it a stacking context - the
+     pieces' own z-index then only counts inside it, and the page (vue 1's
+     current image, z-index 1) was drawn over them. Under the bar (250) and
+     the open panel (249), above the page wipe and the morph clone.
+     position: relative with no size - the pieces are fixed to the screen.
+     Sizes: the old view switcher's (36px buttons, 18px icons, on a
+     ~1500px-wide window), tiles 4px apart, in --menu-unit like the bar;
+     the bar's own height / gap repeated (a sibling, not a child) to centre
+     the tiles on its line. */
+  .site-menu-dock {
+    position: relative;
+    z-index: 248;
+    --dock-bar-h: calc(3 * var(--menu-unit));
+    --dock-bar-gap: calc(1 * var(--menu-unit));
+    --dock-bar-w: calc(20 * var(--menu-unit));
+    --dock-tile: calc(2.4 * var(--menu-unit));
+    --dock-space: calc(0.25 * var(--menu-unit));
+    --dock-edge: calc(1.6 * var(--menu-unit));
+    --dock-icon-size: calc(1.2 * var(--menu-unit));
+    --dock-text-size: calc(0.7 * var(--menu-unit));
+    --dock-pad-x: calc(1.1 * var(--menu-unit));
+  }
+
+  /* On the bar's line (bottom-centre - only pages with the bar at the
+     bottom have a dock), at the far right / left. */
+  .dock-piece {
+    position: fixed;
+    top: calc(100dvh - var(--dock-bar-gap) - var(--dock-bar-h) / 2 - var(--dock-tile) / 2);
+    display: flex;
+    gap: var(--dock-space);
+    /* Nothing shows before site-menu.ts takes over. */
+    visibility: hidden;
+  }
+
+  .dock-views {
+    right: var(--dock-edge);
+  }
+
+  .dock-back {
+    left: var(--dock-edge);
+  }
+
+  /* The mask each tile rises into / sinks out of. */
+  .dock-mask {
+    overflow: hidden;
+    border-radius: 2px;
+  }
+
+  /* Hidden below its mask by default (CSS, so nothing shows before the JS). */
+  .dock-tile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--dock-tile);
+    padding: 0;
+    border: 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+    transform: translateY(100%);
+  }
+
+  .dock-btn {
+    width: var(--dock-tile);
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 55%, transparent);
+    cursor: pointer;
+    transition: color 0.35s;
+  }
+
+  .dock-btn:hover {
+    color: var(--color-text);
+  }
+
+  /* The active view: an orange fill rises inside its tile, and drains back
+     down when another view takes over. On it, the page's dark (like the
+     panel's Contact fill). */
+  .dock-fill {
+    position: absolute;
+    inset: -1px;
+    background: var(--color-accent);
+    transform: translateY(101%);
+    transition: transform 0.45s cubic-bezier(0.76, 0, 0.24, 1);
+  }
+
+  .dock-btn.is-active {
+    color: var(--color-bg);
+  }
+
+  .dock-btn.is-active .dock-fill {
+    transform: translateY(0);
+  }
+
+  .dock-icon {
+    position: relative;
+    width: var(--dock-icon-size);
+    height: auto;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+
+  /* Icon motion: menu-dock-icons.ts (one cycle per hover / click, each
+     finished before it stops). The clip paths keep the shapes sliding in
+     and out inside each icon's own area. */
+
+  .dock-back-link {
+    gap: 0.6em;
+    padding: 0 var(--dock-pad-x);
+    font-size: var(--dock-text-size);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) {
+    .site-menu-dock {
+      --dock-bar-h: 6.5vw;
+      --dock-bar-gap: 2.5vw;
+      --dock-bar-w: 44vw;
+      --dock-tile: 5.2vw;
+      --dock-space: 0.55vw;
+      --dock-edge: 3.2vw;
+      --dock-icon-size: 2.6vw;
+      --dock-text-size: 1.6vw;
+      --dock-pad-x: 2.4vw;
+    }
+  }
+
+  /* Phones: no room beside the bar - the pieces rest just above it, lined
+     up with its ends. */
+  @media (pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px) {
+    .site-menu-dock {
+      --dock-bar-h: calc(12 * var(--menu-unit));
+      --dock-bar-gap: calc(4 * var(--menu-unit));
+      --dock-bar-w: calc(70 * var(--menu-unit));
+      --dock-tile: calc(9.6 * var(--menu-unit));
+      --dock-space: calc(1 * var(--menu-unit));
+      --dock-icon-size: calc(4.8 * var(--menu-unit));
+      --dock-text-size: calc(2.9 * var(--menu-unit));
+      --dock-pad-x: calc(4.4 * var(--menu-unit));
+    }
+
+    .dock-piece {
+      top: calc(100dvh - var(--dock-bar-gap) - var(--dock-bar-h) - var(--dock-bar-gap) / 2 - var(--dock-tile));
+    }
+
+    .dock-views {
+      right: calc((100vw - var(--dock-bar-w)) / 2);
+    }
+
+    .dock-back {
+      left: calc((100vw - var(--dock-bar-w)) / 2);
+    }
+  }
+</style>

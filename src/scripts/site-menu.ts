@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { navigate } from 'astro:transitions/client';
 import { afterSiteLoaderDone } from './site-loader';
+import { initDockIcons } from './menu-dock-icons';
 
 // The site menu's bar (SiteMenu.astro). Persisted, so everything here is
 // set up once per session (main.ts), not per page.
@@ -53,9 +54,27 @@ const LINE_STAGGER = 0.025;
 const CTA_FILL = 0.45;
 const SCROLL_HIDE = 0.45;
 const SCROLL_SHOW = 0.55;
-// Scroll steps smaller than this are ignored (trackpad jitter), and near
-// the top of the page the bar always stays.
-const SCROLL_MIN_DELTA = 4;
+// Dock pieces (SiteMenuDock): each tile rises into its mask, tile after
+// tile, a moment after the page is in view, and sinks back out of it - the
+// same mask moves as the bar's own parts (Leo, 2026-09-27: sliding them out
+// from behind the bar read badly).
+const DOCK_IN = 0.5;
+const DOCK_OUT = 0.3;
+const DOCK_DELAY = 0.15;
+const DOCK_STAGGER = 0.05;
+// How far the page has to scroll in one direction (since it last changed
+// direction) to hide / bring back the bar - counted over the whole
+// movement, not per scroll event: a slow scroll or a gentle swipe moves 1-3px
+// per event, and a per-event threshold never let those bring the bar back
+// (Leo, 2026-09-27: it took a huge swipe on a phone). Back-and-forth jitter
+// never adds up to it. Near the top of the page the bar always stays.
+const SCROLL_TRAVEL = 12;
+// Only the visitor's own scrolling hides / shows the bar: a wheel, swipe,
+// scroll key or scrollbar drag, and the glide that follows it (Lenis's,
+// a phone's momentum) for this long. The site's own scrolls - vue 3
+// jumping to the current row, a page change - left the bar hidden
+// (Leo, 2026-09-27: switching to vue 3 always hid it).
+const USER_SCROLL_WINDOW = 2000;
 const SCROLL_TOP_ZONE = 60;
 const RADIUS = '2px';
 
@@ -65,6 +84,24 @@ type Shape = 'hidden' | 'square' | 'bar';
 // 51.15px) and offsetHeight rounds them: clipping exactly to the rounded
 // size left a sub-pixel sliver, drawn as a 1px line (Leo, 2026-09-26).
 const PAST_EDGE = 1;
+
+// The dock (SiteMenuDock.astro): the piece for the current page - the
+// /projets view buttons, `← Projets` on a project page - comes out from
+// behind the bar once that page is on screen, and goes back behind it on
+// the way out. Hiding starts on every navigation (here); showing is called
+// by whoever knows the page is in view: the bar's entrance (first load),
+// project-morph.ts (morph landed), page-transitions.ts (wipe lifting).
+let dock: { show: () => void; hidden: () => Promise<void> } | null = null;
+
+export function showMenuDock(): void {
+  dock?.show();
+}
+
+// The hide started by the current navigation (the morph waits for it
+// before flying, as it did for the old view switcher).
+export function whenMenuDockHidden(): Promise<void> {
+  return dock?.hidden() ?? Promise.resolve();
+}
 
 export function initSiteMenu(): void {
   const menu = document.getElementById('site-menu');
@@ -79,13 +116,18 @@ export function initSiteMenu(): void {
   const toggle = menu.querySelector<HTMLButtonElement>('.site-menu-toggle')!;
   const close = menu.querySelector<HTMLButtonElement>('.site-menu-close')!;
   const panel = document.getElementById('site-menu-panel');
+  const backdrop = document.querySelector<HTMLElement>('.site-menu-backdrop');
   const panelLines = panel ? Array.from(panel.querySelectorAll<HTMLElement>('.panel-line')) : [];
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // SiteMenuDock.astro's phone tier (pieces above the bar).
+  const phoneQuery = window.matchMedia('(pointer: coarse) and (max-aspect-ratio: 1/1) and (max-width: 599px)');
   const d = (seconds: number) => (reduced ? 0 : seconds);
 
   let shape: Shape = 'hidden';
   let open = false;
   let busy: gsap.core.Timeline | null = null;
+  // The entrance is over: dock pieces can come out from behind the bar.
+  let entered = false;
 
   // The bar's shape = the menu's clip-path, tweened as plain numbers and
   // written out on every update. Not by tweening the
@@ -140,7 +182,13 @@ export function initSiteMenu(): void {
     gsap.set([toggle, name, close], { xPercent: 0, x: 0, yPercent: 100, y: 0 });
     gsap.set(logoCell, { x: toCentre() });
     busy = gsap
-      .timeline({ onComplete: () => void (busy = null) })
+      .timeline({
+        onComplete: () => {
+          busy = null;
+          entered = true;
+          showDock();
+        },
+      })
       .add(shapeTo('square', SQUARE_IN), 0)
       .add(() => void (shape = 'square'))
       .add(shapeTo('bar', WIDEN), 'widen')
@@ -169,6 +217,7 @@ export function initSiteMenu(): void {
         .add(() => void (shape = 'square'));
       if (panel) {
         panel.inert = false;
+        if (backdrop) backdrop.hidden = false;
         panel.classList.add('is-open');
         Object.assign(panelClip, panelClipFor(false));
         applyPanelClip();
@@ -179,15 +228,32 @@ export function initSiteMenu(): void {
         tl.to(panelClip, { ...panelClipFor(true), duration: d(PANEL_IN), ease: EASE, onUpdate: applyPanelClip }, d(0.15))
           .to(panelLines, { yPercent: 0, duration: d(PART_IN), ease: REVEAL_EASE, stagger: d(LINE_STAGGER) }, d(0.3));
       }
+      // The dock piece makes way - on a phone only, where it rests just
+      // above the bar, right where the open panel's bottom edge lands: a
+      // few pixels of it showed under the panel (Leo, 2026-09-27).
+      if (dockOut && phoneQuery.matches) {
+        dockOut.inert = true;
+        sinkTiles(dockOut);
+      }
       if (!reduced) close.focus({ preventScroll: true });
     } else {
+      // The page is usable again as soon as the menu starts closing.
+      if (backdrop) backdrop.hidden = true;
       if (panel) {
-        tl.to(panelLines, { yPercent: -100, duration: d(PART_OUT), ease: HIDE_EASE, stagger: d(LINE_STAGGER / 3) }, 0)
-          .to(panelClip, { ...panelClipFor(false), duration: d(PANEL_OUT), ease: EASE, onUpdate: applyPanelClip }, d(0.15))
+        // Lines sink out of their masks (downwards, Leo 2026-09-27), and
+        // the panel only collapses once the last one is out - collapsing
+        // earlier cut the last lines (availability, Contact) mid-way.
+        const linesOut = d(PART_OUT + (LINE_STAGGER / 3) * Math.max(0, panelLines.length - 1));
+        tl.to(panelLines, { yPercent: 100, duration: d(PART_OUT), ease: HIDE_EASE, stagger: d(LINE_STAGGER / 3) }, 0)
+          .to(panelClip, { ...panelClipFor(false), duration: d(PANEL_OUT), ease: EASE, onUpdate: applyPanelClip }, linesOut)
           .add(() => {
             panel.inert = true;
             panel.classList.remove('is-open');
           });
+      }
+      if (dockOut && phoneQuery.matches && !scrollHidden) {
+        dockOut.inert = false;
+        tl.add(() => void (dockOut && riseTiles(dockOut)), d(0.3));
       }
       tl.to(close, { yPercent: -100, duration: d(PART_OUT), ease: HIDE_EASE }, 0)
         .add(shapeTo('bar', SHRINK), d(0.15))
@@ -241,8 +307,17 @@ export function initSiteMenu(): void {
   document.addEventListener('pointerdown', (event) => {
     if (!open || !(event.target instanceof Node)) return;
     if (menu.contains(event.target) || panel?.contains(event.target)) return;
+    // The backdrop closes on its click instead (below).
+    if (event.target === backdrop) return;
     forceClose();
   });
+  // Beside the menu (over the page): closes on the click itself, not on
+  // the press - closing hides the backdrop, and a tap's click comes after
+  // its pointerdown / pointerup: hidden on the press, the backdrop let the
+  // tap's click land on the project image under the finger (Leo,
+  // 2026-09-27, phone only - a mouse click needs its press and release on
+  // the same element).
+  backdrop?.addEventListener('click', () => void forceClose());
 
   // Contact button: the fill slides up in on hover and on out through the
   // top on leave, then waits below again. Each tween starts from wherever
@@ -327,18 +402,99 @@ export function initSiteMenu(): void {
       .to(incoming, { yPercent: 0, duration: d(ROLL), ease: EASE }, 0);
   }
 
+  // --- Dock ---
+  const dockPieces = Array.from(document.querySelectorAll<HTMLElement>('.site-menu-dock [data-dock]'));
+  // The piece that's out (shown), if any.
+  let dockOut: HTMLElement | null = null;
+  let dockHiding: Promise<void> = Promise.resolve();
+
+  function dockFor(pathname: string): HTMLElement | null {
+    const path = pathname.replace(/\/$/, '') || '/';
+    const kind = path === '/projets' ? 'views' : /^\/projets\/[^/]+$/.test(path) ? 'back' : null;
+    return dockPieces.find((el) => el.dataset.dock === kind) ?? null;
+  }
+
+  const tilesOf = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('.dock-tile'));
+  // Each from wherever it is (a scroll can turn one around mid-way).
+  function riseTiles(el: HTMLElement, delay = 0): gsap.core.Tween {
+    return gsap.to(tilesOf(el), {
+      yPercent: 0,
+      duration: d(DOCK_IN),
+      ease: REVEAL_EASE,
+      stagger: d(DOCK_STAGGER),
+      delay: d(delay),
+      overwrite: true,
+    });
+  }
+  function sinkTiles(el: HTMLElement): gsap.core.Tween {
+    return gsap.to(tilesOf(el), {
+      yPercent: 100,
+      duration: d(DOCK_OUT),
+      ease: HIDE_EASE,
+      stagger: d(DOCK_STAGGER),
+      overwrite: true,
+    });
+  }
+
+  function showDock(): void {
+    const el = dockFor(location.pathname);
+    // Before the bar's entrance ends, the entrance calls this itself.
+    if (!el || el === dockOut || !entered) return;
+    dockOut = el;
+    // The CSS's hidden offset again, as a percentage (GSAP would read the
+    // CSS translate back as fixed px).
+    gsap.set(tilesOf(el), { yPercent: 100, y: 0 });
+    el.style.visibility = 'visible';
+    el.inert = scrollHidden;
+    // Scrolled away with the bar: it rises when the bar comes back.
+    if (!scrollHidden) riseTiles(el, DOCK_DELAY);
+  }
+
+  function hideDock(): Promise<void> {
+    const el = dockOut;
+    if (!el) return Promise.resolve();
+    dockOut = null;
+    el.inert = true;
+    const done = () => void (el.style.visibility = 'hidden');
+    // Already sunk with the bar (scroll): nothing to animate.
+    if (scrollHidden) {
+      gsap.killTweensOf(tilesOf(el));
+      gsap.set(tilesOf(el), { yPercent: 100 });
+      done();
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      sinkTiles(el).eventCallback('onComplete', () => {
+        done();
+        resolve();
+      });
+    });
+  }
+
+  dock = { show: showDock, hidden: () => dockHiding };
+  initDockIcons();
+
   // Any other navigation with the menu open (browser back / forward...):
   // snap it shut, so it never travels across the screen open.
   document.addEventListener('astro:before-preparation', (event: any) => {
     void forceClose(true);
-    moveFor(event.to.pathname);
+    const to: string = event.to.pathname;
+    // The same piece on the next page ([slug] -> [slug]): it just stays.
+    if (dockFor(to) !== dockOut) dockHiding = hideDock();
+    moveFor(to);
   });
+
+  // Reduced motion: no morph and no wipe to call showMenuDock - the piece
+  // just appears with the page (every duration is 0 then).
+  if (reduced) document.addEventListener('astro:page-load', () => showDock());
 
   document.addEventListener('astro:after-swap', () => {
     const next = document.getElementById('transition-root')?.dataset.pageName;
     if (next) renameTo(next);
     markCurrent();
     lastScrollY = window.scrollY;
+    scrollAnchorY = lastScrollY;
+    scrollDirection = 0;
     setScrollHidden(false);
   });
 
@@ -374,22 +530,64 @@ export function initSiteMenu(): void {
       ease: EASE,
       onUpdate: applyClip,
     });
+    // The dock piece that's out sinks and rises with the bar.
+    if (dockOut) {
+      dockOut.inert = hide;
+      if (hide) sinkTiles(dockOut);
+      else riseTiles(dockOut);
+    }
   }
 
   let lastScrollY = window.scrollY;
+  // The current one-direction movement: where it started, which way.
+  let scrollAnchorY = lastScrollY;
+  let scrollDirection = 0;
+  // When the visitor last scrolled by hand (see USER_SCROLL_WINDOW). A tap
+  // (touchstart without a move) doesn't count - tapping the vue 3 button
+  // must not.
+  let lastUserScrollAt = -Infinity;
+  let touchMoved = false;
+  const markUserScroll = () => void (lastUserScrollAt = performance.now());
+  window.addEventListener('wheel', markUserScroll, { passive: true });
+  window.addEventListener('touchstart', () => void (touchMoved = false), { passive: true });
+  window.addEventListener('touchmove', () => {
+    touchMoved = true;
+    markUserScroll();
+  }, { passive: true });
+  // Released after a swipe: the momentum glide that follows counts too.
+  window.addEventListener('touchend', () => {
+    if (touchMoved) markUserScroll();
+  }, { passive: true });
+  // The scrollbar (a press on the page's own edge).
+  window.addEventListener('pointerdown', (event) => {
+    if (event.target === document.documentElement) markUserScroll();
+  });
   window.addEventListener(
     'scroll',
     () => {
       const y = window.scrollY;
       const delta = y - lastScrollY;
       lastScrollY = y;
+      if (delta === 0) return;
+      // The site scrolling by itself: start counting afresh from here.
+      if (performance.now() - lastUserScrollAt > USER_SCROLL_WINDOW) {
+        scrollAnchorY = y;
+        scrollDirection = 0;
+        return;
+      }
+      // Turned around: the new movement starts where the last one ended.
+      if (Math.sign(delta) !== scrollDirection) {
+        scrollDirection = Math.sign(delta);
+        scrollAnchorY = y - delta;
+      }
       // Open: scrolling closes it - but only a gesture does (below), never
       // the scroll event itself. Lenis keeps the page gliding for a moment
       // after a flick: opening the menu during that glide, the leftover
       // scroll closed it again at once (Leo, 2026-09-26).
       if (open) return;
-      if (Math.abs(delta) < SCROLL_MIN_DELTA) return;
-      setScrollHidden(delta > 0 && y > SCROLL_TOP_ZONE);
+      if (y <= SCROLL_TOP_ZONE) return setScrollHidden(false);
+      if (Math.abs(y - scrollAnchorY) < SCROLL_TRAVEL) return;
+      setScrollHidden(delta > 0);
     },
     { passive: true }
   );
@@ -407,7 +605,9 @@ export function initSiteMenu(): void {
   const SCROLL_KEYS = ['PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End', ' '];
   window.addEventListener('keydown', (event) => {
     // Space / arrows on a focused menu button are that button's own keys.
-    if (open && SCROLL_KEYS.includes(event.key) && !isInMenu(event.target)) forceClose();
+    if (!SCROLL_KEYS.includes(event.key) || isInMenu(event.target)) return;
+    markUserScroll();
+    if (open) forceClose();
   });
 
   afterSiteLoaderDone().then(enter);

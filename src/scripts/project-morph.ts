@@ -3,6 +3,7 @@ import { CustomEase } from 'gsap/CustomEase';
 import { toggleScrollLock } from './page-transitions';
 import { lenis as pageLenis, resetPageScroll } from './smooth-scroll';
 import { abortFlight, flightHost, landVideo, liftVideo, setMainVisualHidden } from './main-video';
+import { showMenuDock, whenMenuDockHidden } from './site-menu';
 
 gsap.registerPlugin(CustomEase);
 
@@ -19,35 +20,6 @@ const FLIGHT_Z = 211;
 // setting (off - smooth-scroll.ts, for Lenis) as soon as the flight ends.
 const FLIGHT_LAG_THRESHOLD = 33;
 const FLIGHT_LAG_STEP = 16;
-
-const CHROME_HIDE_DURATION = 0.38;
-const CHROME_REVEAL_DURATION = 0.45;
-const CHROME_HIDE_EASE = CustomEase.create('chromeHide', '0.4, 0, 1, 1');
-const CHROME_REVEAL_EASE = CustomEase.create('chromeReveal', '0, 0, 0.2, 1');
-
-function maskClearDistance(el: HTMLElement): number {
-  return el.getBoundingClientRect().height;
-}
-
-function hideChromeEl(el: HTMLElement | null): Promise<void> {
-  if (!el) return Promise.resolve();
-  const clear = maskClearDistance(el);
-  return new Promise((resolve) => {
-    gsap.to(el, { y: clear, duration: CHROME_HIDE_DURATION, ease: CHROME_HIDE_EASE, onComplete: resolve });
-  });
-}
-
-function revealChromeEl(el: HTMLElement | null): Promise<void> {
-  if (!el) return Promise.resolve();
-  return new Promise((resolve) => {
-    gsap.to(el, { y: 0, duration: CHROME_REVEAL_DURATION, ease: CHROME_REVEAL_EASE, onComplete: resolve });
-  });
-}
-
-function snapChromeHidden(el: HTMLElement | null): void {
-  if (!el) return;
-  gsap.set(el, { y: maskClearDistance(el) });
-}
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -155,11 +127,6 @@ export function initProjectMorph(): void {
       new Promise<void>((resolve) => setTimeout(resolve, 150)),
     ]);
 
-    const viewSwitcherEl = isForward
-      ? document.querySelector<HTMLElement>('.view-switcher-mask .view-switcher')
-      : null;
-    const projectBackEl = isBackward ? document.querySelector<HTMLElement>('.project-back') : null;
-
     const originalLoader = event.loader;
     event.loader = async () => {
       const pageLoaded = originalLoader();
@@ -192,8 +159,9 @@ export function initProjectMorph(): void {
         }
       }
 
-      const chromeLeaving = hideChromeEl(viewSwitcherEl ?? projectBackEl);
-      await Promise.all([leaving, chromeLeaving]);
+      // The menu's dock piece (view buttons / `← Projets`) goes back
+      // behind the bar first - site-menu.ts started it with the navigation.
+      await Promise.all([leaving, whenMenuDockHidden()]);
 
       gsap.set(clone, { display: 'block' });
       // A playing main-visual video keeps playing on top of the clone
@@ -250,16 +218,13 @@ export function initProjectMorph(): void {
       const heroImg = document.querySelector<HTMLImageElement>('[data-project-hero]');
       if (!heroImg) {
         resetToIdle();
+        showMenuDock();
         return;
       }
-      const projectBackEl = document.querySelector<HTMLElement>('.project-back');
-      snapChromeHidden(projectBackEl);
-      morphTo(heroImg, () => {
-        revealChromeEl(projectBackEl);
-      });
+      // Landed: `← Projets` comes out of the menu bar.
+      morphTo(heroImg, showMenuDock);
     } else if (direction === 'backward' && backSlug) {
       allCopiesOf(backSlug).forEach((img) => setMainVisualHidden(img, true));
-      snapChromeHidden(document.querySelector<HTMLElement>('.view-switcher-mask .view-switcher'));
     }
   });
 
@@ -281,10 +246,10 @@ export function initProjectMorph(): void {
     const targetImg = targetLink?.querySelector<HTMLImageElement>('img');
     if (!targetImg) {
       resetToIdle();
+      showMenuDock();
       return;
     }
-    morphTo(targetImg, () => {
-      revealChromeEl(document.querySelector<HTMLElement>('.view-switcher-mask .view-switcher'));
-    });
+    // Landed: the view buttons come out of the menu bar.
+    morphTo(targetImg, showMenuDock);
   });
 } 

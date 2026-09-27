@@ -84,7 +84,9 @@ export function initProjetsPage(root: ParentNode = document) {
     dezoom: page.querySelector('.view-dezoom'),
     liste: page.querySelector('.view-liste'),
   };
-  const switcherButtons = Array.from(page.querySelectorAll<HTMLButtonElement>('[data-set-view]'));
+  // In the menu's dock (SiteMenuDock.astro, persisted), not in the page:
+  // bound here per page, released in destroy().
+  const switcherButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-set-view]'));
   const morphHero = page.querySelector<HTMLImageElement>('.morph-hero');
 
   const restored = isBackwardMorphPending() || isReload ? readProjetsState() : null;

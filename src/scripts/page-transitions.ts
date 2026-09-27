@@ -3,6 +3,7 @@ import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { lenis, resetPageScroll } from './smooth-scroll';
 import { whenVideoReady } from './main-video';
+import { showMenuDock } from './site-menu';
 
 gsap.registerPlugin(CustomEase, ScrollTrigger);
 
@@ -15,6 +16,8 @@ const CONTENT_PARALLAX_VH = '10vh';
 // decoded, then for its visible main video to play its first frame.
 const IMAGES_READY_CAP = 800;
 const VIDEOS_READY_CAP = 600;
+// Share of the wipe's lift after which the menu dock piece comes out.
+const DOCK_SHOW_AT = 0.6;
 
 // --- GESTION DU BLOCAGE DU SCROLL ---
 let isScrollLocked = false;
@@ -222,6 +225,9 @@ export function initPageTransitions(initPage: () => void): void {
     });
 
     tl.to(overlay, { yPercent: -100, duration: WIPE_OUT_DURATION, ease: WIPE_EASE }, 0);
+    // The page's menu dock piece (site-menu.ts) comes out of the bar once
+    // most of the page is uncovered.
+    tl.call(showMenuDock, [], WIPE_OUT_DURATION * DOCK_SHOW_AT);
 
     if (content) {
       tl.fromTo(

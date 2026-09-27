@@ -119,8 +119,20 @@ Start the menu (item 5 below - full spec there, all questions answered):
    even never opened). Now display: none while closed and the blur only
    set under .is-open (site-menu.ts adds it for the whole open -> close
    run) - confirmed fixed by Leo.
-   Next: the /projets view buttons and `← PROJETS` out of the bar, then
-   remove view-switcher / project-back (temp-nav already gone).
+   Dock built 2026-09-27 (Leo to judge): SiteMenuDock.astro (persisted,
+   sibling of the bar, z 248 = under the bar and the panel) - the /projets
+   view buttons (far right) and `← Projets` (far left, data-morph-back).
+   Leo's picks: slide out sideways from behind the bar (not rise-then-
+   slide); look = the bar's (opaque surface, bar height, 2px radius), the
+   old icons at their old stroke weight, active view = an orange block
+   sliding between the buttons (CSS :has on is-active). Phones: pieces rest
+   just above the bar (no room beside it) and rise out of it - same code
+   (hidden = centred behind the bar, both axes). site-menu.ts: hide starts
+   on every navigation (slides back behind the bar; own mask - bottom edge
+   rising - when the bar moves top <-> bottom); shown by the bar's
+   entrance, project-morph.ts on landing, page-transitions.ts at 60% of
+   the lift. Follows the bar's scroll hide. view-switcher / project-back
+   and project-morph's chrome hide/reveal helpers removed.
 
 ## 2026-09-25 session (all done, confirmed by Leo - kept for the record)
 
