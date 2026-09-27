@@ -1,6 +1,6 @@
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { resetPageScroll } from './smooth-scroll';
-import { initPageTransitions } from './page-transitions';
+import { initPageTransitions, isWipeNavigation } from './page-transitions';
 import { initProjectMorph } from './project-morph';
 import { initRevealText } from './reveal-text';
 import { initProjectsReel } from './projects-reel';
@@ -57,9 +57,14 @@ document.addEventListener('astro:before-swap', teardownPage);
 // loader starts lifting (see site-loader.ts) - the same moment a client-side
 // navigation inits its page under the lifting #page-wipe - so no entrance
 // animation plays unseen under the loader.
+// A wiped navigation (menu links...) is inited by page-transitions.ts
+// instead, once the covered screen's images are decoded.
 let isHardLoad = true;
 document.addEventListener('astro:page-load', () => {
-  if (!isHardLoad) return initPage();
+  if (!isHardLoad) {
+    if (!isWipeNavigation()) initPage();
+    return;
+  }
   isHardLoad = false;
   // Astro's router restores the scroll position saved in history.state on
   // a reload (router.js init), regardless of scrollRestoration. The
@@ -85,6 +90,6 @@ window.addEventListener('pageshow', (event) => {
   initPage();
 });
 
-initPageTransitions();
+initPageTransitions(initPage);
 initProjectMorph();
 initSiteMenu();

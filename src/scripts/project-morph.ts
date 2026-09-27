@@ -12,6 +12,13 @@ const TARGET_DECODE_TIMEOUT = 400;
 const MORPH_EASE = CustomEase.create('projectMorph', '0.76, 0, 0.24, 1');
 // The flying video's host sits just above the clone (z-index 210, Layout).
 const FLIGHT_Z = 211;
+// During a flight, a frame the new page blocks for longer than this
+// (30-70ms measured) counts as one normal frame - the flight pauses there
+// instead of jumping ahead, which read as a hitch in the ease (Leo,
+// 2026-09-27: smoother). Put back to the site's
+// setting (off - smooth-scroll.ts, for Lenis) as soon as the flight ends.
+const FLIGHT_LAG_THRESHOLD = 33;
+const FLIGHT_LAG_STEP = 16;
 
 const CHROME_HIDE_DURATION = 0.38;
 const CHROME_REVEAL_DURATION = 0.45;
@@ -104,6 +111,7 @@ export function initProjectMorph(): void {
   function resetToIdle(snapChromeVisible = false): void {
     inFlightTween?.kill();
     inFlightTween = null;
+    gsap.ticker.lagSmoothing(0);
     gsap.set(clone, { display: 'none' });
     flyingVideo = null;
     abortFlight();
@@ -211,6 +219,7 @@ export function initProjectMorph(): void {
       new Promise<void>((resolve) => setTimeout(resolve, TARGET_DECODE_TIMEOUT)),
     ]);
 
+    gsap.ticker.lagSmoothing(FLIGHT_LAG_THRESHOLD, FLIGHT_LAG_STEP);
     const tween = (inFlightTween = gsap.to(flyers, {
       top: toRect.top - 1,
       left: toRect.left,

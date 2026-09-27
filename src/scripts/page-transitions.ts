@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { lenis, resetPageScroll } from './smooth-scroll';
+import { whenVideoReady } from './main-video';
 
 gsap.registerPlugin(CustomEase, ScrollTrigger);
 
@@ -9,7 +10,11 @@ const WIPE_EASE = CustomEase.create('wipe', '0.76, 0, 0.24, 1');
 const WIPE_IN_DURATION = 0.7;
 const WIPE_OUT_DURATION = 0.9;
 const SAFE_TOP_THRESHOLD_PX = 8;
-const CONTENT_PARALLAX_VH = '10vh'; 
+const CONTENT_PARALLAX_VH = '10vh';
+// Longest the covered screen waits for the new page's visible images to be
+// decoded, then for its visible main video to play its first frame.
+const IMAGES_READY_CAP = 800;
+const VIDEOS_READY_CAP = 600;
 
 // --- GESTION DU BLOCAGE DU SCROLL ---
 let isScrollLocked = false;
@@ -94,18 +99,52 @@ function playTimeline(tl: gsap.core.Animation): Promise<void> {
   });
 }
 
-export function initPageTransitions(): void {
+function capped(promise: Promise<unknown>, ms: number): Promise<void> {
+  return Promise.race([promise.then(() => {}), new Promise<void>((resolve) => setTimeout(resolve, ms))]);
+}
+
+function nextFrames(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+// The new page's images the lifting wipe will uncover first: on screen and
+// not hidden (a /projets view's inactive panel, a non-current vue 1 item).
+function visibleImages(): HTMLImageElement[] {
+  return Array.from(document.querySelectorAll<HTMLImageElement>('#transition-root img')).filter((img) => {
+    const r = img.getBoundingClientRect();
+    const onScreen = r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+    return onScreen && img.checkVisibility?.({ visibilityProperty: true } as CheckVisibilityOptions) !== false;
+  });
+}
+
+let transitionInFlight = false;
+// Counts every navigation start: a page-load still waiting on its images /
+// video checks it's still the latest before initing or lifting.
+let navigationId = 0;
+
+// A wiped navigation (not a morph, not the first load) inits its page
+// itself, once the covered screen has what it needs - main.ts skips it.
+export function isWipeNavigation(): boolean {
+  return transitionInFlight;
+}
+
+export function initPageTransitions(initPage: () => void): void {
   const overlay = document.getElementById('page-wipe');
   if (!overlay || prefersReducedMotion()) return;
 
   gsap.set(overlay, { yPercent: 100 });
 
-  let transitionInFlight = false;
+  // Started on the swap: the new page's visible images decoding.
+  let imagesReady: Promise<void> = Promise.resolve();
 
   document.addEventListener('astro:before-preparation', (event: any) => {
+    navigationId += 1;
     // project-morph.ts owns this navigation entirely instead - see
     // isMorphNavigation's comment.
-    if (isMorphNavigation(event.sourceElement)) return;
+    if (isMorphNavigation(event.sourceElement)) {
+      transitionInFlight = false;
+      return;
+    }
 
     transitionInFlight = true;
 
@@ -141,14 +180,38 @@ export function initPageTransitions(): void {
 
   document.addEventListener('astro:after-swap', () => {
     resetPageScroll();
+    if (!transitionInFlight) return;
+    // Capped: decode() can hang, and a lazy image that never starts loading
+    // just rejects - either way the wipe doesn't wait long.
+    imagesReady = capped(
+      Promise.all(visibleImages().map((img) => img.decode().catch(() => {}))),
+      IMAGES_READY_CAP
+    );
   });
 
-  document.addEventListener('astro:page-load', () => {
+  // The wipe used to lift the moment the new page was swapped in, while it
+  // initialised, decoded its images and started its video decoder - those
+  // long frames landed on the wipe's first frames (it jumped / froze).
+  // Now, under the still-covering wipe: images decoded -> page init (its
+  // entrances start here, as before, right as the wipe lifts) -> the visible
+  // main video started and on its first frame (the decoder start-up, the
+  // costly part - main-video.ts) -> two clean frames -> lift.
+  document.addEventListener('astro:page-load', async () => {
     if (!transitionInFlight) return;
     transitionInFlight = false;
+    const id = navigationId;
+
+    await imagesReady;
+    // Another navigation started meanwhile: this page is on its way out
+    // (and the wipe is that navigation's now).
+    if (id !== navigationId) return;
+    initPage();
+    await capped(Promise.all(visibleImages().map((img) => whenVideoReady(img))), VIDEOS_READY_CAP);
+    await nextFrames();
+    if (id !== navigationId) return;
 
     const content = document.getElementById('transition-root');
-    
+
     ScrollTrigger.refresh();
 
     const tl = gsap.timeline();

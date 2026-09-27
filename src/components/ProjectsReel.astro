@@ -289,6 +289,9 @@ const featured = projects.slice(0, 5);
     display: grid;
     grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
     align-items: last baseline;
+    /* Just a label over the image: clicks go through to the project link
+       behind it (it covered part of the image and swallowed them). */
+    pointer-events: none;
   }
 
   /* Sized to their text, not to the column - a title wider than its
